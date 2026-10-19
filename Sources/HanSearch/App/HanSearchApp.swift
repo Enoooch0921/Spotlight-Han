@@ -42,7 +42,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
+        store.settingsVisibilityChanged = { [weak self] visible in
+            if visible {
+                self?.hideSearch(animated: false)
+                // Present system consent from an ordinary foreground app while Settings is open.
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate(ignoringOtherApps: true)
+            } else if self?.store.authorizationInFlight != true {
+                NSApp.setActivationPolicy(.accessory)
+            }
+        }
         store.prepareSystemAuthorization = { [weak self] in
+            NSApp.setActivationPolicy(.regular)
             self?.hideSearch(animated: false)
             NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
             if let window = NSApp.windows.first(where: { $0.isVisible && $0 !== self?.panel && $0.canBecomeMain }) {

@@ -51,6 +51,7 @@ final class SearchStore: ObservableObject {
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
     var prepareSystemAuthorization: (() -> Void)?
+    var settingsVisibilityChanged: ((Bool) -> Void)?
     private var sourceQueue = SourceConnectionQueue()
     private var sourceTask: Task<Void, Never>?
     private var connectionGeneration = UUID()

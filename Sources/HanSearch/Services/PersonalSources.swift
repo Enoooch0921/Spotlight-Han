@@ -10,6 +10,10 @@ struct PersonalLoad: Sendable {
 }
 
 enum PersonalSources {
+    // A permission dialog may outlive our timeout. Keep its EventKit owner alive until the app exits.
+    @MainActor private static let contactAuthorizationStore = CNContactStore()
+    @MainActor private static let calendarAuthorizationStore = EKEventStore()
+    @MainActor private static let reminderAuthorizationStore = EKEventStore()
     static func isAuthorized(_ source: SearchMode) -> Bool {
         switch source {
         case .contacts:
@@ -29,21 +33,21 @@ enum PersonalSources {
         let granted: Bool
         switch source {
         case .contacts:
-            let store = CNContactStore()
+            let store = contactAuthorizationStore
             granted = try await TimedCallback.wait(timeout: 120) { reply in
                 store.requestAccess(for: .contacts) { allowed, error in
                     if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
                 }
             }
         case .calendar:
-            let store = EKEventStore()
+            let store = calendarAuthorizationStore
             granted = try await TimedCallback.wait(timeout: 120) { reply in
                 store.requestFullAccessToEvents { allowed, error in
                     if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
                 }
             }
         case .reminders:
-            let store = EKEventStore()
+            let store = reminderAuthorizationStore
             granted = try await TimedCallback.wait(timeout: 120) { reply in
                 store.requestFullAccessToReminders { allowed, error in
                     if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
@@ -95,6 +99,7 @@ enum PersonalSources {
         let reminders: [EKReminder] = try await TimedCallback.wait(timeout: 45) { reply in
             store.fetchReminders(matching: predicate) { reply(.success($0 ?? [])) }
         }
+        withExtendedLifetime(store) {}
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
         let records = reminders.prefix(10000).map { reminder -> PersonalRecord in
             let title = reminder.title ?? "未命名提醒事項"

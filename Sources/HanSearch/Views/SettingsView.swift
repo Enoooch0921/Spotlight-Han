@@ -122,7 +122,9 @@ struct SettingsView: View {
                 Text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).onAppear { store.hideLauncher?() }
+        }.formStyle(.grouped)
+            .onAppear { store.settingsVisibilityChanged?(true) }
+            .onDisappear { store.settingsVisibilityChanged?(false) }
     }
     private func scope(_ mode: SearchMode) -> String {
         switch mode {
