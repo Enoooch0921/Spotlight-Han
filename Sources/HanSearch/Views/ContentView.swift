@@ -43,7 +43,7 @@ struct ContentView: View {
                         .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
                         .disabled(store.actionInFlight || store.composerCreated != nil)
                         .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
-                    if store.searching || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
+                    if store.showSearchActivity || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
                     if store.composerMode != nil {
                         Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
                             .buttonStyle(.plain).disabled(store.actionInFlight).help(L.text("返回搜尋"))
@@ -109,11 +109,6 @@ struct ContentView: View {
                     SettingsLink { Text(L.text("前往設定")) }.controlSize(.small)
                 }.padding(.horizontal, 18).padding(.vertical, 10)
             }
-            Group {
-                if let activity = store.activityDescription {
-                    ProgressView().progressViewStyle(.linear).controlSize(.small).accessibilityLabel(L.text(activity))
-                } else { Color.clear.accessibilityHidden(true) }
-            }.frame(height: 3).padding(.horizontal, 18)
             if let details = store.details {
                 VStack(alignment: .leading, spacing: 16) {
                     ScrollView { HighlightedText(text: details, query: store.query).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }

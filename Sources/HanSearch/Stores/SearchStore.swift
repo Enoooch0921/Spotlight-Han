@@ -25,6 +25,7 @@ final class SearchStore: ObservableObject {
     private var currencyQuery = ""
     @Published var selection: String?
     @Published var searching = false
+    @Published var showSearchActivity = false
     @Published var searchPhase = ""
     @Published var indexing = false
     @Published var folder: URL?
@@ -55,7 +56,7 @@ final class SearchStore: ObservableObject {
     @Published var personalStatus: [SearchMode: String] = [:]
     @Published var sourceHealth: [SearchMode: SourceHealth] = [:]
     @Published var calendarSort = CalendarResultSort(rawValue: UserDefaults.standard.string(forKey: "calendarResultSort.v1") ?? "") ?? .upcoming {
-        didSet { UserDefaults.standard.set(calendarSort.rawValue, forKey: "calendarResultSort.v1"); search() }
+        didSet { UserDefaults.standard.set(calendarSort.rawValue, forKey: "calendarResultSort.v1"); refreshSearchResults() }
     }
     private var eventChangeStore: EKEventStore?
     private var eventChangeObserver: AnyCancellable?
@@ -120,6 +121,11 @@ final class SearchStore: ObservableObject {
     private var lastRefresh = Date.distantPast
     private var generation = UUID()
     private var searchTask: Task<Void, Never>?
+    private var searchActivityTask: Task<Void, Never>?
+    private var resultRefreshTask: Task<Void, Never>?
+    private var pendingResultsRefresh = false
+    private var completedQuery: String?
+    private var completedMode: SearchMode?
 
     init(loadSources: Bool = true, fileAccess: FileAccessBookmarks? = nil,
          taskPreferences: UserDefaults = .standard, sourcePreferences: UserDefaults = .standard,
@@ -166,7 +172,7 @@ final class SearchStore: ObservableObject {
             self.clips.removeAll { $0 == value }
             self.clips.insert(value, at: 0)
             self.clips = Array(self.clips.prefix(50))
-            if self.mode == .clipboard { self.search() }
+            if self.mode == .clipboard { self.refreshSearchResults() }
         }
         Task {
             await loadCatalog()
@@ -180,15 +186,36 @@ final class SearchStore: ObservableObject {
     var hasBody: Bool { composerMode != nil || !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
     var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
     var activityDescription: String? {
-        if searching { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
+        if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
         if indexing { return indexNotice.isEmpty ? "正在讀取文件內容…" : indexNotice }
         if catalogRefreshing { return catalogStatus }
-        if currencyResults.first?.id == "quick:currency:loading" { return "正在取得每日參考匯率…" }
+        if currencyResults.first?.id == "currency:loading" { return "正在取得每日參考匯率…" }
         return nil
     }
 
-    func search() {
-        details = nil
+    /// Source snapshots refresh results quietly; only query/mode changes start a
+    /// visible search. Never interrupt a user query just because another batch arrived.
+    func refreshSearchResults() {
+        guard composerMode == nil, mode == .clipboard || !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        pendingResultsRefresh = true
+        guard !searching, resultRefreshTask == nil else { return }
+        resultRefreshTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+            guard let self else { return }
+            self.resultRefreshTask = nil
+            guard self.pendingResultsRefresh else { return }
+            self.pendingResultsRefresh = false
+            self.search(silent: true)
+        }
+    }
+    func search(silent: Bool = false) {
+        if silent && searching { pendingResultsRefresh = true; return }
+        let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
+        if silent && (composerMode != nil || completedQuery != term || completedMode != mode) { return }
+        if !silent {
+            details = nil; resultRefreshTask?.cancel(); resultRefreshTask = nil; pendingResultsRefresh = false
+            searchActivityTask?.cancel(); showSearchActivity = false
+        }
         onLayoutChanged?()
         searchTask?.cancel()
         let token = UUID(); generation = token
@@ -198,24 +225,31 @@ final class SearchStore: ObservableObject {
             updateComposerPreview()
             return
         }
-        let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
-        updateCurrency(query: term)
+        if !silent { updateCurrency(query: term) }
         if mode == .clipboard {
             quickResults = clips.enumerated().filter { term.isEmpty || ChineseSearch.matches($0.element, query: term) }.map {
                 QuickResult(id: "clip:\($0.offset)", title: String($0.element.prefix(100)), subtitle: "剪貼板 · 按 Return 複製", symbol: "doc.on.clipboard", action: .copy($0.element))
             }
-            results = []; selection = quickResults.first?.id; searching = false; onLayoutChanged?(); return
+            results = []; if !silent || !allIDs.contains(selection ?? "") { selection = quickResults.first?.id }
+            completedQuery = term; completedMode = mode; searching = false; onLayoutChanged?(); return
         }
         guard !term.isEmpty else {
             results = []; quickResults = []; selection = nil; searching = false; notice = ""; onLayoutChanged?(); return
         }
-        searching = true; searchPhase = "正在比對\(mode == .all ? "App、檔名與已連接資料" : mode.rawValue)…"
-        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort
+        if !silent {
+            searching = true; searchPhase = "正在比對\(mode == .all ? "App、檔名與已連接資料" : mode.rawValue)…"
+            searchActivityTask = Task { [weak self] in
+                do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+                guard let self, self.generation == token, self.searching else { return }
+                self.showSearchActivity = true
+            }
+        }
+        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort, cachedContents = results
         let processCancellation = ProcessCancellation()
         searchTask = Task {
-            do { try await Task.sleep(for: .milliseconds(60)) } catch { return }
+            if !silent { do { try await Task.sleep(for: .milliseconds(60)) } catch { return } }
             guard !Task.isCancelled else { return }
-            let task = Task.detached(priority: .userInitiated) { [weak self] in
+            let task = Task.detached(priority: silent ? .utility : .userInitiated) { [weak self] in
                 let start = Date()
                 func stage(_ text: String) {
                     Task { @MainActor in
@@ -238,6 +272,7 @@ final class SearchStore: ObservableObject {
                 if mode == .contents {
                     stage(folder == nil ? "正在查詢系統文件內容索引…" : "正在比對已載入的文件內容…")
                     if folder != nil { files += docs.compactMap { $0.match(query: term, mode: .contents) } }
+                    else if silent { files += cachedContents }
                     else {
                         let response = SearchService.search(query: term, mode: .contents, cancellation: processCancellation)
                         files += response.items; warning = response.warning
@@ -260,12 +295,22 @@ final class SearchStore: ObservableObject {
             guard !Task.isCancelled, self.generation == token else { return }
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
-            self.selection = self.currencyResults.first?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id; self.milliseconds = elapsed; self.searching = false
-            self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
+            if !silent || !self.allIDs.contains(self.selection ?? "") {
+                self.selection = self.currencyResults.first?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id
+            }
+            if !silent {
+                self.milliseconds = elapsed; self.searching = false
+                self.searchActivityTask?.cancel(); self.showSearchActivity = false
+                self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
+                self.completedQuery = term; self.completedMode = mode
+            }
             self.onLayoutChanged?()
+            if self.pendingResultsRefresh { self.refreshSearchResults() }
         }
     }
     func pauseSearchForComposer() {
+        searchActivityTask?.cancel(); resultRefreshTask?.cancel(); resultRefreshTask = nil
+        showSearchActivity = false; pendingResultsRefresh = false
         searchTask?.cancel(); generation = UUID(); currencyTask?.cancel(); currencyQuery = ""
         results = []; quickResults = []; translationResult = nil; currencyResults = []; selection = nil; searching = false
     }
@@ -305,7 +350,7 @@ final class SearchStore: ObservableObject {
         if let cached = await Task.detached(priority: .utility, operation: { FileCatalog.load() }).value {
             entries = cached.entries.filter { entry in catalogRoots.contains { entry.path.hasPrefix($0.path + "/") } }; catalogCount = entries.count
             sourceHealth[.names] = SourceHealth(phase: .ready, lastSuccess: cached.updated, invalidated: cached.unreadable > 0 || cached.capped)
-            catalogStatus = "已載入 \(entries.count) 筆檔名，正在更新"; search()
+            catalogStatus = "已載入 \(entries.count) 筆檔名，正在更新"; refreshSearchResults()
         }
         refreshCatalog()
     }
@@ -339,7 +384,7 @@ final class SearchStore: ObservableObject {
                 sourceHealth[.names, default: SourceHealth()].partialUpdate = snapshot.updated
                 sourceHealth[.names, default: SourceHealth()].lastAttempt = Date()
             } else { sourceHealth[.names, default: SourceHealth()].succeeded(at: snapshot.updated) }
-            if saveError { catalogStatus += " · 無法儲存快取" }; search()
+            if saveError { catalogStatus += " · 無法儲存快取" }; refreshSearchResults()
         }
     }
     func chooseCatalogFolder() {
@@ -384,7 +429,7 @@ final class SearchStore: ObservableObject {
         guard let folder, !indexing else { return }
         sourceHealth[.contents, default: SourceHealth()].phase = .loading
         sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
-        indexing = true; documents = []; indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; search()
+        indexing = true; documents = []; indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; refreshSearchResults()
         Task {
             let indexed = await Task.detached(priority: .utility) { SearchService.index(folder: folder) }.value
             if indexed.skippedText > 0 || indexed.capped {
@@ -393,7 +438,7 @@ final class SearchStore: ObservableObject {
                 sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
             } else { sourceHealth[.contents, default: SourceHealth()].succeeded(at: Date()) }
             documents = indexed.documents; indexing = false
-            indexNotice = "已讀取 \(indexed.documents.count) 個檔案" + (indexed.skippedText > 0 ? " · \(indexed.skippedText) 份內容未完整讀取" : "") + (indexed.capped ? " · 10,000 檔案上限" : ""); search()
+            indexNotice = "已讀取 \(indexed.documents.count) 個檔案" + (indexed.skippedText > 0 ? " · \(indexed.skippedText) 份內容未完整讀取" : "") + (indexed.capped ? " · 10,000 檔案上限" : ""); refreshSearchResults()
         }
     }
     func resetScope() { guard !indexing else { return }; folder = nil; documents = []; sourceHealth[.contents] = nil; indexNotice = ""; search() }
@@ -526,7 +571,7 @@ final class SearchStore: ObservableObject {
             }
             guard self.eventWorkerTokens[source] == token else { return }
             self.eventWorkers[source] = nil; self.eventWorkerTokens[source] = nil; self.connecting.remove(source)
-            self.search(); self.finishSetupIfIdle(); self.scheduleEventSourceRefresh()
+            self.refreshSearchResults(); self.finishSetupIfIdle(); self.scheduleEventSourceRefresh()
         }
     }
     private func scheduleEventSourceRefresh() {
@@ -658,7 +703,7 @@ final class SearchStore: ObservableObject {
                             self.sourceHealth[.notes, default: SourceHealth()].partialUpdate = Date()
                         }
                         self.notesReadState = update.notesCheckpoint
-                        self.personalStatus[.notes] = update.status; self.search()
+                        self.personalStatus[.notes] = update.status; self.refreshSearchResults()
                     }
                 }
                 case .mail: return try PersonalSources.mail(cancellation: cancellation)
@@ -699,7 +744,7 @@ final class SearchStore: ObservableObject {
             sourceHealth[source, default: SourceHealth()].recordFailure(error, at: Date())
             personalStatus[source] = error is SourceAccessFailure ? error.localizedDescription : "連接失敗：" + error.localizedDescription
         }
-        if token == connectionGeneration { search() }
+        if token == connectionGeneration { refreshSearchResults() }
     }
 
     private func mergeNotes(_ records: [PersonalRecord], keepExisting: Bool) {

@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Combine
 import HanSearchCore
 
 @main
@@ -23,10 +24,10 @@ struct SourceRefreshChecks {
             }
             preconditionFailure("Background refresh did not reach the expected state")
         }
-        func finish(_ source: SearchMode) {
+        func finish(_ source: SearchMode, records: [PersonalRecord] = []) {
             let value = pending.removeValue(forKey: source)
             precondition(value != nil)
-            value?.resume(returning: PersonalLoad(records: [], status: "已連接測試來源"))
+            value?.resume(returning: PersonalLoad(records: records, status: "已連接測試來源"))
         }
         for source: SearchMode in [.calendar, .reminders] { store.sourceHealth[source] = SourceHealth(phase: .ready, lastSuccess: Date()) }
         // A setup batch and a long Notes read must not block already-authorised EventKit reads.
@@ -74,6 +75,35 @@ struct SourceRefreshChecks {
         store.refreshAuthorizedSources(changedOnly: true)
         precondition(store.sourceHealth[.calendar]?.phase == .needsPermission && calls == before)
         store.cancelConnections()
-        print("PASS: deferred notifications, concurrent EventKit refresh during Notes/setup, changes during reads, auto-refresh switch, failure backoff, old timestamps and permission loss; fake loaders only, no personal reads or writes")
+        // Background snapshots must update matches without restarting the query,
+        // moving its selection, dismissing details, or flashing a progress indicator.
+        allowed = true
+        store.setupRunning = false
+        store.query = "Fixture"; store.mode = .calendar
+        var queryStarts = 0
+        let changes = store.$searching.dropFirst().sink { if $0 { queryStarts += 1 } }
+        store.search()
+        for _ in 0..<20 { store.refreshSearchResults() }
+        try await wait { !store.searching }
+        precondition(queryStarts == 1)
+        let first = PersonalRecord(id: "fixture:first", title: "Fixture First", subtitle: "", text: "Fixture", symbol: "calendar", mode: .calendar, action: .details("First"))
+        let second = PersonalRecord(id: "fixture:second", title: "Fixture Second", subtitle: "", text: "Fixture", symbol: "calendar", mode: .calendar, action: .details("Second"))
+        store.sourceHealth[.calendar] = SourceHealth(phase: .ready, lastSuccess: Date(), invalidated: true)
+        store.refreshAuthorizedSources(changedOnly: true)
+        try await wait { pending[.calendar] != nil }
+        finish(.calendar, records: [first])
+        try await wait { store.quickResults.contains { $0.id == "quick:fixture:first" } }
+        let selected = "quick:fixture:first"
+        store.selection = selected; store.details = "Keep this open"
+        store.sourceHealth[.calendar]?.markChanged()
+        store.refreshAuthorizedSources(changedOnly: true)
+        try await wait { pending[.calendar] != nil }
+        finish(.calendar, records: [first, second])
+        try await wait { store.quickResults.contains { $0.id == "quick:fixture:second" } }
+        precondition(store.selection == selected && store.details == "Keep this open")
+        precondition(queryStarts == 1 && !store.showSearchActivity)
+        changes.cancel()
+        store.cancelConnections()
+        print("PASS: deferred notifications, concurrent EventKit refresh during Notes/setup, changes during reads, auto-refresh switch, failure backoff, old timestamps, permission loss and quiet search refresh preserving selection/details; fake loaders only, no personal reads or writes")
     }
 }
