@@ -75,6 +75,18 @@ private final class IndexFixture: @unchecked Sendable {
         precondition(store.results.map(\.id) == ["/fixture/new.pdf"] && fixture.count == beforeCalculator + 1)
         store.mode = .names; store.search(); try await wait { !store.searching }
         precondition(fixture.count == beforeCalculator + 1)
-        print("PASS: All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")
+        let previews = DocumentPreviewStore()
+        let cancelledPreview = Task { await previews.preview(url: written, query: "內文測試詞") }
+        cancelledPreview.cancel()
+        let cancelledValue = await cancelledPreview.value
+        precondition(cancelledValue == .cancelled)
+        let snippet = await previews.preview(url: written, query: "內文測試詞")
+        guard case let .match(text) = snippet else { preconditionFailure("Missing document preview") }
+        precondition(text.contains("内文测试词") && !SearchHighlight.ranges(in: text, query: "內文測試詞").isEmpty)
+        try "Changed fixture".write(to: written, atomically: true, encoding: .utf8)
+        let cachedPreview = await previews.preview(url: written, query: "內文測試詞")
+        precondition(cachedPreview == snippet)
+        precondition(DocumentPreview.read(written, query: "內文測試詞", cancellation: ProcessCancellation()) == .noLiteralMatch)
+        print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")
     }
 }

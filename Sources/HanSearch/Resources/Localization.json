@@ -503,5 +503,11 @@
   "系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。": "Like native Spotlight, system document search may also match filenames or metadata. Directly indexed folders show snippets around matching text.",
   "舊版 PPT 請使用系統索引搜尋": "Use system index search for legacy PPT files",
   "正在查詢全機文件內文；可先使用已出現的結果。": "Searching document contents across this Mac. You can use results already shown.",
-  "直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。": "Read Word, text-based PDF, PowerPoint and plain text in this folder for cross-script content search."
+  "直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。": "Read Word, text-based PDF, PowerPoint and plain text in this folder for cross-script content search.",
+  "正在準備命中段落…": "Preparing matching passage…",
+  "系統索引命中；未找到可凸顯的內文片段": "System index match; no literal content passage to highlight",
+  "無法取得內文摘要：%@": "Content preview unavailable: %@",
+  "已達摘要讀取上限；可開啟文件查看": "Preview limit reached; open the document to view content",
+  "內文摘要已取消": "Content preview cancelled",
+  "全機文件結果會在背景讀取顯示中的文件摘要，凸顯繁簡命中字；讀取失敗、沒有完整字詞命中或超限會明確標示。": "Visible system-index document results load excerpts in the background with cross-script highlights. Unavailable, non-literal or limited previews are labeled."
 }

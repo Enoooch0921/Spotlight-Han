@@ -121,11 +121,12 @@ public enum SearchService {
         return FolderIndex(documents: documents, skippedText: issues.count, capped: capped, issues: issues, examinedFiles: examined, unsupportedFiles: unsupported)
     }
 
-    public static func extractText(_ url: URL) throws -> String {
+    public static func extractText(_ url: URL, cancellation: ProcessCancellation? = nil) throws -> String {
+        if cancellation?.isCancelled == true { throw CancellationError() }
         let ext = url.pathExtension.lowercased()
-        if ["pptx", "ppsx", "potx", "pptm"].contains(ext) { return try PresentationText.extract(url) }
+        if ["pptx", "ppsx", "potx", "pptm"].contains(ext) { return try PresentationText.extract(url, cancellation: cancellation) }
         if ["ppt", "pps", "pot"].contains(ext) {
-            let data = try ProcessRunner.run("/usr/bin/mdls", ["-raw", "-name", "kMDItemTextContent", url.path], timeout: 10, outputLimit: 8_000_000)
+            let data = try ProcessRunner.run("/usr/bin/mdls", ["-raw", "-name", "kMDItemTextContent", url.path], timeout: 10, cancellation: cancellation, outputLimit: 8_000_000)
             guard let text = String(data: data, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.trimmingCharacters(in: .whitespacesAndNewlines) != "(null)" else {
                 throw DocumentReadReason.legacyNeedsSystemIndex
             }
@@ -138,7 +139,7 @@ public enum SearchService {
             return text
         }
         if ["doc", "docx", "rtf", "rtfd", "odt", "html", "htm"].contains(ext) {
-            let data = try ProcessRunner.run("/usr/bin/textutil", ["-convert", "txt", "-encoding", "UTF-8", "-stdout", url.path], timeout: 10, outputLimit: 32_000_000)
+            let data = try ProcessRunner.run("/usr/bin/textutil", ["-convert", "txt", "-encoding", "UTF-8", "-stdout", url.path], timeout: 10, cancellation: cancellation, outputLimit: 32_000_000)
             guard let text = String(data: data, encoding: .utf8) else { throw ProcessFailure.failed("文件文字編碼無法讀取。") }
             return text
         }

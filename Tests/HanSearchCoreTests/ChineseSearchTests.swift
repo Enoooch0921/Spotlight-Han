@@ -492,6 +492,9 @@ final class ChineseSearchTests {
         XCTAssertTrue(hit?.excerpt.contains("教会活动") == true)
         XCTAssertNotNil(indexed.documents.first?.match(query: "簡體資料", mode: .names))
         XCTAssertNotNil(indexed.documents.first?.match(query: "電腦課程", mode: .contents))
+        guard case let .match(snippet) = DocumentPreview.read(docxURL, query: "教會活動", cancellation: ProcessCancellation()) else { preconditionFailure("Missing Word preview") }
+        XCTAssertTrue(snippet.contains("教会活动") && !SearchHighlight.ranges(in: snippet, query: "教會活動").isEmpty)
+        XCTAssertEqual(DocumentPreview.read(docxURL, query: "不存在的測試詞", cancellation: ProcessCancellation()), .noLiteralMatch)
     }
 
     func testRealSpotlightQueryDoesNotError() throws {
@@ -529,7 +532,10 @@ final class ChineseSearchTests {
         XCTAssertEqual(index.documents.count, 1); XCTAssertEqual(index.skippedText, 0)
         for query in ["教會活動", "电脑课程", "头发", "鼎达叔叔"] { XCTAssertNotNil(index.documents.first?.match(query: query, mode: .contents)) }
         XCTAssertNil(index.documents.first?.match(query: "教會活動", mode: .names))
+        guard case let .match(slideSnippet) = DocumentPreview.read(deck, query: "鼎达叔叔", cancellation: ProcessCancellation()) else { preconditionFailure("Missing PPTX notes preview") }
+        XCTAssertTrue(slideSnippet.contains("鼎達叔叔") && !SearchHighlight.ranges(in: slideSnippet, query: "鼎达叔叔").isEmpty)
         let cancelled = ProcessCancellation(); cancelled.cancel()
+        XCTAssertEqual(DocumentPreview.read(deck, query: "教會活動", cancellation: cancelled), .cancelled)
         do { _ = try PresentationText.extract(deck, cancellation: cancelled); preconditionFailure("Ignored cancellation") } catch is CancellationError {}
         try write("ppt/slides/slide1.xml", "<!DOCTYPE a [<!ENTITY x SYSTEM 'file:///fixture/never-read'>]><a>&x;</a>")
         let unsafe = folder.appendingPathComponent("unsafe.pptx")
@@ -549,6 +555,10 @@ final class ChineseSearchTests {
         try pdf("body.pdf", text: "HanPDFBodyFixture"); try pdf("empty.pdf", text: nil)
         try Data(repeating: 0, count: 20_000_001).write(to: folder.appendingPathComponent("oversized.docx"))
         try Data([0]).write(to: folder.appendingPathComponent("unsupported.png"))
+        guard case let .match(pdfSnippet) = DocumentPreview.read(folder.appendingPathComponent("body.pdf"), query: "hanpdfbodyfixture", cancellation: ProcessCancellation()) else { preconditionFailure("Missing PDF preview") }
+        XCTAssertTrue(!SearchHighlight.ranges(in: pdfSnippet, query: "hanpdfbodyfixture").isEmpty)
+        XCTAssertEqual(DocumentPreview.read(folder.appendingPathComponent("empty.pdf"), query: "fixture", cancellation: ProcessCancellation()), .unavailable(.noText))
+        XCTAssertEqual(DocumentPreview.read(folder.appendingPathComponent("oversized.docx"), query: "fixture", cancellation: ProcessCancellation()), .unavailable(.tooLarge))
         let diagnosed = SearchService.index(folder: folder)
         XCTAssertEqual(diagnosed.examinedFiles, 6); XCTAssertEqual(diagnosed.unsupportedFiles, 1)
         XCTAssertEqual(diagnosed.extractedFiles, 2); XCTAssertEqual(diagnosed.skippedText, 3)

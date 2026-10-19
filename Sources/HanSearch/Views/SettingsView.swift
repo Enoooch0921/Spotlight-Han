@@ -60,6 +60,8 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Text(L.text("系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。"))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("全機文件結果會在背景讀取顯示中的文件摘要，凸顯繁簡命中字；讀取失敗、沒有完整字詞命中或超限會明確標示。"))
+                    .font(.caption).foregroundStyle(.secondary)
                 if store.folder != nil { TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[.contents], now: context.date) } }
                 Text(store.folder?.path ?? L.text("未指定資料夾：文件內容模式使用 Spotlight 索引")).font(.caption)
                 if !store.indexNotice.isEmpty { Text(L.text(store.indexNotice)).font(.caption).foregroundStyle(.secondary) }
