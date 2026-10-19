@@ -287,6 +287,9 @@
 "查看更新內容" = "Release notes";
 "查看未完成的檔案與原因" = "View unfinished files and reasons";
 "查看系統語言下載" = "View system language downloads";
+"查詢系統文件索引" = "Querying the system document index";
+"核對內文 %@／%@ 份" = "Checking content %@/%@ documents";
+"核對文件內文" = "Checking document content";
 "格式、權限或讀取錯誤" = "Format, access or read error";
 "桌面與 Dock" = "Desktop & Dock";
 "標題" = "Title";

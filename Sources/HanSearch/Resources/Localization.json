@@ -517,5 +517,8 @@
   "尚未確認完整內文命中，可能只有檔名、中繼資料或系統分詞符合；預設收起。": "No confirmed literal content match. These may match names, metadata or system tokenization; collapsed by default.",
   "尚未找到完整字詞命中；其他系統索引結果已收起，可展開查看。": "No literal match confirmed. Expand other system-index results to inspect them.",
   "文件・內文命中": "Document · content match",
-  "文件・檔名命中": "Document · name match"
+  "文件・檔名命中": "Document · name match",
+  "核對內文 %@／%@ 份": "Checking content %@/%@ documents",
+  "核對文件內文": "Checking document content",
+  "查詢系統文件索引": "Querying the system document index"
 }

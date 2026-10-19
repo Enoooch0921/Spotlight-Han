@@ -115,7 +115,13 @@ private final class IndexFixture: @unchecked Sendable {
                                  documentPreviewLoader: { await verifier.read($0, query: $1) })
         ranked.fullTextInAll = true
         ranked.query = "如果只能用"; ranked.search()
+        try await wait { ranked.verifyingDocumentContents && !ranked.searching && ranked.documentVerificationCompleted > 0 }
+        precondition(ranked.showsSearchProgress && ranked.documentVerificationTotal == 25 && ranked.documentVerificationCompleted <= 25, "Progress must cover verification after the native search finishes")
+        let completedDuringRead = ranked.documentVerificationCompleted
         try await wait { !ranked.searching && !ranked.verifyingDocumentContents && ranked.results.count == 25 }
+        precondition(!ranked.showsSearchProgress && ranked.documentVerificationCompleted == 25 && ranked.documentVerificationCompleted >= completedDuringRead)
+        ranked.refreshSearchResults(); try await Task.sleep(for: .milliseconds(250))
+        precondition(!ranked.showsSearchProgress && ranked.documentVerificationCompleted == 25, "Quiet refresh must not replay progress")
         precondition(ranked.allIDs == ["/fixture/z-real.docx"] && ranked.otherIndexedResultCount == 24, "Unverified native matches must not bury a later literal hit")
         precondition(verifier.maximumConcurrency <= 2, "Verification must bound concurrent reads")
         for _ in 0..<20 { ranked.habits.record(query: ranked.query, identity: "file:/fixture/noise-0.txt", kind: .file) }
@@ -127,6 +133,7 @@ private final class IndexFixture: @unchecked Sendable {
         ranked.query = "如果只能用"; ranked.search()
         try await wait { verifier.finishedOld && !ranked.searching && !ranked.verifyingDocumentContents }
         precondition(ranked.documentPreviews["/fixture/old.pdf"] == nil && ranked.allIDs == ["/fixture/z-real.docx"] && !ranked.showOtherIndexedResults, "Late old snippets must not leak into a new query")
+        precondition(ranked.documentVerificationTotal == 25 && ranked.documentVerificationCompleted == 25, "A cancelled old query must not advance the new progress")
         print("PASS: literal content evidence outranks unrelated index matches and habits, candidates verified without scrolling, collapsed fallback, bounded concurrency and late-preview rejection")
         print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")
     }

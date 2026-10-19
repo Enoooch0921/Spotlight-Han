@@ -12,6 +12,8 @@ final class SearchStore: ObservableObject {
     var documentFilenameMatches = Set<String>()
     @Published var documentPreviews: [String: DocumentPreview] = [:]
     @Published var verifyingDocumentContents = false
+    @Published var documentVerificationCompleted = 0
+    @Published var documentVerificationTotal = 0
     @Published var showOtherIndexedResults = false
     var documentVerificationTask: Task<Void, Never>?
     var documentVerificationGeneration = UUID()
@@ -245,6 +247,7 @@ final class SearchStore: ObservableObject {
         return completedMode == .apps && completedQuery == term ? quickResults : []
     }
     var allIDs: [String] { orderedSearchIDs }
+    var showsSearchProgress: Bool { showSearchActivity || verifyingDocumentContents }
     var activityDescription: String? {
         if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
         if verifyingDocumentContents { return "正在核對文件內文，已確認的結果會先顯示…" }

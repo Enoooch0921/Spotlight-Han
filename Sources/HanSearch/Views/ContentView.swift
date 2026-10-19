@@ -56,7 +56,7 @@ struct ContentView: View {
                         .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
                         .disabled(store.actionInFlight || store.composerCreated != nil)
                         .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
-                    if store.showSearchActivity || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
+                    if store.showsSearchProgress || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
                     if store.composerMode != nil {
                         Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
                             .buttonStyle(.plain).disabled(store.actionInFlight).help(L.text("返回搜尋"))
@@ -119,6 +119,10 @@ struct ContentView: View {
                 Picker(L.text("行事曆排序"), selection: $store.calendarSort) {
                     ForEach(CalendarResultSort.allCases, id: \.self) { order in Text(L.text(order.title)).tag(order) }
                 }.controlSize(.small).padding(.horizontal, 18).padding(.vertical, 8)
+            }
+            if store.showsSearchProgress {
+                SearchActivityView(store: store)
+                Divider().padding(.horizontal, 18)
             }
             SearchSourceHealthBanner(store: store)
             if !store.hotkeyError.isEmpty {
