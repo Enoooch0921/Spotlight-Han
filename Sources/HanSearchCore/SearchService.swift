@@ -14,7 +14,7 @@ public struct FolderIndex: Sendable {
 }
 
 public enum SearchService {
-    public static func search(query: String, mode: SearchMode, folder: URL? = nil) -> SearchResponse {
+    public static func search(query: String, mode: SearchMode, folder: URL? = nil, cancellation: ProcessCancellation? = nil) -> SearchResponse {
         var items: [SearchItem] = []
         var warning: String?
         var truncated = false
@@ -22,7 +22,7 @@ public enum SearchService {
             var args = ["-0"]
             if let folder { args += ["-onlyin", folder.path] }
             args.append(ChineseSearch.predicate(query, mode: mode))
-            let data = try ProcessRunner.run("/usr/bin/mdfind", args)
+            let data = try ProcessRunner.run("/usr/bin/mdfind", args, cancellation: cancellation)
             let paths = data.split(separator: 0)
             truncated = paths.count > 2000
             items = paths.prefix(2000).compactMap { bytes in

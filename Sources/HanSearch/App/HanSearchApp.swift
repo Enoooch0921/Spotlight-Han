@@ -2,18 +2,29 @@ import SwiftUI
 import AppKit
 import HanSearchCore
 import OSLog
+import Carbon
 
 @main
 struct HanSearchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var body: some Scene {
         MenuBarExtra("Spotlight Han", systemImage: "magnifyingglass") {
-            Button("開啟 Spotlight Han") { delegate.showSearch() }
-            SettingsLink { Text("設定與資料來源…") }
-            Divider()
-            Button("結束 Spotlight Han") { NSApp.terminate(nil) }.keyboardShortcut("q")
+            HanMenuView(store: delegate.store, open: { delegate.showSearch() })
         }
         Settings { SettingsView(store: delegate.store).frame(width: 650, height: 650) }
+    }
+}
+
+private struct HanMenuView: View {
+    @ObservedObject var store: SearchStore
+    let open: () -> Void
+    var body: some View {
+        Group {
+            Button(L.text("開啟 Spotlight Han"), action: open)
+            SettingsLink { Text(L.text("設定與資料來源…")) }
+            Divider()
+            Button(L.text("結束 Spotlight Han")) { NSApp.terminate(nil) }.keyboardShortcut("q")
+        }.environment(\.locale, store.interfaceLanguage.locale)
     }
 }
 
@@ -25,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var translationWindow: NSWindow?
     private var keyMonitor: Any?
     private var lastToggle = Date.distantPast
+    private var rejectedBinding: ShortcutBinding?
     private var presentation = LauncherPresentation()
     private var fadeGeneration = 0
     private var layoutTarget: NSRect?
@@ -65,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if #available(macOS 15.0, *) {
                 self.hideSearch(animated: false)
                 self.translationWindow?.close()
-                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 220), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 460), styleMask: [.titled, .closable], backing: .buffered, defer: false)
                 window.title = "Spotlight Han · 本機翻譯語言"; window.isReleasedWhenClosed = false
                 window.contentView = NSHostingView(rootView: TranslationSetupView(store: self.store, source: source, query: self.store.query.trimmingCharacters(in: .whitespacesAndNewlines), close: { [weak self, weak window] in window?.close(); self?.showSearch() }))
                 self.translationWindow = window
@@ -75,22 +87,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkey.action = { [weak self] in self?.toggleSearch() }
         store.changeHotkey = { [weak self] binding in self?.setHotkey(binding) }
         let saved = UserDefaults.standard.data(forKey: "shortcutBinding.v1").flatMap { try? JSONDecoder().decode(ShortcutBinding.self, from: $0) }
-        if let saved, hotkey.register(saved) { store.hotkeyNotice = saved.display }
+        if let saved, HotKey.systemConflict(saved) == nil, hotkey.register(saved) { store.hotkeyNotice = saved.display }
         else if hotkey.register() {
             store.hotkeyNotice = ShortcutBinding.standard.display
-            if saved != nil { store.hotkeyError = "原快捷鍵無法註冊，已使用預設快捷鍵。" }
+            if let saved { rejectedBinding = saved; store.hotkeyError = HotKey.systemConflict(saved) ?? "原快捷鍵無法註冊，已使用預設快捷鍵。" }
         } else { store.hotkeyError = "快捷鍵被占用，請從選單列開啟並重新設定。" }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel?.isKeyWindow == true, self.hotkey.matches(event) else { return event }
             if !event.isARepeat { self.toggleSearch() }
             return nil
         }
-        showSearch()
+        let launchEvent = NSAppleEventManager.shared().currentAppleEvent
+        let loginLaunch = launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAELaunchedAsLogInItem))?.booleanValue == true ||
+            launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem)
+        if !loginLaunch { showSearch() }
     }
     func applicationWillTerminate(_ notification: Notification) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     }
-    func applicationDidBecomeActive(_ notification: Notification) { store.checkClockSetupOnReturn() }
+    func applicationDidBecomeActive(_ notification: Notification) {
+        store.checkClockSetupOnReturn(); store.loginItem.refresh()
+        if let rejectedBinding { setHotkey(rejectedBinding) }
+        else if let binding = hotkey.binding { store.hotkeyError = HotKey.systemConflict(binding) ?? "" }
+    }
     func applicationDidResignActive(_ notification: Notification) { hideSearch(animated: false) }
     private func command(_ key: String) -> Bool {
         switch key {
@@ -120,10 +139,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else { panel.setFrame(frame, display: true) }
     }
     private func setHotkey(_ binding: ShortcutBinding) {
+        if let conflict = HotKey.systemConflict(binding) { rejectedBinding = binding; store.hotkeyError = conflict; return }
         guard hotkey.register(binding) else {
+            rejectedBinding = binding
             store.hotkeyError = "無法使用 \(binding.display)，可能已被系統或其他 App 占用。原快捷鍵仍可使用；⌘Space 請先關閉 Spotlight 的同名快捷鍵。"
             return
         }
+        rejectedBinding = nil
         store.hotkeyNotice = binding.display; store.hotkeyError = ""
         if let data = try? JSONEncoder().encode(binding) { UserDefaults.standard.set(data, forKey: "shortcutBinding.v1") }
     }

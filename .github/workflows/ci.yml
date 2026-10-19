@@ -15,6 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build app
         run: ./script/build_and_run.sh --build-only
+      - name: Check interface localizations
+        run: ./script/check_localizations.sh
       - name: Run functional checks
         run: swift run HanSearchChecks
       - name: Verify signed Clock companion source

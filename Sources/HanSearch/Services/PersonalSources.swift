@@ -53,7 +53,17 @@ enum PersonalSources {
                     if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
                 }
             }
-        default: return // Notes and Mail present their own Apple event authorization during the read.
+        case .notes, .mail:
+            let target = source == .notes ? "com.apple.Notes" : "com.apple.mail"
+            let cancellation = ProcessCancellation()
+            let worker = Task.detached(priority: .userInitiated) {
+                // Ask using an application-name read, then release the consent UI before slow content indexing.
+                try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", "function run(a) { return Application(a[0]).name(); }", target], timeout: 120, cancellation: cancellation)
+            }
+            _ = try await withTaskCancellationHandler { try await worker.value }
+                onCancel: { cancellation.cancel(); worker.cancel() }
+            granted = isAuthorized(source)
+        default: return
         }
         guard granted else { throw ProcessFailure.failed("\(source.rawValue)未授權，可在系統設定的隱私權中調整。") }
     }

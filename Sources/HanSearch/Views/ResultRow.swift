@@ -12,7 +12,7 @@ struct ResultRow: View {
                 HStack {
                     Text(item.name).font(.body.weight(.medium)).lineLimit(1)
                     Spacer()
-                    Text(item.source).font(.caption2).foregroundStyle(.secondary)
+                    Text(L.text(item.source)).font(.caption2).foregroundStyle(.secondary)
                 }
                 Text(item.url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 if !item.excerpt.isEmpty {

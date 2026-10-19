@@ -41,11 +41,53 @@ struct CheckRunner {
         tests.testSourceConnectionQueue()
         try await tests.testBoundedSystemCallbacks()
         try tests.testCancellableStreamingProcesses()
-        print("PASS: 18 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation.")
+        tests.testSystemShortcutPreferences()
+        tests.testSystemSettingsSearch()
+        print("PASS: 20 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search.")
     }
 }
 
 final class ChineseSearchTests {
+    func testSystemSettingsSearch() {
+        let examples: [(String, String)] = [
+            ("隱私與安全性", "com.apple.settings.PrivacySecurity.extension"),
+            ("隐私安全性", "com.apple.settings.PrivacySecurity.extension"),
+            ("隐私安全", "com.apple.settings.PrivacySecurity.extension"),
+            ("Privacy & Security", "com.apple.settings.PrivacySecurity.extension"),
+            ("wifi", "com.apple.wifi-settings-extension"), ("Wi‑Fi", "com.apple.wifi-settings-extension"),
+            ("無線網絡", "com.apple.wifi-settings-extension"), ("開啟WiFi設定", "com.apple.wifi-settings-extension"),
+            ("藍牙", "com.apple.BluetoothSettings"), ("蓝牙", "com.apple.BluetoothSettings"),
+            ("Bluetooth", "com.apple.BluetoothSettings"), ("bt", "com.apple.BluetoothSettings"),
+            ("System settings keyboard", "com.apple.Keyboard-Settings.extension"),
+            ("存储空间", "com.apple.settings.Storage"), ("登入項目", "com.apple.LoginItems-Settings.extension")
+        ]
+        for (query, identifier) in examples {
+            let result = SystemSettingsCatalog.results(query: query).first
+            XCTAssertEqual(result?.id, "quick:system-settings:" + identifier)
+            if case .open(let url) = result?.action { XCTAssertEqual(url.absoluteString, "x-apple.systempreferences:" + identifier) }
+            else { preconditionFailure("Settings must open a fixed pane URL") }
+        }
+        XCTAssertEqual(QuickProvider.results(query: "WiFi").first?.id, "quick:system-settings:com.apple.wifi-settings-extension")
+        XCTAssertEqual(SystemSettingsCatalog.results(query: "系統設定").first?.id, "quick:settings")
+        for query in ["", "a", "my-private-video.mp4", "wifi unknownword", "wifi?injected=true", "3000tb rmb"] {
+            XCTAssertTrue(SystemSettingsCatalog.results(query: query).isEmpty)
+        }
+    }
+
+    func testSystemShortcutPreferences() {
+        let commandSpace: [String: Any] = ["enabled": true, "value": ["parameters": [32, 49, 1048576]]]
+        let binding = SystemShortcutPreference.enabledBinding(commandSpace)
+        XCTAssertNotNil(binding)
+        XCTAssertTrue(SystemShortcutPreference.sameKeys(binding!, .commandSpace))
+        XCTAssertNil(SystemShortcutPreference.enabledBinding(["enabled": false, "value": ["parameters": [32, 49, 1048576]]]))
+        XCTAssertNil(SystemShortcutPreference.enabledBinding(["enabled": true, "value": ["parameters": [32, 49]]]))
+        XCTAssertNil(SystemShortcutPreference.enabledBinding(["enabled": true, "value": ["parameters": [32, -1, 1048576]]]))
+        let changed: [String: Any] = ["enabled": true, "value": ["parameters": [32, 49, 786432]]]
+        XCTAssertTrue(SystemShortcutPreference.sameKeys(SystemShortcutPreference.enabledBinding(changed)!, .standard))
+        XCTAssertFalse(SystemShortcutPreference.sameKeys(binding!, .standard))
+        XCTAssertEqual(SearchMode.shortcuts.rawValue, "捷徑")
+    }
+
     func testSourceConnectionQueue() {
         var queue = SourceConnectionQueue()
         XCTAssertTrue(queue.enqueue(.notes, allowPrompt: false))

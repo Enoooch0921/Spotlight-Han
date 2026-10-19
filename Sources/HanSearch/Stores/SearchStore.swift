@@ -23,12 +23,23 @@ final class SearchStore: ObservableObject {
     private var currencyQuery = ""
     @Published var selection: String?
     @Published var searching = false
+    @Published var searchPhase = ""
     @Published var indexing = false
     @Published var folder: URL?
     @Published var notice = ""
     @Published var indexNotice = ""
     @Published var hotkeyNotice = "⌃⌥Space"
-    @Published var hotkeyError = ""
+    @Published var hotkeyError = "" { didSet { onLayoutChanged?() } }
+    let loginItem = LoginItemService()
+    @Published var interfaceLanguage = L.language {
+        didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
+    }
+    @Published var translationSource = UserDefaults.standard.string(forKey: "translationSource.v1") ?? "auto" {
+        didSet { UserDefaults.standard.set(translationSource, forKey: "translationSource.v1") }
+    }
+    @Published var translationTarget = UserDefaults.standard.string(forKey: "translationTarget.v1") ?? "zh-Hant" {
+        didSet { UserDefaults.standard.set(translationTarget, forKey: "translationTarget.v1") }
+    }
     @Published var motionEnabled = UserDefaults.standard.object(forKey: "launcherMotion.v1") as? Bool ?? true {
         didSet { UserDefaults.standard.set(motionEnabled, forKey: "launcherMotion.v1") }
     }
@@ -67,6 +78,10 @@ final class SearchStore: ObservableObject {
     private var searchTask: Task<Void, Never>?
 
     init() {
+        if let saved = UserDefaults.standard.stringArray(forKey: "enabledSources.v1") {
+            let renamed = saved.map { $0 == "動作" ? SearchMode.shortcuts.rawValue : $0 }
+            if renamed != saved { UserDefaults.standard.set(renamed, forKey: "enabledSources.v1") }
+        }
         let allowed = fileAccess.urls
         if let saved = UserDefaults.standard.stringArray(forKey: "indexRootPaths.v2") {
             catalogRoots = saved.map { fileAccess.resolvedIndexURL($0) }.filter { root in allowed.contains { root.path == $0.path || root.path.hasPrefix($0.path + "/") } }
@@ -88,8 +103,15 @@ final class SearchStore: ObservableObject {
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
-    var hasBody: Bool { !query.isEmpty || mode != .all || details != nil }
+    var hasBody: Bool { !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
     var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
+    var activityDescription: String? {
+        if searching { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
+        if indexing { return indexNotice.isEmpty ? "正在讀取文件內容…" : indexNotice }
+        if catalogRefreshing { return catalogStatus }
+        if currencyResults.first?.id == "quick:currency:loading" { return "正在取得每日參考匯率…" }
+        return nil
+    }
 
     func search() {
         details = nil
@@ -107,27 +129,37 @@ final class SearchStore: ObservableObject {
         guard !term.isEmpty else {
             results = []; quickResults = []; selection = nil; searching = false; notice = ""; onLayoutChanged?(); return
         }
-        searching = true
+        searching = true; searchPhase = "正在比對\(mode == .all ? "App、檔名與已連接資料" : mode.rawValue)…"
         let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal
+        let processCancellation = ProcessCancellation()
         searchTask = Task {
             do { try await Task.sleep(for: .milliseconds(60)) } catch { return }
             guard !Task.isCancelled else { return }
-            let task = Task.detached(priority: .userInitiated) {
+            let task = Task.detached(priority: .userInitiated) { [weak self] in
                 let start = Date()
+                func stage(_ text: String) {
+                    Task { @MainActor in
+                        guard let self, self.generation == token, self.searching else { return }
+                        self.searchPhase = text
+                    }
+                }
                 var files: [SearchItem] = [], quick: [QuickResult] = []
                 var warning: String?
-                let utilities = [SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term) : []
+                let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
+                    stage("正在比對本機檔名清單…")
                     files += FileCatalog.search(entries, query: term, mode: mode)
                 }
                 if !utilityOnly && (mode == .all || mode == .apps) {
+                    stage("正在搜尋應用程式…")
                     files += SearchService.searchApplications(query: term)
                 }
                 if mode == .contents {
+                    stage(folder == nil ? "正在查詢系統文件內容索引…" : "正在比對已載入的文件內容…")
                     if folder != nil { files += docs.compactMap { $0.match(query: term, mode: .contents) } }
                     else {
-                        let response = SearchService.search(query: term, mode: .contents)
+                        let response = SearchService.search(query: term, mode: .contents, cancellation: processCancellation)
                         files += response.items; warning = response.warning
                     }
                 }
@@ -142,7 +174,9 @@ final class SearchStore: ObservableObject {
                 let web = mode == .all ? QuickProvider.webSearch(query: term) : nil
                 return (SearchService.merge(files, query: term), quick, web, warning, Date().timeIntervalSince(start) * 1000)
             }
-            let (files, quick, web, warning, elapsed) = await task.value
+            let (files, quick, web, warning, elapsed) = await withTaskCancellationHandler {
+                await task.value
+            } onCancel: { processCancellation.cancel(); task.cancel() }
             guard !Task.isCancelled, self.generation == token else { return }
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
@@ -332,7 +366,7 @@ final class SearchStore: ObservableObject {
             }
             try Task.checkCancellation()
             sourceReading = true
-            if source != .notes && source != .mail { authorizationInFlight = false }
+            authorizationInFlight = false
             personalStatus[source] = "正在讀取\(source.rawValue)…"
             let loaded: PersonalLoad
             if source == .alarms {
@@ -438,9 +472,9 @@ final class SearchStore: ObservableObject {
                     catch { notice = "無法開啟備忘錄，請檢查自動化授權。" }
                 }
             case .shortcut(let name):
-                let alert = NSAlert(); alert.messageText = "執行捷徑「\(name)」？"
-                alert.informativeText = "此捷徑會執行你在捷徑 App 中設定的動作。請確認內容後執行。"
-                alert.addButton(withTitle: "執行"); alert.addButton(withTitle: "取消")
+                let alert = NSAlert(); alert.messageText = L.format("執行捷徑「%@」？", name)
+                alert.informativeText = L.text("此捷徑會執行你在捷徑 App 中設定的動作。請確認內容後執行。")
+                alert.addButton(withTitle: L.text("執行")); alert.addButton(withTitle: L.text("取消"))
                 guard alert.runModal() == .alertFirstButtonReturn else { return }
                 Task {
                     do {

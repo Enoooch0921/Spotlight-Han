@@ -7,7 +7,7 @@ let package = Package(
     products: [.executable(name: "HanSearch", targets: ["HanSearch"])],
     targets: [
         .target(name: "HanSearchCore"),
-        .executableTarget(name: "HanSearch", dependencies: ["HanSearchCore"]),
+        .executableTarget(name: "HanSearch", dependencies: ["HanSearchCore"], exclude: ["Resources"]),
         .executableTarget(name: "HanSearchChecks", dependencies: ["HanSearchCore"], path: "Tests/HanSearchCoreTests")
     ]
 )

@@ -2,7 +2,7 @@ import Foundation
 
 public enum SearchMode: String, CaseIterable, Sendable {
     case all = "全部", apps = "App", names = "檔名", videos = "影片", contents = "文件內容"
-    case notes = "備忘錄", contacts = "聯絡人", calendar = "行事曆", mail = "郵件", shortcuts = "動作", clipboard = "剪貼板"
+    case notes = "備忘錄", contacts = "聯絡人", calendar = "行事曆", mail = "郵件", shortcuts = "捷徑", clipboard = "剪貼板"
     case reminders = "提醒事項", alarms = "鬧鐘"
 }
 

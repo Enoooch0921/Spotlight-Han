@@ -43,7 +43,7 @@ public enum QuickProvider {
     public static func results(query: String) -> [QuickResult] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
-        var items: [QuickResult] = []
+        var items: [QuickResult] = SystemSettingsCatalog.results(query: query)
         if let plan = TaskCommandParser.parse(query) {
             let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
             let displayDate: Date
@@ -68,9 +68,6 @@ public enum QuickProvider {
             items.append(QuickResult(id: "url", title: query, subtitle: "在預設瀏覽器開啟", symbol: "globe", action: .open(url)))
         } else if !["doc", "docx", "pdf", "txt", "md", "xlsx", "pptx", "mp4", "mov", "mkv", "jpg", "jpeg", "png", "zip"].contains((query as NSString).pathExtension.lowercased()), query.range(of: #"^(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,63}(?::[0-9]{1,5})?$"#, options: .regularExpression) != nil, let url = URL(string: "https://" + query) {
             items.append(QuickResult(id: "url", title: query, subtitle: "在預設瀏覽器開啟", symbol: "globe", action: .open(url)))
-        }
-        if ["設定", "系统设置", "系統設定", "settings"].contains(query.lowercased()) {
-            items.append(QuickResult(id: "settings", title: "系統設定", subtitle: "開啟 Mac 系統設定", symbol: "gearshape", action: .open(URL(fileURLWithPath: "/System/Applications/System Settings.app"))))
         }
         return items
     }

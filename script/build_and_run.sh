@@ -18,6 +18,7 @@ cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 if [[ -f "$ROOT_DIR/Assets/SpotlightHan.icns" ]]; then cp "$ROOT_DIR/Assets/SpotlightHan.icns" "$APP_BUNDLE/Contents/Resources/SpotlightHan.icns"; fi
 cp "$ROOT_DIR/Assets/Shortcuts/Spotlight-Han-System-Clock.shortcut" "$APP_BUNDLE/Contents/Resources/"
 cp "$ROOT_DIR/LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
+cp -R "$ROOT_DIR/Sources/HanSearch/Resources/". "$APP_BUNDLE/Contents/Resources/"
 cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -26,10 +27,12 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>local.hansearch.mac</string>
 <key>CFBundleName</key><string>Spotlight Han</string>
 <key>CFBundleDisplayName</key><string>Spotlight Han</string>
+<key>CFBundleDevelopmentRegion</key><string>zh-Hant</string>
+<key>CFBundleLocalizations</key><array><string>zh-Hant</string><string>zh-Hans</string><string>en</string></array>
 <key>CFBundleIconFile</key><string>SpotlightHan.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.5.3</string>
-<key>CFBundleVersion</key><string>9</string>
+<key>CFBundleShortVersionString</key><string>0.6.0</string>
+<key>CFBundleVersion</key><string>10</string>
 <key>NSContactsUsageDescription</key><string>在本機搜尋你允許取用的聯絡人，不會上傳。</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>搜尋行事曆，並依你確認的指令新增行程。</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>搜尋提醒事項，並依你確認的指令新增提醒。</string>

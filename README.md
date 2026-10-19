@@ -45,20 +45,21 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 | --- | --- |
 | 計算 | `(1200+300)*0.9` |
 | 單位換算 | `5 km to m` |
+| 開啟系統設定子頁 | `隱私安全性`、`wifi`、`蓝牙` 或 `Bluetooth`。 |
 | 台幣換人民幣 | `3000tb rmb` |
 | 同時看多個幣別 | `3000tb`，預設顯示 CNY、USD、JPY，可在設定更改。 |
 | 新增系統提醒事項 | `提醒我明天上午9點交報告`，預覽後按 Return。 |
 | 設定 Apple 時鐘鬧鐘 | `設定30分鐘後的鬧鐘`，首次需加入內附捷徑。 |
 
-也支援經授權搜尋備忘錄、聯絡人、行事曆、提醒事項與 Mail，以及選擇啟用的剪貼板記錄。非中文查詢可在搜尋結果上方顯示本機繁體中文翻譯。
+也支援經授權搜尋備忘錄、聯絡人、行事曆、提醒事項與 Mail，以及選擇啟用的剪貼板記錄。可在搜尋結果上方顯示 Apple 本機翻譯，來源及目標語言可自訂。
 
 匯率使用免費每日參考資料，畫面標示時間與來源；本機翻譯需 macOS 15 以上並先準備 Apple 語言模型。私人資料來源與建立指令需個別設定及系統授權。詳見[完整功能與限制](docs/guide.zh-Hant.md#功能)。
 
 ## 開始使用
 
-**目前為 0.5.3 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
+**目前為 0.6.0 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
-**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.5.3-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
+**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.6.0-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
 
 若要自行從原始碼建置，需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
 
@@ -73,7 +74,9 @@ cd Spotlight-Han
 3. 按「選擇搜尋資料夾…」，加入下載、影片、文件等實際想搜尋的位置，等待首次掃描完成。
 4. 輸入關鍵字；用 `↑ / ↓` 選擇、`Return` 開啟、`Escape` 收起。
 
-想改用 **⌘Space**：在 Han 設定按「開啟 Spotlight 快捷鍵開關」，自行關閉原生 Spotlight 的組合鍵，再回 Han 按「使用 ⌘Space」。
+介面語言可選跟隨系統、繁體中文、简体中文或 English；翻譯另外設定來源及目標語言。一般設定提供登入時自動啟動；搜尋／索引會顯示目前處理狀態。
+
+想改用 **⌘Space**：在 Han 設定按「開啟 Spotlight 快捷鍵開關」，自行關閉原生 Spotlight 的組合鍵，再回 Han 按「使用 ⌘Space」。Han 會檢查系統快捷鍵衝突；無法註冊時保留原本的組合。其他 App 的衝突仍以系統是否允許註冊為準。
 
 ## 試用前，先了解這幾件事
 

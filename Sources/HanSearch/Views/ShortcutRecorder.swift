@@ -23,7 +23,7 @@ final class RecorderButton: NSButton {
     var recording = false
     override var acceptsFirstResponder: Bool { true }
     @objc func beginRecording() {
-        recording = true; title = "按下快捷鍵（Esc 取消）"; window?.makeFirstResponder(self)
+        recording = true; title = L.text("按下快捷鍵（Esc 取消）"); window?.makeFirstResponder(self)
     }
     override func resignFirstResponder() -> Bool { recording = false; title = savedTitle; return super.resignFirstResponder() }
     override func keyDown(with event: NSEvent) {
@@ -48,7 +48,7 @@ final class RecorderButton: NSButton {
         default: label = event.charactersIgnoringModifiers?.uppercased() ?? "Key \(event.keyCode)"
         }
         let binding = ShortcutBinding(keyCode: UInt32(event.keyCode), modifiers: carbon, keyLabel: label)
-        guard binding.isValid else { title = "請搭配 ⌘、⌃ 或 ⌥"; return }
+        guard binding.isValid else { title = L.text("請搭配 ⌘、⌃ 或 ⌥"); return }
         recording = false; title = savedTitle; changed?(binding)
     }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
