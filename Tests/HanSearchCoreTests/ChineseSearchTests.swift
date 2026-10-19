@@ -118,6 +118,12 @@ final class ChineseSearchTests {
             reply(.success(7)); reply(.success(9))
         }
         XCTAssertEqual(result, 7)
+        for _ in 0..<25 {
+            do {
+                let _: Int = try await TimedCallback.wait(timeout: 0) { reply in reply(.success(99)) }
+                preconditionFailure("An expired deadline must reject a reply even before the watchdog runs")
+            } catch CallbackFailure.timedOut { }
+        }
         let start = Date()
         do {
             let _: Int = try await TimedCallback.wait(timeout: 0.03) { reply in
