@@ -74,6 +74,19 @@
 
 App 名稱可省略空格或以連字號／底線分隔，例如 `logicpro`、`Logic Pro`、`logic-pro` 都能找到 Logic Pro；`finalcutpro` 也能比對 Final Cut Pro。這個規則只用於 App 名稱與中繼資料，沒有將備忘錄或文件全文的空格任意合併。
 
+內建常見 App 縮寫，一般搜尋與 App 列表共用，大小寫均可。僅比對已安裝的 App；不會為所有名稱任意產生首字母縮寫。完整名稱正好相符的結果仍優先於縮寫，反覆開啟後也會套用搜尋習慣。
+
+| 輸入 | 對應 App |
+| --- | --- |
+| `fcp`／`fcpx` | Final Cut Pro（含 Creator Studio 名稱） |
+| `lpx` | Logic Pro |
+| `ps` | Adobe Photoshop |
+| `ai` | Adobe Illustrator |
+| `ae` | Adobe After Effects |
+| `pr` | Adobe Premiere Pro |
+| `vscode` | Visual Studio Code |
+| `ppt` | Microsoft PowerPoint |
+
 「搜尋習慣」預設開啟。成功開啟 App／檔案、成功切到備忘錄、顯示聯絡人／行程／提醒詳情、開啟郵件或成功執行已確認的捷徑後，才記錄該搜尋詞的選擇；僅選取、滑過、開啟失敗、計算器／翻譯／剪貼板等不學習。相同搜尋詞的重複選擇優先；不同詞也會小幅參考常用結果與類型。單次誤開不會直接蓋掉明確的完整名稱符合。分數隨未使用時間減弱（90天半衰期），365天未用移除，最多2,000組。
 
 這項學習從 0.8.1 更新後開始累積；舊版只有最近開啟 App 清單，無法回溯更新前搜尋各個詞的開啟選擇。

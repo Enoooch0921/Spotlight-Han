@@ -94,6 +94,14 @@ final class AppLibraryStore: ObservableObject {
                 let x = recent.firstIndex(of: a.preferenceID) ?? Int.max, y = recent.firstIndex(of: b.preferenceID) ?? Int.max
                 if x != y { return x < y }
             }
+            if !terms.isEmpty, customID != nil || scope != .recent {
+                func relevance(_ app: InstalledApplication) -> Int {
+                    let name = ChineseSearch.applicationKey(app.name), needle = ChineseSearch.applicationKey(query)
+                    return name == needle ? 4 : ApplicationAliases.matches(query, aliases: app.aliases) ? 3 : name.hasPrefix(needle) ? 2 : name.contains(needle) ? 1 : 0
+                }
+                let x = relevance(a), y = relevance(b)
+                if x != y { return x > y }
+            }
             let order = a.name.localizedStandardCompare(b.name)
             return order == .orderedSame ? a.id < b.id : order == .orderedAscending
         }

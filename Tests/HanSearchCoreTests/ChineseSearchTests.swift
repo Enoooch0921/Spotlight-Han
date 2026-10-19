@@ -96,12 +96,24 @@ final class ChineseSearchTests {
         XCTAssertFalse(logic.matches("procom")) // Do not join separate metadata fields.
         let fcp = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Final Cut Pro.app"), name: "Final Cut Pro Creator Studio")
         XCTAssertTrue(fcp.matches("finalcutpro"))
+        for query in ["fcp", "FCP", "fcpx", "fcp creator"] { XCTAssertTrue(fcp.matches(query)) }
+        XCTAssertFalse(fcp.matches("cp"))
+        XCTAssertTrue(InstalledApplication(url: URL(fileURLWithPath: "/fixture/Renamed.app"), name: "剪輯", bundleID: "com.apple.FinalCut").matches("fcp"))
+        XCTAssertTrue(InstalledApplication(url: URL(fileURLWithPath: "/fixture/Adobe Photoshop 2026.app"), name: "Adobe Photoshop 2026").matches("PS"))
+        XCTAssertFalse(InstalledApplication(url: URL(fileURLWithPath: "/fixture/Fancy Creative Product.app"), name: "Fancy Creative Product").matches("fcp"))
+        let exactFCP = SearchItem(url: URL(fileURLWithPath: "/fixture/FCP.app"), name: "FCP", source: "fixture")
+        let aliasOrder = SearchService.merge([fcp.searchItem, exactFCP, similarlyNamedFileFixture()], query: "fcp")
+        XCTAssertEqual(aliasOrder.prefix(2).map(\.id), [exactFCP.id, fcp.id])
         let similarlyNamedFile = SearchItem(url: URL(fileURLWithPath: "/fixture/logicpro guide.pdf"), source: "fixture")
         let spotlightApp = SearchItem(url: logic.url, source: "Spotlight")
         let merged = SearchService.merge([similarlyNamedFile, spotlightApp, logic.searchItem], query: "logicpro")
         XCTAssertEqual(merged.first?.id, logic.id)
         XCTAssertEqual(merged.first?.applicationIdentifier, logic.preferenceID)
         XCTAssertEqual(apps.first { $0.bundleID == "fixture.tool" }?.group, .other)
+    }
+
+    private func similarlyNamedFileFixture() -> SearchItem {
+        SearchItem(url: URL(fileURLWithPath: "/fixture/fcp guide.pdf"), source: "fixture")
     }
 
     func testEventAccessCallbackState() {

@@ -156,7 +156,7 @@ final class SearchStore: ObservableObject {
         }
         appLibrary.rankSearch = { [weak self] apps, query in
             guard let self else { return apps }
-            let candidates = apps.map { HabitCandidate(id: $0.id, identity: "app:" + $0.preferenceID, title: $0.name, kind: .app) }
+            let candidates = apps.map { HabitCandidate(id: $0.id, identity: "app:" + $0.preferenceID, title: $0.name, kind: .app, aliases: $0.aliases) }
             let order = self.habits.ordered(candidates, query: query)
             let byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             return order.compactMap { byID[$0] }

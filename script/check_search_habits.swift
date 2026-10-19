@@ -35,6 +35,8 @@ actor NoteFixture {
         precondition(types.ordered([noteTie,appTie],query:"測試",now:now).first == appTie.id, "Type preference breaks comparable relevance ties")
         let exactNote = HabitCandidate(id:"exact",identity:"note:exact",title:"Exact",kind:.note)
         precondition(types.ordered([appTie,exactNote],query:"Exact",now:now).first == exactNote.id, "General App preference cannot override a clear title match")
+        let fcpAlias = HabitCandidate(id:"fcp",identity:"app:fcp",title:"Final Cut Pro",kind:.app,aliases:["fcp","fcpx"])
+        precondition(types.ordered([noteTie,fcpAlias],query:"fcp",now:now).first == fcpAlias.id, "Known aliases retain relevance when habits are present")
         let encoded = try JSONEncoder().encode(history)
         let text = String(decoding:encoded,as:UTF8.self)
         for secret in ["Logic Pro","LOGICPRO","private-id","工作筆記","/fixture/private.docx"] { precondition(!text.contains(secret)) }

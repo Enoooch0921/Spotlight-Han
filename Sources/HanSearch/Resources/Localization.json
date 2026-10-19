@@ -461,5 +461,6 @@
   "清除學習紀錄": "Clear learned choices",
   "無法儲存搜尋習慣；本次仍可使用。": "Could not save search habits; available for this session.",
   "依相關性與開啟習慣排列": "Sorted by relevance and opening habits",
+  "依相關性排列": "Sorted by relevance",
   "無法開啟項目": "Could not open the item"
 }

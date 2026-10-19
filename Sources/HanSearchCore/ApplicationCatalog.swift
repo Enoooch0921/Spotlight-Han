@@ -59,16 +59,19 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
     public var group: ApplicationGroup { ApplicationGroup.declared(declaredCategory) }
     private let folded: [String]
     private let compact: [String]
+    public let aliases: [String]
     public init(url: URL, name: String, bundleID: String? = nil, declaredCategory: String? = nil) {
         self.url = url; self.name = name; self.bundleID = bundleID; self.declaredCategory = declaredCategory
         folded = [name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""].map(ChineseSearch.normalized)
         compact = folded.map(ChineseSearch.applicationKey)
+        aliases = ApplicationAliases.aliases(name: name, bundleID: bundleID)
     }
     public func matches(_ query: String) -> Bool {
         matches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
     }
     public func matches(terms: [String]) -> Bool {
         terms.allSatisfy { term in
+            if ApplicationAliases.matches(term, aliases: aliases) { return true }
             if folded.contains(where: { $0.contains(term) }) { return true }
             let value = ChineseSearch.applicationKey(term)
             return !value.isEmpty && compact.contains { $0.contains(value) }

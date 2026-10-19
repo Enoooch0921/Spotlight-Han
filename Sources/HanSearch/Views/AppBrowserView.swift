@@ -175,7 +175,7 @@ struct AppBrowserView: View {
                 Text(library.selectedTitle).font(.system(size: 12, weight: .semibold))
                 Text(String(apps.count)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 Spacer()
-                Text(L.text(library.selectedCustomGroupID == nil && library.group == .recent ? "依開啟時間排列" : !store.query.isEmpty && store.habits.enabled && !store.habits.history.entries.isEmpty ? "依相關性與開啟習慣排列" : "依名稱排列")).font(.system(size: 10)).foregroundStyle(.secondary)
+                Text(L.text(library.selectedCustomGroupID == nil && library.group == .recent ? "依開啟時間排列" : !store.query.isEmpty ? store.habits.enabled && !store.habits.history.entries.isEmpty ? "依相關性與開啟習慣排列" : "依相關性排列" : "依名稱排列")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 16).padding(.top, 14)
             }
             if library.isEditingCategory { categoryEditor }

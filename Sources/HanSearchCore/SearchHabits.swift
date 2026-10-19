@@ -10,8 +10,10 @@ public struct HabitCandidate: Sendable {
     public let identity: String
     public let title: String
     public let kind: SearchResultKind
-    public init(id: String, identity: String, title: String, kind: SearchResultKind) {
+    public let aliases: [String]
+    public init(id: String, identity: String, title: String, kind: SearchResultKind, aliases: [String] = []) {
         self.id = id; self.identity = identity; self.title = title; self.kind = kind
+        self.aliases = aliases
     }
 }
 
@@ -66,7 +68,8 @@ public struct SearchHabitHistory: Codable, Sendable {
         func score(_ item: HabitCandidate) -> Double {
             let name = ChineseSearch.normalized(item.title)
             let compact = ChineseSearch.applicationKey(name), compactNeedle = ChineseSearch.applicationKey(needle)
-            let relevance: Double = name == needle || (item.kind == .app && compact == compactNeedle) ? 300 : name.hasPrefix(needle) || (item.kind == .app && compact.hasPrefix(compactNeedle)) ? 220 : name.contains(needle) ? 140 : 60
+            let alias = item.kind == .app && ApplicationAliases.matches(query, aliases: item.aliases)
+            let relevance: Double = name == needle || (item.kind == .app && compact == compactNeedle) ? 300 : alias ? 260 : name.hasPrefix(needle) || (item.kind == .app && compact.hasPrefix(compactNeedle)) ? 220 : name.contains(needle) ? 140 : 60
             let target = digest("t:" + item.identity)
             let count = queryCounts[target, default: 0]
             // Repeated choices for this query can override title relevance; one accidental

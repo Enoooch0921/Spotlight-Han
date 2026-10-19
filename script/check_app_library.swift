@@ -22,6 +22,12 @@ struct AppLibraryChecks {
         }
         library.refresh(); library.refresh(force: true)
         try await waitForLoad(library)
+        let fcp = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Final Cut Pro.app"), name: "Final Cut Pro")
+        let exactFCP = InstalledApplication(url: URL(fileURLWithPath: "/fixture/FCP.app"), name: "FCP")
+        let aliasLibrary = AppLibraryStore(defaults: defaults, loader: { [fcp, exactFCP] }, opener: { _ in false })
+        aliasLibrary.refresh(); try await waitForLoad(aliasLibrary)
+        precondition(aliasLibrary.items(query: "FCP").map(\.id) == [exactFCP.id, fcp.id])
+        precondition(aliasLibrary.items(query: "fcpx").map(\.id) == [fcp.id])
         precondition(library.applications.count == 25 && library.group == .all)
         precondition(library.items(query: "红果短剧").map(\.id) == [apps[1].id])
         precondition(library.items(query: "", group: .recent).isEmpty)

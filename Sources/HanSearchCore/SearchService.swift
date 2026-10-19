@@ -106,7 +106,8 @@ public enum SearchService {
             let name = ChineseSearch.normalized(item.name)
             let compactName = item.isApplication ? ChineseSearch.applicationKey(item.name) : name
             let compactNeedle = item.isApplication ? ChineseSearch.applicationKey(query) : needle
-            return (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (item.isApplication ? 5 : 0)
+            let alias = item.isApplication && ApplicationAliases.matches(query, aliases: ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier))
+            return (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (alias ? 80 : 0) + (item.isApplication ? 5 : 0)
         }
         return Array(byPath.values.sorted { a, b in
             let x = score(a), y = score(b)

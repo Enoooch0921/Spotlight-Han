@@ -65,6 +65,7 @@
 "依名稱排列" = "Sorted by name";
 "依已安裝 App 建議分類" = "Suggestions from installed apps";
 "依用途分類，可右鍵更改或釘選；最近開啟只記錄從 Han 開啟的 App。" = "Grouped by purpose. Right-click to change a category or pin an app. Recents record only apps opened through Han.";
+"依相關性排列" = "Sorted by relevance";
 "依相關性與開啟習慣排列" = "Sorted by relevance and opening habits";
 "依開啟時間排列" = "Most recently opened first";
 "停止連接" = "Stop connecting";

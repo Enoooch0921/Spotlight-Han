@@ -3,7 +3,7 @@ import HanSearchCore
 
 extension SearchStore {
     func habitCandidate(_ item: SearchItem) -> HabitCandidate {
-        HabitCandidate(id: item.id, identity: item.isApplication ? "app:" + (item.applicationIdentifier ?? item.url.path) : "file:" + item.id, title: item.name, kind: item.isApplication ? .app : .file)
+        HabitCandidate(id: item.id, identity: item.isApplication ? "app:" + (item.applicationIdentifier ?? item.url.path) : "file:" + item.id, title: item.name, kind: item.isApplication ? .app : .file, aliases: item.isApplication ? ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier) : [])
     }
     func habitCandidate(_ item: QuickResult) -> HabitCandidate? {
         let kinds: [(String, SearchResultKind)] = [("note:", .note), ("contact:", .contact), ("event:", .calendar), ("reminder:", .reminder), ("mail:", .mail), ("shortcut:", .shortcut)]
