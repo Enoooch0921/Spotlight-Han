@@ -495,6 +495,7 @@ final class ChineseSearchTests {
         guard case let .match(snippet) = DocumentPreview.read(docxURL, query: "教會活動", cancellation: ProcessCancellation()) else { preconditionFailure("Missing Word preview") }
         XCTAssertTrue(snippet.contains("教会活动") && !SearchHighlight.ranges(in: snippet, query: "教會活動").isEmpty)
         XCTAssertEqual(DocumentPreview.read(docxURL, query: "不存在的測試詞", cancellation: ProcessCancellation()), .noLiteralMatch)
+        XCTAssertEqual(DocumentPreview.read(docxURL, query: "教會 不存在的測試詞", cancellation: ProcessCancellation()), .noLiteralMatch)
     }
 
     func testRealSpotlightQueryDoesNotError() throws {

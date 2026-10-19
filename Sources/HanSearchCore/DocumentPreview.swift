@@ -19,6 +19,9 @@ public enum DocumentPreview: Sendable, Equatable {
             func excerpt(_ text: String) -> DocumentPreview {
                 guard !cancellation.isCancelled else { return .cancelled }
                 guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .unavailable(.noText) }
+                let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
+                let folded = ChineseSearch.normalized(text)
+                guard !terms.isEmpty, terms.allSatisfy({ folded.contains($0) }) else { return .noLiteralMatch }
                 let snippet = SearchHighlight.excerpt(in: text, query: query, limit: 220)
                 return SearchHighlight.ranges(in: snippet, query: query).isEmpty ? .noLiteralMatch : .match(snippet)
             }

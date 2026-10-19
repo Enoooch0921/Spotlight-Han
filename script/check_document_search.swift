@@ -1,6 +1,27 @@
 import Foundation
 import HanSearchCore
 
+private final class VerificationFixture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var active = 0, peak = 0
+    private var oldStarted = false, oldFinished = false
+    var maximumConcurrency: Int { lock.lock(); defer { lock.unlock() }; return peak }
+    var startedOld: Bool { lock.lock(); defer { lock.unlock() }; return oldStarted }
+    var finishedOld: Bool { lock.lock(); defer { lock.unlock() }; return oldFinished }
+    private func begin(_ query: String) { lock.lock(); active += 1; peak = max(peak, active); if query == "舊摘要" { oldStarted = true }; lock.unlock() }
+    private func end(_ query: String) { lock.lock(); active -= 1; if query == "舊摘要" { oldFinished = true }; lock.unlock() }
+    private func slowResponse() { Thread.sleep(forTimeInterval: 0.35) }
+    func read(_ url: URL, query: String) async -> DocumentPreview {
+        begin(query); defer { end(query) }
+        if query == "舊摘要" {
+            await Task.detached { self.slowResponse() }.value
+            return .match("舊摘要不該蓋掉新查詢")
+        }
+        do { try await Task.sleep(for: .milliseconds(10)) } catch { return .cancelled }
+        return url.lastPathComponent == "z-real.docx" ? .match("如果只能用這份真正有內文的文件") : .noLiteralMatch
+    }
+}
+
 private final class IndexFixture: @unchecked Sendable {
     private let lock = NSLock()
     private var calls: [String] = []
@@ -87,6 +108,26 @@ private final class IndexFixture: @unchecked Sendable {
         let cachedPreview = await previews.preview(url: written, query: "內文測試詞")
         precondition(cachedPreview == snippet)
         precondition(DocumentPreview.read(written, query: "內文測試詞", cancellation: ProcessCancellation()) == .noLiteralMatch)
+        let verifier = VerificationFixture()
+        let candidates = (0..<24).map { SearchItem(url: URL(fileURLWithPath: "/fixture/noise-\($0).txt"), source: "文件・系統索引") } + [SearchItem(url: URL(fileURLWithPath: "/fixture/z-real.docx"), source: "文件・系統索引")]
+        let ranked = SearchStore(loadSources: false, taskPreferences: defaults, sourcePreferences: defaults,
+                                 contentSearcher: { term, _ in SearchResponse(items: term == "舊摘要" ? [SearchItem(url: URL(fileURLWithPath: "/fixture/old.pdf"), source: "文件・系統索引")] : candidates) },
+                                 documentPreviewLoader: { await verifier.read($0, query: $1) })
+        ranked.fullTextInAll = true
+        ranked.query = "如果只能用"; ranked.search()
+        try await wait { !ranked.searching && !ranked.verifyingDocumentContents && ranked.results.count == 25 }
+        precondition(ranked.allIDs == ["/fixture/z-real.docx"] && ranked.otherIndexedResultCount == 24, "Unverified native matches must not bury a later literal hit")
+        precondition(verifier.maximumConcurrency <= 2, "Verification must bound concurrent reads")
+        for _ in 0..<20 { ranked.habits.record(query: ranked.query, identity: "file:/fixture/noise-0.txt", kind: .file) }
+        ranked.toggleOtherIndexedResults()
+        precondition(ranked.allIDs.first == "/fixture/z-real.docx" && ranked.allIDs.count == 25, "Habits must not promote unrelated index candidates above confirmed matches")
+        ranked.selection = "/fixture/z-real.docx"; ranked.toggleOtherIndexedResults()
+        precondition(ranked.selection == "/fixture/z-real.docx")
+        ranked.query = "舊摘要"; ranked.search(); try await wait { verifier.startedOld }
+        ranked.query = "如果只能用"; ranked.search()
+        try await wait { verifier.finishedOld && !ranked.searching && !ranked.verifyingDocumentContents }
+        precondition(ranked.documentPreviews["/fixture/old.pdf"] == nil && ranked.allIDs == ["/fixture/z-real.docx"] && !ranked.showOtherIndexedResults, "Late old snippets must not leak into a new query")
+        print("PASS: literal content evidence outranks unrelated index matches and habits, candidates verified without scrolling, collapsed fallback, bounded concurrency and late-preview rejection")
         print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")
     }
 }

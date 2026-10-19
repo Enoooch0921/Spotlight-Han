@@ -8,7 +8,15 @@ import Combine
 final class SearchStore: ObservableObject {
     @Published var query = ""
     @Published var mode: SearchMode = .all
-    @Published var results: [SearchItem] = []
+    @Published var results: [SearchItem] = [] { didSet { cacheDocumentFilenameMatches() } }
+    var documentFilenameMatches = Set<String>()
+    @Published var documentPreviews: [String: DocumentPreview] = [:]
+    @Published var verifyingDocumentContents = false
+    @Published var showOtherIndexedResults = false
+    var documentVerificationTask: Task<Void, Never>?
+    var documentVerificationGeneration = UUID()
+    var documentVerificationQuery = ""
+    var documentVerificationStarted = Date.distantPast
     @Published var quickResults: [QuickResult] = []
     @Published var translationResult: QuickResult?
     @Published var currencyResults: [QuickResult] = []
@@ -125,6 +133,7 @@ final class SearchStore: ObservableObject {
     private let resultOpener: (URL) -> Bool
     private let noteOpener: @Sendable (String) async throws -> Void
     private let contentSearcher: @Sendable (String, ProcessCancellation) -> SearchResponse
+    let documentPreviewLoader: @Sendable (URL, String) async -> DocumentPreview
     private var cachedGlobalQuery: String?
     private var cachedGlobalContents: [SearchItem] = []
     private let sourcePreferences: UserDefaults
@@ -155,9 +164,11 @@ final class SearchStore: ObservableObject {
          resultOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
          noteOpener: @escaping @Sendable (String) async throws -> Void = { id in try await Task.detached { try PersonalSources.openNote(id) }.value },
          contentSearcher: @escaping @Sendable (String, ProcessCancellation) -> SearchResponse = { query, cancellation in SearchService.searchDocumentContents(query: query, cancellation: cancellation) },
+         documentPreviewLoader: @escaping @Sendable (URL, String) async -> DocumentPreview = { url, query in await DocumentPreviewStore.shared.preview(url: url, query: query) },
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.contentSearcher = contentSearcher
+        self.documentPreviewLoader = documentPreviewLoader
         self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
         self.aliases = SearchAliasStore(defaults: taskPreferences)
@@ -236,6 +247,7 @@ final class SearchStore: ObservableObject {
     var allIDs: [String] { orderedSearchIDs }
     var activityDescription: String? {
         if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
+        if verifyingDocumentContents { return "正在核對文件內文，已確認的結果會先顯示…" }
         if indexing { return indexNotice.isEmpty ? "正在讀取文件內容…" : indexNotice }
         if catalogRefreshing { return catalogStatus }
         if currencyResults.first?.id == "currency:loading" { return "正在取得每日參考匯率…" }
@@ -262,6 +274,7 @@ final class SearchStore: ObservableObject {
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         if silent && (composerMode != nil || completedQuery != term || completedMode != mode) { return }
         if !silent {
+            resetDocumentVerificationIfNeeded(query: term)
             details = nil; notice = ""; resultRefreshTask?.cancel(); resultRefreshTask = nil; pendingResultsRefresh = false
             searchActivityTask?.cancel(); showSearchActivity = false
         }
@@ -361,6 +374,7 @@ final class SearchStore: ObservableObject {
                 if finalFiles.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
                 if !self.allIDs.contains(self.selection ?? "") { self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first }
                 if response.truncated && warning == nil { warning = "文件內文符合超過 2,000 筆，請增加關鍵字。" }
+                self.verifyDocumentContents(query: term)
             }
             if !silent {
                 self.milliseconds = totalElapsed; self.searching = false
@@ -373,6 +387,7 @@ final class SearchStore: ObservableObject {
         }
     }
     func pauseSearchForComposer() {
+        resetDocumentVerification()
         searchActivityTask?.cancel(); resultRefreshTask?.cancel(); resultRefreshTask = nil
         showSearchActivity = false; pendingResultsRefresh = false
         searchTask?.cancel(); generation = UUID(); currencyTask?.cancel(); currencyQuery = ""

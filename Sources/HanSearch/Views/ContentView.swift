@@ -153,6 +153,15 @@ struct ContentView: View {
                     .onChange(of: store.selection) { _, selected in if let selected { proxy.scrollTo(selected) } }
                 }
             }
+            if store.otherIndexedResultCount > 0 {
+                HStack {
+                    Button { store.toggleOtherIndexedResults() } label: {
+                        Label(L.format(store.showOtherIndexedResults ? "收起其他系統索引結果（%@）" : "其他系統索引結果（%@）", String(store.otherIndexedResultCount)), systemImage: store.showOtherIndexedResults ? "chevron.up" : "chevron.down")
+                    }.buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                        .help(L.text("尚未確認完整內文命中，可能只有檔名、中繼資料或系統分詞符合；預設收起。"))
+                    Spacer()
+                }.padding(.horizontal, 18).padding(.vertical, 8)
+            }
             Divider().padding(.horizontal, 18)
             HStack(spacing: 8) {
                 if store.catalogRefreshing || store.indexing { ProgressView().controlSize(.mini) }
@@ -168,7 +177,7 @@ struct ContentView: View {
         }
     }
     private func fileRow(_ item: SearchItem) -> some View {
-        ResultRow(item: item, query: store.query)
+        ResultRow(item: item, query: store.query, preview: store.documentPreviews[item.id])
             .padding(.horizontal, 12).padding(.vertical, 4)
             .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
             .contentShape(Rectangle())
@@ -269,12 +278,14 @@ struct ContentView: View {
         if store.mode == .clipboard { return L.text(store.clipboardEnabled ? "尚無剪貼板記錄" : "啟用剪貼板記錄") }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) && store.personalStatus[store.mode] == nil { return L.format("連接%@", L.text(store.mode.rawValue)) }
         if store.query.isEmpty { return L.format("搜尋%@", L.text(store.mode.rawValue)) }
-        return L.text(store.searching ? "正在搜尋…" : "找不到符合的項目")
+        return L.text(store.searching || store.verifyingDocumentContents ? "正在搜尋…" : "找不到符合的項目")
     }
     private var emptyDescription: String {
         if store.mode == .clipboard { return "記錄預設關閉；啟用後只保留本次執行期間的文字。" }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
         if store.query.isEmpty { return "輸入關鍵字，繁體與簡體一起比對。" }
+        if store.verifyingDocumentContents { return "正在核對文件內文，已確認的結果會先顯示…" }
+        if store.otherIndexedResultCount > 0 { return "尚未找到完整字詞命中；其他系統索引結果已收起，可展開查看。" }
         if store.mode == .all && store.fullTextInAll {
             return store.searching ? "正在查詢全機文件內文；可先使用已出現的結果。" : "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。"
         }

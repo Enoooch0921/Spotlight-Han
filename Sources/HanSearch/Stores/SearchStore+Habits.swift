@@ -24,6 +24,9 @@ extension SearchStore {
         let calendarSet = Set(calendarIDs)
         var iterator = calendarIDs.makeIterator()
         ranked = ranked.map { calendarSet.contains($0) ? iterator.next()! : $0 }
+        let otherIndexed = Set(results.filter { isOtherIndexedResult($0) }.map(\.id))
+        let confirmed = ranked.filter { !otherIndexed.contains($0) }
+        ranked = confirmed + (showOtherIndexedResults ? ranked.filter { otherIndexed.contains($0) } : [])
         return fixed + ranked
     }
     func recordHabit(_ candidate: HabitCandidate?, query: String) {

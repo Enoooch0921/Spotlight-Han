@@ -86,12 +86,14 @@
 "全天" = "All day";
 "全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可用 Han 直接讀取來補強繁簡比對與 PPTX 文字；「全部」仍保留全機搜尋。舊版 PPT 取決於系統索引。" = "System-wide contents use the macOS index. Unindexed, excluded, unavailable or inaccessible files may be missing. Add a folder for direct Chinese script matching and PPTX extraction; All still searches the system index. Legacy PPT depends on system indexing.";
 "全機文件內文・系統索引" = "Mac-wide document contents · System index";
+"全機文件結果會在背景核對候選文件，優先顯示有完整字詞命中的摘要；其餘系統索引結果預設收起，可展開查看。" = "Candidate documents are checked in the background. Literal content matches appear first; other system-index matches are collapsed by default.";
 "全機文件結果會在背景讀取顯示中的文件摘要，凸顯繁簡命中字；讀取失敗、沒有完整字詞命中或超限會明確標示。" = "Visible system-index document results load excerpts in the background with cross-script highlights. Unavailable, non-literal or limited previews are labeled.";
 "全部" = "All";
 "全部 App" = "All Apps";
 "全部重新讀取" = "Refresh All Connected Sources";
 "共享" = "Sharing";
 "其他" = "Other";
+"其他系統索引結果（%@）" = "Other system-index results (%@)";
 "分鐘" = "minutes";
 "分類名稱" = "Category name";
 "分類名稱需為 1–30 個字" = "Use a category name of 1–30 characters.";
@@ -140,8 +142,10 @@
 "完成" = "Done";
 "專注模式" = "Focus";
 "尚未完成授權" = "Permission not yet completed";
+"尚未找到完整字詞命中；其他系統索引結果已收起，可展開查看。" = "No literal match confirmed. Expand other system-index results to inspect them.";
 "尚未授權" = "Not authorised";
 "尚未檢查更新" = "Updates have not been checked";
+"尚未確認完整內文命中，可能只有檔名、中繼資料或系統分詞符合；預設收起。" = "No confirmed literal content match. These may match names, metadata or system tokenization; collapsed by default.";
 "尚未辨識到時間，試試「明天下午3點開會」。" = "No time recognised. Try “tomorrow at 3pm meeting”.";
 "尚未連接 · 前往設定啟用" = "Not connected · Enable in Settings";
 "尚無剪貼板記錄" = "No clipboard history yet";
@@ -240,6 +244,9 @@
 "搜尋縮寫已儲存" = "Search aliases saved";
 "搜尋習慣" = "Search habits";
 "搜尋需要完整存取" = "Search requires full access";
+"收起其他系統索引結果（%@）" = "Hide other system-index results (%@)";
+"文件・內文命中" = "Document · content match";
+"文件・檔名命中" = "Document · name match";
 "文件・系統索引" = "Document · System index";
 "文件內容" = "Document content";
 "文件內容・系統索引" = "Contents · System index";
@@ -300,6 +307,7 @@
 "正在搜尋整台 Mac 的文件內文…" = "Searching document contents across this Mac…";
 "正在查詢全機文件內文；可先使用已出現的結果。" = "Searching document contents across this Mac. You can use results already shown.";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
+"正在核對文件內文，已確認的結果會先顯示…" = "Checking document content; confirmed matches appear first…";
 "正在檢查授權…" = "Checking permission…";
 "正在檢查更新…" = "Checking for updates…";
 "正在檢查本機語言…" = "Checking local languages…";
