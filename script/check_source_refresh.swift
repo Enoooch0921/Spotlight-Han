@@ -16,7 +16,7 @@ struct SourceRefreshChecks {
         let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults, sourceAccessCheck: { _ in allowed }, eventSourceLoader: { source in
             calls[source, default: 0] += 1
             return try await withCheckedThrowingContinuation { pending[source] = $0 }
-        }, eventCalendarLoader: { [] })
+        }, eventCalendarLoader: { [] }, contentSearcher: { _, _ in SearchResponse(items: []) })
         func wait(_ condition: @escaping @MainActor () -> Bool) async throws {
             for _ in 0..<400 {
                 if condition() { return }

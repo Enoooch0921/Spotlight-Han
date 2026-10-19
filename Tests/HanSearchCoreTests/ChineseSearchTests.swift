@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import CoreText
 import HanSearchCore
 
 private func XCTAssertTrue(_ condition: Bool) { precondition(condition) }
@@ -35,6 +37,7 @@ struct CheckRunner {
         tests.testMetadataPredicateTreatsInputAsData()
         tests.testMergeDeduplicatesAndKeepsPreview()
         try tests.testRealDocxExtractionAndCrossScriptContent()
+        try tests.testPresentationContents()
         try tests.testRealSpotlightQueryDoesNotError()
         try tests.testCalculator()
         tests.testConversions()
@@ -57,7 +60,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 29 check groups — phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 30 check groups — PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -493,7 +496,65 @@ final class ChineseSearchTests {
 
     func testRealSpotlightQueryDoesNotError() throws {
         // An empty index is valid; this asserts only that macOS accepts the generated grammar.
-        _ = try ProcessRunner.run("/usr/bin/mdfind", ["-0", ChineseSearch.predicate("教會活動", mode: .all)])
+        let sentinel = "HanPrivateDataNotNeeded" + UUID().uuidString.replacingOccurrences(of: "-", with: "") + " 教會活動"
+        _ = try ProcessRunner.run("/usr/bin/mdfind", ["-0", ChineseSearch.predicate(sentinel, mode: .all)])
+        _ = try ProcessRunner.run("/usr/bin/mdfind", ["-0", "-interpret", SearchService.documentQuery(sentinel)])
+        let predicate = SearchService.documentQuery("教會活動")
+        XCTAssertTrue(predicate.contains("教会活动") && predicate.contains("教會活动"))
+        XCTAssertTrue(SearchService.documentExtensions.isSuperset(of: ["ppt", "pptx", "docx", "pdf"]))
+        XCTAssertEqual(SearchService.documentQuery("\u{0}\n"), "")
+        XCTAssertTrue(ChineseSearch.indexedVariants("头发").contains("頭髮"))
+        XCTAssertFalse(predicate.contains("kMDItemDisplayName"))
+    }
+
+    func testPresentationContents() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("HanPPTChecks-" + UUID().uuidString)
+        let package = root.appendingPathComponent("package"), folder = root.appendingPathComponent("docs")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        func write(_ path: String, _ text: String) throws {
+            let url = package.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        }
+        try write("[Content_Types].xml", "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>")
+        try write("ppt/slides/slide1.xml", "<?xml version=\"1.0\"?><p:sld xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:p><a:r><a:t>本周教会</a:t></a:r><a:r><a:t>活动與頭髮研究 A&amp;B</a:t></a:r></a:p></p:sld>")
+        try write("ppt/slides/slide2.xml", "<p:sld xmlns:p=\"p\" xmlns:a=\"a\"><a:p><a:r><a:t>繁體電腦課程</a:t></a:r></a:p></p:sld>")
+        try write("ppt/notesSlides/notesSlide1.xml", "<p:notes xmlns:p=\"p\" xmlns:a=\"a\"><a:p><a:r><a:t>講者備忘稿：鼎達叔叔</a:t></a:r></a:p></p:notes>")
+        let deck = folder.appendingPathComponent("deck.pptx")
+        _ = try ProcessRunner.run("/usr/bin/ditto", ["-c", "-k", package.path, deck.path])
+        let text = try SearchService.extractText(deck)
+        XCTAssertTrue(text.contains("教会活动") && text.contains("A&B") && text.contains("鼎達叔叔"))
+        let index = SearchService.index(folder: folder)
+        XCTAssertEqual(index.documents.count, 1); XCTAssertEqual(index.skippedText, 0)
+        for query in ["教會活動", "电脑课程", "头发", "鼎达叔叔"] { XCTAssertNotNil(index.documents.first?.match(query: query, mode: .contents)) }
+        XCTAssertNil(index.documents.first?.match(query: "教會活動", mode: .names))
+        let cancelled = ProcessCancellation(); cancelled.cancel()
+        do { _ = try PresentationText.extract(deck, cancellation: cancelled); preconditionFailure("Ignored cancellation") } catch is CancellationError {}
+        try write("ppt/slides/slide1.xml", "<!DOCTYPE a [<!ENTITY x SYSTEM 'file:///fixture/never-read'>]><a>&x;</a>")
+        let unsafe = folder.appendingPathComponent("unsafe.pptx")
+        _ = try ProcessRunner.run("/usr/bin/ditto", ["-c", "-k", package.path, unsafe.path])
+        do { _ = try SearchService.extractText(unsafe); preconditionFailure("Accepted external-entity XML") } catch {}
+        func pdf(_ name: String, text: String?) throws {
+            var rect = CGRect(x: 0, y: 0, width: 400, height: 500)
+            let context = CGContext(folder.appendingPathComponent(name) as CFURL, mediaBox: &rect, nil)!
+            context.beginPDFPage(nil)
+            if let text {
+                context.textPosition = CGPoint(x: 25, y: 400)
+                let attributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key(kCTFontAttributeName as String): CTFontCreateWithName("Helvetica" as CFString, 14, nil)]
+                CTLineDraw(CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes) as CFAttributedString), context)
+            }
+            context.endPDFPage(); context.closePDF()
+        }
+        try pdf("body.pdf", text: "HanPDFBodyFixture"); try pdf("empty.pdf", text: nil)
+        try Data(repeating: 0, count: 20_000_001).write(to: folder.appendingPathComponent("oversized.docx"))
+        try Data([0]).write(to: folder.appendingPathComponent("unsupported.png"))
+        let diagnosed = SearchService.index(folder: folder)
+        XCTAssertEqual(diagnosed.examinedFiles, 6); XCTAssertEqual(diagnosed.unsupportedFiles, 1)
+        XCTAssertEqual(diagnosed.extractedFiles, 2); XCTAssertEqual(diagnosed.skippedText, 3)
+        XCTAssertEqual(Set(diagnosed.issues.map(\.reason)), Set([.tooLarge, .noText, .readFailed]))
+        XCTAssertNotNil(diagnosed.documents.first { $0.url.lastPathComponent == "body.pdf" }?.match(query: "hanpdfbodyfixture", mode: .contents))
+        do { _ = try ProcessRunner.run("/usr/bin/yes", ["fixture"], timeout: 2, outputLimit: 1024); preconditionFailure("Ignored output bound") } catch {}
     }
 
     func testCalculator() throws {

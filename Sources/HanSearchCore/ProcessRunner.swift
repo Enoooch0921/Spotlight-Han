@@ -18,7 +18,7 @@ public enum ProcessFailure: Error, LocalizedError {
 
 public enum ProcessRunner {
     public static func run(_ executable: String, _ arguments: [String], timeout: Double = 15,
-                           cancellation: ProcessCancellation? = nil, onLine: ((Data) -> Void)? = nil) throws -> Data {
+                           cancellation: ProcessCancellation? = nil, outputLimit: Int? = nil, onLine: ((Data) -> Void)? = nil) throws -> Data {
         if cancellation?.isCancelled == true { throw CancellationError() }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
@@ -41,6 +41,11 @@ public enum ProcessRunner {
         while true {
             let chunk = output.fileHandleForReading.availableData
             if chunk.isEmpty { break }
+            if let outputLimit, data.count + chunk.count > outputLimit {
+                if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+                process.waitUntilExit()
+                throw ProcessFailure.failed("文件或搜尋輸出過大，請縮小搜尋範圍。")
+            }
             data.append(chunk)
             if let onLine {
                 pending.append(chunk)

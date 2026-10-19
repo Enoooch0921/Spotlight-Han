@@ -26,6 +26,26 @@ public enum ChineseSearch {
         return candidates.filter { seen.insert($0).inserted }
     }
 
+    /// Bounded script combinations also find titles/body text that mix scripts.
+    public static func indexedVariants(_ text: String) -> [String] {
+        if text.utf8.allSatisfy({ $0 < 128 }) { return [text] }
+        let alternatives: [Character: String] = ["发": "發髮", "后": "後后", "里": "裡裏里", "台": "臺檯颱台", "干": "乾幹干", "钟": "鐘鍾", "面": "面麵", "复": "復複", "只": "只隻", "谷": "谷穀", "斗": "斗鬥", "余": "余餘", "制": "制製", "系": "系係繫", "松": "松鬆", "板": "板闆"]
+        var combinations = [""]
+        for character in text {
+            let original = String(character), folded = simplified(original)
+            var choices = variants(original)
+            if folded.count == 1, let values = alternatives[Character(folded)] {
+                choices += values.map(String.init).filter { simplified($0) == folded }
+            }
+            choices = Array(Set(choices)).sorted()
+            if combinations.count * choices.count > 60 { break }
+            combinations = combinations.flatMap { prefix in choices.map { prefix + $0 } }
+        }
+        let full = combinations.filter { $0.count == text.count }
+        var seen = Set<String>()
+        return (variants(text) + full).filter { seen.insert($0).inserted }
+    }
+
     /// App names commonly omit word separators when typed into a launcher.
     public static func applicationKey(_ text: String) -> String {
         normalized(text).filter { !$0.isWhitespace && !"-_.".contains($0) }
@@ -57,7 +77,7 @@ public enum ChineseSearch {
         default: fields = ["kMDItemDisplayName", "kMDItemFSName", "kMDItemTextContent"]
         }
         let clauses = terms(text).map { term in
-            "(" + variants(term).flatMap { variant in
+            "(" + (mode == .contents ? indexedVariants(term) : variants(term)).flatMap { variant in
                 fields.map { "\($0) == \"*\(escape(variant))*\"cd" }
             }.joined(separator: " || ") + ")"
         }
@@ -68,4 +88,5 @@ public enum ChineseSearch {
         }
         return predicate
     }
+
 }

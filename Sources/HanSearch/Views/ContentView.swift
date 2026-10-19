@@ -209,7 +209,8 @@ struct ContentView: View {
         if store.mode == .notes || store.mode == .contacts || store.mode == .calendar || store.mode == .reminders || store.mode == .mail || store.mode == .shortcuts {
             return store.personalStatus[store.mode] ?? "尚未連接 · 前往設定啟用"
         }
-        return L.text(store.catalogStatus) + (store.query.isEmpty ? "" : String(format: L.text(" · 比對 %.1f ms"), store.milliseconds))
+        let summary = store.mode == .all && store.fullTextInAll && store.catalogRoots.isEmpty ? L.text("全機文件內文・系統索引") : L.text(store.catalogStatus)
+        return summary + (store.query.isEmpty ? "" : String(format: L.text(" · 比對 %.1f ms"), store.milliseconds))
     }
     private func quickRow(_ item: QuickResult) -> some View {
         HStack(spacing: 13) {
@@ -274,6 +275,9 @@ struct ContentView: View {
         if store.mode == .clipboard { return "記錄預設關閉；啟用後只保留本次執行期間的文字。" }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
         if store.query.isEmpty { return "輸入關鍵字，繁體與簡體一起比對。" }
+        if store.mode == .all && store.fullTextInAll {
+            return store.searching ? "正在查詢全機文件內文；可先使用已出現的結果。" : "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。"
+        }
         return store.catalogRoots.isEmpty ? "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" : "請縮短關鍵字，或在設定中加入檔案所在資料夾。"
     }
 }

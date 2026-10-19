@@ -59,7 +59,7 @@ actor NoteFixture {
         reloaded.enabled = true
         var accepts = false, opened = 0
         let notes = NoteFixture()
-        let store = SearchStore(loadSources:false,taskPreferences:defaults,sourcePreferences:defaults,resultOpener:{ _ in opened += 1; return accepts },noteOpener:{ try await notes.open($0) })
+        let store = SearchStore(loadSources:false,taskPreferences:defaults,sourcePreferences:defaults,resultOpener:{ _ in opened += 1; return accepts },noteOpener:{ try await notes.open($0) },contentSearcher:{ _, _ in SearchResponse(items: []) })
         store.query = "logicpro"
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent("HanHabitFile-" + UUID().uuidString + ".txt")
         try Data("fixture".utf8).write(to:temp)

@@ -10,7 +10,7 @@ struct TaskComposerChecks {
         var plans: [TaskPlan] = []
         var finishWrite: CheckedContinuation<String, Never>?
         let calendars = [TaskCalendarChoice(id: "thumb", title: "大拇指", source: "測試"), TaskCalendarChoice(id: "toe", title: "大腳趾", source: "測試")]
-        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }, taskWriter: { plan in
+        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }, contentSearcher: { _, _ in SearchResponse(items: []) }, taskWriter: { plan in
             plans.append(plan)
             return await withCheckedContinuation { finishWrite = $0 }
         })
@@ -78,7 +78,7 @@ struct TaskComposerChecks {
         let dayPlan = TaskPlan(kind: .reminder, title: "交報告", start: future, isAllDay: true)
         let day = TaskService.makeReminder(dayPlan, store: eventStore)
         precondition(day.dueDateComponents?.hour == nil && (day.alarms ?? []).isEmpty)
-        let reopened = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars })
+        let reopened = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }, contentSearcher: { _, _ in SearchResponse(items: []) })
         precondition(reopened.defaultEventCalendarID == "thumb")
         print("PASS: composer Tab routing, preview-only Return, reviewed edits, stale input, cancellation, duplicate submission, validation, and EventKit object mapping; no personal data read or written")
     }

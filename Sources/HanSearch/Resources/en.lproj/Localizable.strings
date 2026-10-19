@@ -15,6 +15,7 @@
 "%@尚未完成授權，請按「連接」並完成系統提示。" = "Permission for %@ is not complete. Choose Connect and respond to the system prompt.";
 "%@目前僅允許新增；搜尋需要完整存取，請到系統隱私權設定更改。" = "%@ currently has write-only access. Search requires full access in system privacy settings.";
 "%@翻譯 · Apple 本機翻譯 · 選取後 ↵ 複製" = "%@ translation · Apple on-device translation · Select then ↵ to copy";
+"%@：%@ 份" = "%@: %@ files";
 "1 %@ ≈ %@ %@ · 資料 %@ · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Daily update · Reference rate";
 "1 %@ ≈ %@ %@ · 資料 %@ · 過期快取 · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Stale cache · Daily update · Reference rate";
 "Apple 本機翻譯 · 選取後 ↵ 複製" = "Apple on-device translation · Select then ↵ to copy";
@@ -24,6 +25,7 @@
 "Google · 按下 Return 後開啟瀏覽器" = "Google · Press Return to open the browser";
 "Han 預設行事曆" = "Han default calendar";
 "Microsoft Office" = "Microsoft Office";
+"PDF 受密碼保護" = "PDF is password protected";
 "Rates by ExchangeRate-API · 每日更新" = "Rates by ExchangeRate-API · Updated daily";
 "Spotlight Han %@ · 繁簡中文搜尋" = "Spotlight Han %@ · Traditional/Simplified Chinese search";
 "Spotlight Han %@ 可更新" = "Spotlight Han %@ is available";
@@ -32,10 +34,13 @@
 "Spotlight 的 %@ 仍然開啟。請先關閉系統 Spotlight 快捷鍵，再回來設定 Han。" = "Spotlight still uses %@. Disable its shortcut, then return to Han.";
 "Waves" = "Waves";
 "Word 與 PDF 內容" = "Word and PDF content";
+"Word、PDF 與 PowerPoint 內容" = "Word, PDF and PowerPoint Contents";
 "iZotope" = "iZotope";
 "↵ 開啟" = "↵ Open";
 "⌘1 App、⌘2 檔案、⌘3 捷徑、⌘4 剪貼板。Escape 收起面板。" = "⌘1 Apps, ⌘2 Files, ⌘3 Shortcuts, ⌘4 Clipboard. Escape dismisses search.";
 "⌘Space 仍被系統使用。請先關閉 Spotlight 的「顯示 Spotlight 搜尋」；也請檢查「顯示應用程式」是否使用相同組合。" = "⌘Space is still assigned to macOS. Disable Show Spotlight search and check Show Applications for the same shortcut.";
+"「全部」加入全機文件搜尋（含內文）" = "Search system-wide documents in All (including contents)";
+"「全部」包含文件內文" = "Include document contents in All";
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
 "上次完整更新：%@" = "Last complete refresh: %@";
@@ -78,6 +83,8 @@
 "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" = "Choose search folders to save access. Apps, calculations and conversions work without them.";
 "先顯示時間與內容，按 Return 才建立。行程及提醒使用系統預設行事曆／清單；新增需要相應的存取授權。鬧鐘交給 Apple 系統時鐘。首次按下方「連接系統時鐘」，在系統視窗加入一次捷徑；不用自己編輯。系統鬧鐘精度為分鐘，只支援下一次的指定時分。" = "Review the time and content, then press Return to create. Events and reminders use system defaults and require permission. Alarms are created in Apple Clock through the bundled shortcut. Precision is one minute and only the next occurrence is supported.";
 "全天" = "All day";
+"全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可用 Han 直接讀取來補強繁簡比對與 PPTX 文字；「全部」仍保留全機搜尋。舊版 PPT 取決於系統索引。" = "System-wide contents use the macOS index. Unindexed, excluded, unavailable or inaccessible files may be missing. Add a folder for direct Chinese script matching and PPTX extraction; All still searches the system index. Legacy PPT depends on system indexing.";
+"全機文件內文・系統索引" = "Mac-wide document contents · System index";
 "全部" = "All";
 "全部 App" = "All Apps";
 "全部重新讀取" = "Refresh All Connected Sources";
@@ -150,12 +157,14 @@
 "已建立" = "Created";
 "已忘記資料夾；可重新選擇搜尋範圍" = "Folders forgotten. Choose your search scope again.";
 "已掃描 %@ 筆檔名…" = "Scanned %@ filenames…";
+"已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。" = "Searched the system document index and connected sources. Try fewer keywords or add a folder for unindexed documents. Scanned PDFs still need OCR.";
 "已整理 %@ 個 App；保留原本手動分類" = "Organized %@ apps; kept existing manual categories";
 "已新增提醒「%@」" = "Created reminder “%@”";
 "已新增行程「%@」" = "Created event “%@”";
 "已暫停排隊，請先處理前一個來源的授權，再重新連接。" = "Queue paused. Finish the previous source's permission before reconnecting.";
 "已有同名分類，請換個名稱" = "This category name already exists. Choose another name.";
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
+"已檢查 %@ 個檔案，%@ 份可搜尋內文，%@ 份未完成，%@ 個未支援格式" = "Checked %@ files: %@ with searchable text, %@ unfinished, %@ unsupported formats";
 "已移至「%@」" = "Moved to “%@”";
 "已複製" = "Copied";
 "已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
@@ -177,6 +186,8 @@
 "已連接 Apple 系統時鐘" = "Connected to Apple Clock";
 "已連接 Mail 收件匣 %@ 封（前 200 封，內文前 16,000 字）" = "Connected %@ inbox messages (first 200; 16,000 characters each)";
 "已過去" = "Past";
+"已達 10,000 份文件上限，尚有文件未檢查；請選擇較小的資料夾。" = "Reached the 10,000-document limit. Some files remain unchecked; select a smaller folder.";
+"已達內文總量 32 MB 上限" = "Reached the 32 MB total-text limit";
 "已釘選" = "Pinned";
 "建立所選分類" = "Create selected categories";
 "建議分類" = "Suggested categories";
@@ -226,7 +237,11 @@
 "搜尋縮寫已儲存" = "Search aliases saved";
 "搜尋習慣" = "Search habits";
 "搜尋需要完整存取" = "Search requires full access";
+"文件・系統索引" = "Document · System index";
 "文件內容" = "Document content";
+"文件內容・系統索引" = "Contents · System index";
+"文件內文符合超過 2,000 筆，請增加關鍵字。" = "Over 2,000 document matches. Add more keywords.";
+"文件或搜尋輸出過大，請縮小搜尋範圍。" = "Document or search output is too large. Narrow the scope.";
 "新增分類" = "New category";
 "新增提醒事項" = "New reminder";
 "新增提醒事項：%@" = "Create reminder: %@";
@@ -238,6 +253,7 @@
 "日期由新到舊" = "Event date: newest first";
 "日期由舊到新" = "Event date: oldest first";
 "日期與時間" = "Date & Time";
+"明細顯示前 200 份，分類數量包含全部未完成文件。" = "Showing the first 200 files. Reason counts include all unfinished files.";
 "時間尚未完整辨識，請簡化成一個日期與時間。" = "The time is incomplete. Simplify it to one date and time.";
 "時間已經過去，請調整後再建立。" = "This time has passed. Adjust it before creating.";
 "時間解析暫時無法使用，請重新開啟 Han。" = "Date parsing is unavailable. Please reopen Han.";
@@ -259,7 +275,9 @@
 "柔和過渡動畫" = "Smooth transitions";
 "查看全部 App" = "View All Apps";
 "查看更新內容" = "Release notes";
+"查看未完成的檔案與原因" = "View unfinished files and reasons";
 "查看系統語言下載" = "View system language downloads";
+"格式、權限或讀取錯誤" = "Format, access or read error";
 "桌面與 Dock" = "Desktop & Dock";
 "標題" = "Title";
 "標題與純文字內文，最多 2,000 則；不讀取受密碼保護的備忘錄" = "Titles and plain text, up to 2,000 notes. Locked notes are skipped.";
@@ -276,6 +294,8 @@
 "正在掃描檔名（不讀取影片內容）…" = "Scanning filenames (not video content)…";
 "正在搜尋…" = "Searching…";
 "正在搜尋應用程式…" = "Searching applications…";
+"正在搜尋整台 Mac 的文件內文…" = "Searching document contents across this Mac…";
+"正在查詢全機文件內文；可先使用已出現的結果。" = "Searching document contents across this Mac. You can use results already shown.";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
 "正在檢查授權…" = "Checking permission…";
 "正在檢查更新…" = "Checking for updates…";
@@ -298,6 +318,7 @@
 "此時間無法建立系統鬧鐘" = "Cannot create a Clock alarm at this time";
 "此模式僅支援行事曆與提醒事項。" = "This mode supports Calendar and Reminders only.";
 "每天最多自動檢查一次 GitHub 公開版本；只讀取版本資訊，不傳送搜尋內容或 App 清單。更新由你下載與安裝。" = "Automatically checks public GitHub releases at most once a day. Search text and installed apps are not sent. You download and install updates.";
+"沒有可擷取的文字（空白或圖片）" = "No extractable text (empty or image-only)";
 "沒有符合的 App" = "No matching apps";
 "清單" = "List";
 "清除學習紀錄" = "Clear learned choices";
@@ -323,6 +344,8 @@
 "目前已是最新可用版本" = "You have the latest available version";
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目標語言" = "Target language";
+"直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PPT／PPTX 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PPT/PPTX and text files across this Mac in All. App and filename results appear first, followed by document matches. Disabling the Spotlight shortcut does not disable its index.";
+"直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。" = "Read Word, text-based PDF, PowerPoint and plain text in this folder for cross-script content search.";
 "確認建立" = "Confirm creation";
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";
@@ -334,10 +357,14 @@
 "等待續讀（已有部分資料）" = "Waiting to continue (partial data available)";
 "等待語言準備完成 · 已等待 %@ 秒" = "Waiting for languages · %@ seconds elapsed";
 "等待讀取" = "Queued";
+"簡報 XML 文字無法完整讀取。" = "The presentation XML could not be read completely.";
+"簡報文字格式無法安全讀取。" = "The presentation text format could not be read safely.";
+"簡報沒有可讀取的文字頁面，或超過讀取上限。" = "The presentation has no readable text parts or exceeds the read limit.";
 "系統 App 資料來源" = "System app sources";
 "系統 Mail 收件匣前 200 封，內文每封前 16,000 字；不是所有信箱" = "First 200 messages in Mail's inbox, up to 16,000 characters each; not all mailboxes";
 "系統內建 App" = "Built-in macOS apps";
 "系統找不到 App，請確認 App 仍在原本位置。" = "macOS cannot find the app. Check its location.";
+"系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。" = "Like native Spotlight, system document search may also match filenames or metadata. Directly indexed folders show snippets around matching text.";
 "系統文件索引 · 可在設定加入資料夾加強全文比對" = "System content index · Add a folder for direct content matching";
 "系統時鐘捷徑尚未連接，請按「檢查連接」。" = "Clock shortcut is not connected. Choose Check connection.";
 "系統目前不支援這一組翻譯語言。" = "macOS does not currently support this language pair.";
@@ -368,6 +395,9 @@
 "自訂搜尋縮寫" = "Custom Search Aliases";
 "自訂搜尋縮寫…" = "Custom Search Aliases…";
 "自訂：%@" = "Custom: %@";
+"舊版 PPT 尚無可讀文字，需系統完成索引或轉存為 PPTX。" = "No readable text is available for this legacy PPT. Wait for system indexing or save it as PPTX.";
+"舊版 PPT 尚無系統文字索引" = "Legacy PPT has no system text index";
+"舊版 PPT 請使用系統索引搜尋" = "Use system index search for legacy PPT files";
 "藍牙" = "Bluetooth";
 "行事曆" = "Calendar";
 "行事曆排序" = "Calendar sort";
@@ -410,6 +440,7 @@
 "資料夾授權" = "Folder access";
 "資料已舊（超過15分鐘）" = "Out of date (over 15 minutes)";
 "資料有變動，待更新" = "Data changed; refresh needed";
+"超過單檔 20 MB 上限" = "Exceeds the 20 MB per-file limit";
 "跟隨系統" = "Follow system";
 "跟隨系統預設" = "Follow system default";
 "軟體更新" = "Software updates";
@@ -454,6 +485,7 @@
 "開發測試版在重新編譯或重新簽章後，macOS 仍可能要求重新授權；正式發行需要固定的開發者簽章。" = "Development builds may require permission again after rebuilding or signing. Stable distribution needs a consistent developer signature.";
 "關於" = "About";
 "隱私與安全性" = "Privacy & Security";
+"雲端檔案尚未下載" = "Cloud file has not been downloaded";
 "雲端與遠端" = "Cloud and remote access";
 "需要授權（仍顯示舊資料）" = "Permission required (showing old data)";
 "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。" = "Permission is needed. Choose Reload; startup will not automatically ask again.";

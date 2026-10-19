@@ -31,6 +31,11 @@ final class SearchStore: ObservableObject {
     @Published var folder: URL?
     @Published var notice = ""
     @Published var indexNotice = ""
+    @Published var documentIssues: [DocumentReadIssue] = []
+    @Published var documentIndexCapped = false
+    @Published var fullTextInAll = true {
+        didSet { taskPreferences.set(fullTextInAll, forKey: "fullTextInAll.v1"); search() }
+    }
     @Published var hotkeyNotice = "⌃⌥Space"
     @Published var hotkeyError = "" { didSet { onLayoutChanged?() } }
     let loginItem = LoginItemService()
@@ -119,6 +124,9 @@ final class SearchStore: ObservableObject {
     private var eventWorkerTokens: [SearchMode: UUID] = [:]
     private let resultOpener: (URL) -> Bool
     private let noteOpener: @Sendable (String) async throws -> Void
+    private let contentSearcher: @Sendable (String, ProcessCancellation) -> SearchResponse
+    private var cachedGlobalQuery: String?
+    private var cachedGlobalContents: [SearchItem] = []
     private let sourcePreferences: UserDefaults
     private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
     private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
@@ -146,8 +154,11 @@ final class SearchStore: ObservableObject {
          eventCalendarLoader: @escaping @MainActor () -> [TaskCalendarChoice] = { TaskService.eventCalendars() },
          resultOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
          noteOpener: @escaping @Sendable (String) async throws -> Void = { id in try await Task.detached { try PersonalSources.openNote(id) }.value },
+         contentSearcher: @escaping @Sendable (String, ProcessCancellation) -> SearchResponse = { query, cancellation in SearchService.searchDocumentContents(query: query, cancellation: cancellation) },
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
+        self.contentSearcher = contentSearcher
+        self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
         self.aliases = SearchAliasStore(defaults: taskPreferences)
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
@@ -251,7 +262,7 @@ final class SearchStore: ObservableObject {
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         if silent && (composerMode != nil || completedQuery != term || completedMode != mode) { return }
         if !silent {
-            details = nil; resultRefreshTask?.cancel(); resultRefreshTask = nil; pendingResultsRefresh = false
+            details = nil; notice = ""; resultRefreshTask?.cancel(); resultRefreshTask = nil; pendingResultsRefresh = false
             searchActivityTask?.cancel(); showSearchActivity = false
         }
         onLayoutChanged?()
@@ -282,42 +293,33 @@ final class SearchStore: ObservableObject {
                 self.showSearchActivity = true
             }
         }
-        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort, cachedContents = results
+        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort
+        let cachedContents = cachedGlobalQuery == term ? cachedGlobalContents : []
+        let fullTextInAll = fullTextInAll, contentSearcher = contentSearcher
         let aliasTargets = aliases.matchingTargets(term)
         let aliasPaths = Set(aliasTargets.filter { $0.hasPrefix("file:") }.map { String($0.dropFirst(5)) })
         let processCancellation = ProcessCancellation()
         searchTask = Task {
             if !silent { do { try await Task.sleep(for: .milliseconds(60)) } catch { return } }
             guard !Task.isCancelled else { return }
-            let task = Task.detached(priority: silent ? .utility : .userInitiated) { [weak self] in
+            let task = Task.detached(priority: silent ? .utility : .userInitiated) {
                 let start = Date()
-                func stage(_ text: String) {
-                    Task { @MainActor in
-                        guard let self, self.generation == token, self.searching else { return }
-                        self.searchPhase = text
-                    }
-                }
                 var files: [SearchItem] = [], quick: [QuickResult] = []
-                var warning: String?
                 let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
-                    stage("正在比對本機檔名清單…")
                     files += FileCatalog.search(entries, query: term, mode: mode, aliasPaths: aliasPaths)
                 }
                 if !utilityOnly && (mode == .all || mode == .apps) {
-                    stage("正在搜尋應用程式…")
                     files += SearchService.searchApplications(query: term, aliasTargets: aliasTargets)
                 }
-                if mode == .contents {
-                    stage(folder == nil ? "正在查詢系統文件內容索引…" : "正在比對已載入的文件內容…")
-                    if folder != nil { files += docs.compactMap { $0.match(query: term, mode: .contents) } }
-                    else if silent { files += cachedContents }
-                    else {
-                        let response = SearchService.search(query: term, mode: .contents, cancellation: processCancellation)
-                        files += response.items; warning = response.warning
-                    }
+                if !utilityOnly && (mode == .contents || mode == .all) {
+                    let documentMode: SearchMode = mode == .contents ? .contents : fullTextInAll ? .all : .names
+                    files += docs.compactMap { $0.match(query: term, mode: documentMode) }
                 }
+                let lookup = !utilityOnly && (mode == .all && fullTextInAll || mode == .contents && folder == nil)
+                let base = files
+                if lookup { files += cachedContents }
                 quick += utilities
                 if !utilityOnly { quick += calendarSort.sorted(personal).lazy.compactMap { $0.result(query: term, mode: mode, aliasMatch: aliasTargets.contains("quick:" + $0.id)) }.prefix(50) }
                 if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
@@ -327,9 +329,9 @@ final class SearchStore: ObservableObject {
                     }
                 }
                 let web = mode == .all ? QuickProvider.webSearch(query: term) : nil
-                return (SearchService.merge(files, query: term), quick, web, warning, Date().timeIntervalSince(start) * 1000)
+                return (SearchService.merge(files, query: term), quick, web, lookup && !silent, base, Date().timeIntervalSince(start) * 1000)
             }
-            let (files, quick, web, warning, elapsed) = await withTaskCancellationHandler {
+            let (files, quick, web, lookup, base, elapsed) = await withTaskCancellationHandler {
                 await task.value
             } onCancel: { processCancellation.cancel(); task.cancel() }
             guard !Task.isCancelled, self.generation == token else { return }
@@ -338,10 +340,32 @@ final class SearchStore: ObservableObject {
             if !silent || !self.allIDs.contains(self.selection ?? "") {
                 self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first
             }
+            self.onLayoutChanged?()
+            var finalFiles = files, warning: String?, totalElapsed = elapsed
+            if lookup {
+                let contentStarted = Date()
+                self.searchPhase = "正在搜尋整台 Mac 的文件內文…"
+                do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+                guard !Task.isCancelled, self.generation == token else { return }
+                let contentTask = Task.detached(priority: .userInitiated) { contentSearcher(term, processCancellation) }
+                let response = await withTaskCancellationHandler { await contentTask.value } onCancel: { processCancellation.cancel(); contentTask.cancel() }
+                guard !Task.isCancelled, self.generation == token else { return }
+                totalElapsed += Date().timeIntervalSince(contentStarted) * 1000
+                warning = response.warning
+                if warning == nil {
+                    self.cachedGlobalQuery = term; self.cachedGlobalContents = response.items
+                }
+                // Keep already-visible local matches when the system index fails.
+                finalFiles = SearchService.merge(base + (warning == nil ? response.items : cachedContents), query: term)
+                self.results = finalFiles; self.quickResults = quick
+                if finalFiles.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
+                if !self.allIDs.contains(self.selection ?? "") { self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first }
+                if response.truncated && warning == nil { warning = "文件內文符合超過 2,000 筆，請增加關鍵字。" }
+            }
             if !silent {
-                self.milliseconds = elapsed; self.searching = false
+                self.milliseconds = totalElapsed; self.searching = false
                 self.searchActivityTask?.cancel(); self.showSearchActivity = false
-                self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
+                self.notice = warning ?? (finalFiles.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
                 self.completedQuery = term; self.completedMode = mode
             }
             self.onLayoutChanged?()
@@ -455,7 +479,7 @@ final class SearchStore: ObservableObject {
     }
     func forgetFolders() {
         guard !catalogRefreshing, !indexing else { return }
-        fileAccess.clear(); catalogRoots = []; unavailableCatalogRoots = []; entries = []; documents = []; folder = nil; catalogCount = 0
+        fileAccess.clear(); catalogRoots = []; unavailableCatalogRoots = []; entries = []; documents = []; documentIssues = []; documentIndexCapped = false; folder = nil; catalogCount = 0
         sourceHealth[.names] = nil; sourceHealth[.contents] = nil
         saveCatalogRoots(); try? FileManager.default.removeItem(at: FileCatalog.cacheURL)
         catalogStatus = "已忘記資料夾；可重新選擇搜尋範圍"; search()
@@ -463,7 +487,7 @@ final class SearchStore: ObservableObject {
     func chooseFolder() {
         guard !indexing else { return }
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = "讀取文件內容"; panel.message = "直接讀取此資料夾的 Word、文字 PDF 與純文字，供繁簡全文搜尋。"
+        panel.prompt = L.text("讀取文件內容"); panel.message = L.text("直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try fileAccess.add([url]); folder = url; mode = .contents; rebuildIndex() }
         catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }
@@ -472,19 +496,25 @@ final class SearchStore: ObservableObject {
         guard let folder, !indexing else { return }
         sourceHealth[.contents, default: SourceHealth()].phase = .loading
         sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
-        indexing = true; documents = []; indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; refreshSearchResults()
+        indexing = true; documents = []; documentIssues = []; documentIndexCapped = false
+        indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; refreshSearchResults()
         Task {
             let indexed = await Task.detached(priority: .utility) { SearchService.index(folder: folder) }.value
             if indexed.skippedText > 0 || indexed.capped {
-                sourceHealth[.contents, default: SourceHealth()].phase = .incomplete
-                sourceHealth[.contents, default: SourceHealth()].partialUpdate = Date()
+                if indexed.documents.isEmpty {
+                    sourceHealth[.contents] = SourceHealth(phase: .failed, lastAttempt: Date())
+                } else {
+                    sourceHealth[.contents, default: SourceHealth()].phase = .incomplete
+                    sourceHealth[.contents, default: SourceHealth()].partialUpdate = Date()
+                }
                 sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
             } else { sourceHealth[.contents, default: SourceHealth()].succeeded(at: Date()) }
             documents = indexed.documents; indexing = false
-            indexNotice = "已讀取 \(indexed.documents.count) 個檔案" + (indexed.skippedText > 0 ? " · \(indexed.skippedText) 份內容未完整讀取" : "") + (indexed.capped ? " · 10,000 檔案上限" : ""); refreshSearchResults()
+            documentIssues = indexed.issues; documentIndexCapped = indexed.capped
+            indexNotice = "已檢查 \(indexed.examinedFiles) 個檔案，\(indexed.extractedFiles) 份可搜尋內文，\(indexed.skippedText) 份未完成，\(indexed.unsupportedFiles) 個未支援格式"; refreshSearchResults()
         }
     }
-    func resetScope() { guard !indexing else { return }; folder = nil; documents = []; sourceHealth[.contents] = nil; indexNotice = ""; search() }
+    func resetScope() { guard !indexing else { return }; folder = nil; documents = []; documentIssues = []; documentIndexCapped = false; sourceHealth[.contents] = nil; indexNotice = ""; search() }
     func openSourcePrivacy(_ source: SearchMode) {
         let anchor: String
         switch source {

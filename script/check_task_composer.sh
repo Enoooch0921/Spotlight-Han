@@ -30,3 +30,8 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_search_habits.swift -o "$BUILD_DIR/HanSearchHabitChecks"
 "$BUILD_DIR/HanSearchHabitChecks"
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_document_search.swift -o "$BUILD_DIR/HanDocumentSearchChecks"
+"$BUILD_DIR/HanDocumentSearchChecks"
