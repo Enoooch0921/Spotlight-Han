@@ -37,7 +37,8 @@ struct CheckRunner {
         try tests.testTaskCommands()
         tests.testCurrencyQueries()
         try tests.testShortcutBindings()
-        print("PASS: 14 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation.")
+        tests.testLauncherVisibilityAfterSwitchingApps()
+        print("PASS: 15 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps.")
     }
 }
 
@@ -194,7 +195,7 @@ final class ChineseSearchTests {
     }
 
     func testCurrencyQueries() {
-        let examples = ["3000台幣=rmb", "nt3000 = rmb", "3000nt = rmb", "NT$3,000 = 人民币", "3000新臺幣換成RMB", "3,000 TWD to CNY"]
+        let examples = ["3000台幣=rmb", "nt3000 = rmb", "3000nt = rmb", "NT$3,000 = 人民币", "3000新臺幣換成RMB", "3,000 TWD to CNY", "3000tb=rmb", "3000tb rmb", "3000 tb RMB"]
         let rates = ["USD": 1.0, "TWD": 30.0, "CNY": 6.9]
         for text in examples {
             guard let query = CurrencyQuery.parse(text) else { preconditionFailure("Currency parser rejected \(text)") }
@@ -202,6 +203,18 @@ final class ChineseSearchTests {
             XCTAssertTrue(abs(query.converted(using: rates)!.amount - 690) < 1e-9)
         }
         XCTAssertEqual(CurrencyQuery.parse("RMB100=NT")?.target, "TWD")
+        let defaults = CurrencyQuery.requests("3000tb", defaultTargets: ["CNY", "USD", "JPY"])
+        XCTAssertEqual(defaults.map(\.target), ["CNY", "USD", "JPY"])
+        XCTAssertTrue(defaults.allSatisfy { $0.source == "TWD" && $0.amount == 3000 })
+        XCTAssertEqual(CurrencyQuery.requests("3000台幣", defaultTargets: ["JPY", "USD"]).map(\.target), ["JPY", "USD"])
+        XCTAssertEqual(CurrencyQuery.requests("3000tb=rmb,usd,jpy", defaultTargets: ["EUR"]).map(\.target), ["CNY", "USD", "JPY"])
+        XCTAssertEqual(CurrencyQuery.requests("3000tb rmb usd", defaultTargets: ["EUR"]).map(\.target), ["CNY", "USD"])
+        XCTAssertEqual(CurrencyQuery.requests("3000tb=rmb,cny", defaultTargets: []).map(\.target), ["CNY"])
+        XCTAssertEqual(CurrencyQuery.requests("3000tb rmb", defaultTargets: ["EUR"]).map(\.target), ["CNY"])
+        XCTAssertEqual(CurrencyQuery.cleanTargets(["rmb", "CNY", "not-currency", "usd"]), ["CNY", "USD"])
+        XCTAssertTrue(CurrencyQuery.isCurrencyQuery("3000tb"))
+        XCTAssertTrue(CurrencyQuery.requests("1 TB to GB", defaultTargets: ["CNY"]).isEmpty)
+        XCTAssertTrue(CurrencyQuery.requests("3000tb = RMB nonsense", defaultTargets: ["CNY"]).isEmpty)
         XCTAssertEqual(CurrencyQuery.money(690, code: "CNY"), "CNY 690.00")
         for invalid in ["nt3000nt=rmb", "3000nt=1rmb", "3000nt=rmb extra", "report3000nt=rmb", "1,2nt=rmb", "3000nt", "nanTWD=CNY", "100 XYZ to CNY", "1e1000TWD=CNY"] {
             XCTAssertNil(CurrencyQuery.parse(invalid))
@@ -219,6 +232,18 @@ final class ChineseSearchTests {
         XCTAssertFalse(ShortcutBinding(keyCode: 500, modifiers: 256, keyLabel: "bad").isValid)
         let binding = ShortcutBinding(keyCode: 40, modifiers: 256 | 512, keyLabel: "K")
         XCTAssertEqual(try JSONDecoder().decode(ShortcutBinding.self, from: JSONEncoder().encode(binding)), binding)
+    }
+
+    func testLauncherVisibilityAfterSwitchingApps() {
+        var state = LauncherPresentation()
+        XCTAssertEqual(state.toggle(applicationActive: false, windowVisible: false), .show)
+        XCTAssertEqual(state.toggle(applicationActive: true, windowVisible: true), .hide)
+        XCTAssertEqual(state.toggle(applicationActive: true, windowVisible: false), .show)
+        // Regression: AppKit can report the old panel as visible after switching to a different app.
+        XCTAssertEqual(state.toggle(applicationActive: false, windowVisible: true), .show)
+        XCTAssertEqual(state.toggle(applicationActive: true, windowVisible: true), .hide)
+        state.show(); state.hide() // Explicit deactivation resets presentation before the next hotkey.
+        XCTAssertEqual(state.toggle(applicationActive: false, windowVisible: true), .show)
     }
 
 }

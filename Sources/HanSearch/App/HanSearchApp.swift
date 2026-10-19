@@ -25,23 +25,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var translationWindow: NSWindow?
     private var keyMonitor: Any?
     private var lastToggle = Date.distantPast
+    private var presentation = LauncherPresentation()
+    private var fadeGeneration = 0
+    private var layoutTarget: NSRect?
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 804, height: 140), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Spotlight Han"
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
-        panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = true
+        panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
         panel.contentView = TransparentHostingView(rootView: ContentView(store: store))
         panel.command = { [weak self] key in self?.command(key) ?? false }
+        panel.dismiss = { [weak self] in self?.hideSearch() }
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
-        store.hideLauncher = { [weak panel] in panel?.orderOut(nil) }
+        store.hideLauncher = { [weak self] in self?.hideSearch() }
         store.prepareTranslation = { [weak self] source in
             guard let self else { return }
             if #available(macOS 15.0, *) {
-                self.panel?.orderOut(nil)
+                self.hideSearch(animated: false)
                 self.translationWindow?.close()
                 let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 220), styleMask: [.titled, .closable], backing: .buffered, defer: false)
                 window.title = "Spotlight Han · 本機翻譯語言"; window.isReleasedWhenClosed = false
@@ -69,6 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     }
     func applicationDidBecomeActive(_ notification: Notification) { store.checkClockSetupOnReturn() }
+    func applicationDidResignActive(_ notification: Notification) { hideSearch(animated: false) }
     private func command(_ key: String) -> Bool {
         switch key {
         case "1": store.mode = .apps
@@ -87,7 +92,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
         let height: CGFloat = store.details != nil ? detailHeight : (!store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64))))
         let top = panel.frame.maxY
-        panel.setFrame(NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height), display: true)
+        let target = NSRect(x: panel.frame.minX, y: top - max(410, height), width: 804, height: max(410, height))
+        let collapsed = NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height)
+        let frame = store.hasBody && store.details == nil ? target : collapsed
+        guard layoutTarget != frame else { return }
+        layoutTarget = frame
+        if presentation.isPresented, panel.isVisible, store.motionEnabled, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            LauncherMotion.perform(duration: LauncherMotion.resizeDuration) { panel.animator().setFrame(frame, display: true) }
+        } else { panel.setFrame(frame, display: true) }
     }
     private func setHotkey(_ binding: ShortcutBinding) {
         guard hotkey.register(binding) else {
@@ -99,24 +111,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func toggleSearch() {
         guard NSApp.modalWindow == nil, translationWindow?.attachedSheet == nil else { return }
-        guard Date().timeIntervalSince(lastToggle) > 0.2 else { return }
+        // Carbon and a local monitor can observe the same physical press. Ignore only that tiny duplicate window.
+        guard Date().timeIntervalSince(lastToggle) > 0.04 else { return }
         lastToggle = Date()
+        let active = NSApp.isActive && !NSApp.isHidden
         let visible = panel?.isVisible == true
-        Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle launcher; visible=\(visible, privacy: .public)")
-        if visible { panel?.orderOut(nil) }
-        else { showSearch() }
-        Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle complete; visible=\(self.panel?.isVisible == true, privacy: .public)")
+        let action = presentation.toggle(applicationActive: active, windowVisible: visible)
+        Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle launcher; active=\(active, privacy: .public), visible=\(visible, privacy: .public)")
+        if action == .hide { hideSearch() } else { showSearch() }
+    }
+    private func hideSearch(animated: Bool = true) {
+        presentation.hide(); fadeGeneration += 1
+        guard let panel else { return }
+        let generation = fadeGeneration
+        guard panel.isVisible, animated, store.motionEnabled else {
+            panel.orderOut(nil); panel.alphaValue = 1; return
+        }
+        LauncherMotion.perform(duration: LauncherMotion.hideDuration, changes: { panel.animator().alphaValue = 0 }) { [weak self, weak panel] in
+            guard let self, self.fadeGeneration == generation, !self.presentation.isPresented else { return }
+            panel?.orderOut(nil); panel?.alphaValue = 1
+        }
     }
     func showSearch() {
-        guard let panel else { return }
+        guard let panel, NSApp.modalWindow == nil else { return }
+        fadeGeneration += 1
+        let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden
+        // Resize offscreen on entry; later structural expansions retarget the native window animation.
+        if !wasVisible { presentation.hide(); layoutTarget = nil }
         resizePanel()
-        let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main
-        if let visible = screen?.visibleFrame {
-            panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2, y: visible.maxY - visible.height * 0.26 - panel.frame.height))
+        if !wasVisible {
+            let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main
+            if let visible = screen?.visibleFrame {
+                panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2, y: visible.maxY - visible.height * 0.26 - panel.frame.height))
+            }
+            layoutTarget = panel.frame
         }
+        let fade = store.motionEnabled
+        if !panel.isVisible { panel.alphaValue = fade ? 0 : 1 }
+        presentation.show()
+        NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        store.focusToken = UUID(); store.refreshIfNeeded()
+        store.focusToken = UUID()
+        if fade {
+            let duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? LauncherMotion.hideDuration : LauncherMotion.showDuration
+            LauncherMotion.perform(duration: duration) { panel.animator().alphaValue = 1 }
+        } else { panel.alphaValue = 1 }
+        store.refreshIfNeeded()
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if let window = translationWindow, window.isVisible { window.makeKeyAndOrderFront(nil) }
@@ -127,13 +167,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 private final class LauncherPanel: NSPanel {
     var command: ((String) -> Bool)?
+    var dismiss: (() -> Void)?
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command), let key = event.charactersIgnoringModifiers, command?(key) == true { return true }
         return super.performKeyEquivalent(with: event)
     }
-    override func cancelOperation(_ sender: Any?) { orderOut(nil) }
+    override func cancelOperation(_ sender: Any?) { if let dismiss { dismiss() } else { orderOut(nil) } }
 }
 
 /// Keep the hosting surface clear; only the individual native glass shapes draw chrome.

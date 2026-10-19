@@ -8,6 +8,9 @@ struct SettingsView: View {
         Form {
             Section("一般") {
                 LabeledContent("喚出搜尋", value: store.hotkeyNotice)
+                Toggle("柔和過渡動畫", isOn: $store.motionEnabled)
+                Text("開啟／收起使用短淡入淡出，結果面板平順展開。系統開啟「減少動態效果」時保留淡化、停止高度動畫。")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text("⌘1 App、⌘2 檔案、⌘3 動作、⌘4 剪貼板。Escape 收起面板。")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
@@ -82,8 +85,16 @@ struct SettingsView: View {
                 Toggle("非中文查詢顯示繁體中文翻譯", isOn: $store.translationEnabled)
                 Text("使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，選取翻譯結果按 Return 開啟語言視窗，再進入系統語言下載設定。下載後可跨 App 共用。原查詢的檔案與 App 結果仍保留。")
                     .font(.caption).foregroundStyle(.secondary)
-                Text("貨幣可輸入 3000台幣=rmb、nt3000 = rmb、3000nt = rmb。參考匯率每日更新；結果會標示來源、資料時間與過期快取。")
+                Text("貨幣可輸入 3000tb=rmb、3000tb rmb、nt3000 = rmb。只輸入 3000tb 或 3000台幣，會顯示下方選取的目標；也可明寫 3000tb=rmb,usd,jpy。參考匯率每日更新，結果標示資料時間及過期快取，非銀行成交價。")
                     .font(.caption).foregroundStyle(.secondary)
+                Text("預設換算目標（至少選一種，可多選）").font(.caption)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
+                    ForEach(CurrencyQuery.supportedCodes, id: \.self) { code in
+                        Toggle((Locale.current.localizedString(forCurrencyCode: code) ?? code) + " " + code, isOn: Binding(get: { store.currencyTargets.contains(code) }, set: { store.setCurrencyTarget(code, enabled: $0) }))
+                            .toggleStyle(.checkbox).font(.caption)
+                            .disabled(store.currencyTargets.count == 1 && store.currencyTargets.contains(code))
+                    }
+                }
                 Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!)
                 Text("只下載公開的 USD 匯率表並在本機換算，金額與搜尋文字不會傳送。")
                     .font(.caption).foregroundStyle(.secondary)
@@ -106,7 +117,7 @@ struct SettingsView: View {
                 }
             }
             Section("關於") {
-                Text("Spotlight Han 0.5.0 · 繁簡中文搜尋")
+                Text("Spotlight Han 0.5.1 · 繁簡中文搜尋")
                 Text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。")
                     .font(.caption).foregroundStyle(.secondary)
             }

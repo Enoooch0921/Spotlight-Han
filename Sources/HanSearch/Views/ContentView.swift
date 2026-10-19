@@ -27,7 +27,7 @@ struct ContentView: View {
         }
         .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
         .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
-        .onExitCommand { NSApp.keyWindow?.orderOut(nil) }
+        .onExitCommand { store.hideLauncher?() }
 
     }
     private var layout: some View {
@@ -46,8 +46,9 @@ struct ContentView: View {
                 category(.shortcuts, symbol: "square.stack.3d.up", hint: "動作 ⌘3")
                 category(.clipboard, symbol: "doc.on.clipboard", hint: "剪貼板 ⌘4")
             }
-            if store.hasBody { resultPanel }
+            if store.hasBody { resultPanel.transition(.opacity) }
         }
+        .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.hasBody)
     }
     private func category(_ mode: SearchMode, symbol: String, hint: String) -> some View {
         Button {
@@ -59,6 +60,7 @@ struct ContentView: View {
                 .background(store.mode == mode ? Color.primary.opacity(0.08) : .clear, in: Circle())
                 .spotlightGlass(Circle())
         }.buttonStyle(.plain).help(hint).accessibilityLabel(hint)
+            .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
     }
     private var resultPanel: some View {
         VStack(spacing: 0) {
@@ -69,6 +71,7 @@ struct ContentView: View {
                             .buttonStyle(.plain).font(.system(size: 11, weight: .medium))
                             .padding(.horizontal, 11).padding(.vertical, 7)
                             .background(store.mode == mode ? Color.primary.opacity(0.10) : .clear, in: Capsule())
+                            .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
                     }
                 }.padding(.horizontal, 14).padding(.vertical, 9)
             }
@@ -136,7 +139,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
                 Text(item.subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
-                if item.id == "quick:currency" {
+                if item.id.hasPrefix("quick:currency:") {
                     Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!).font(.system(size: 10))
                 }
             }

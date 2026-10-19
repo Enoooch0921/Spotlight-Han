@@ -6,7 +6,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 用自己習慣的中文搜尋 App、影片、檔名和文件。目標是成為 Spotlight 的開源替代品，先把「緊急時找得到檔案」做好。
 
-**目前版本：0.5.0，開發預覽。尚未達到 Spotlight 的完整功能對等。**
+**目前版本：0.5.1，開發預覽。尚未達到 Spotlight 的完整功能對等。**
 
 ## 為什麼做 Spotlight Han？
 
@@ -30,7 +30,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 | Word／PDF 內容 | 可指定資料夾讀取 DOC、DOCX、RTF、ODT、UTF-8 文字與有文字層的 PDF。未指定時，僅此模式使用 Spotlight。 |
 | 計算器 | 四則、括號、次方、百分比、平方根、常用函數；三角函數使用弧度。專用解析器，不執行任意程式碼。 |
 | 單位換算 | 長度、重量、時間、資料容量、溫度，如 `32°F in Celsius`。貨幣換算由獨立的公開匯率表提供。 |
-| 貨幣換算 | `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`，以及 TWD／CNY／USD 等常見幣別。免費每日參考匯率，顯示資料時間與來源，非即時行情。 |
+| 貨幣換算 | `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`、`3000tb=rmb`、`3000tb rmb`；可自訂多個預設目標，輸入 `3000tb` 同時顯示。另支援 TWD／CNY／USD 等常見幣別。免費每日參考匯率，顯示資料時間與來源，非即時行情。 |
 | 本機翻譯 | 非中文查詢上方顯示繁體中文翻譯，下方仍搜尋原查詢。使用 Apple Translation（macOS 15+），首次需準備語言；不把查詢傳給第三方翻譯服務。 |
 | 自訂快捷鍵 | 按下按鍵組合錄製、保存、恢復預設；按同一快捷鍵開啟／收起面板。提供直接開啟系統 Spotlight 快捷鍵開關的入口及 ⌘Space 設定。 |
 | 網址與網頁 | 開啟 HTTP/HTTPS 網址；無本機結果時提供 Google 搜尋動作，按下 Return 後才連網。 |
@@ -49,7 +49,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 ## 介面與快捷鍵
 
-以 [Apple 的 macOS 27 Spotlight 官方參考](https://support.apple.com/zh-tw/guide/mac-help/mchl4d69efd3/27/mac/27)為設計依據：浮動搜尋膠囊、四個圓形分類入口、輸入後展開的結果面板。macOS 26 以上使用原生 Liquid Glass；較舊系統使用原生模糊材質。透明的 AppKit 容器與四周留白讓系統陰影自然延伸，避免矩形底板及截斷邊緣。詳情在原面板中展開，不使用會在透明視窗四周留下矩形遮罩的彈出頁；語言準備使用獨立的標準視窗。
+以 [Apple 的 macOS 27 Spotlight 官方參考](https://support.apple.com/zh-tw/guide/mac-help/mchl4d69efd3/27/mac/27)為設計依據：浮動搜尋膠囊、四個圓形分類入口、輸入後展開的結果面板。macOS 26 以上使用原生 Liquid Glass；較舊系統使用原生模糊材質。透明的 AppKit 容器與四周留白讓系統陰影自然延伸，避免矩形底板及截斷邊緣。提供可關閉的短淡入淡出與面板展開過渡；系統「減少動態效果」啟用時停止高度動畫、保留淡化。切換到其他 App 時立即收起並清除顯示狀態，避免回來要按兩次快捷鍵。詳情在原面板中展開，不使用會在透明視窗四周留下矩形遮罩的彈出頁；語言準備使用獨立的標準視窗。
 
 - 預設 `Control + Option + Space`：開啟／收起搜尋。可在設定錄製自訂組合，需搭配 Command、Control 或 Option；衝突時保留原本快捷鍵。
 - `Command + 1 / 2 / 3 / 4`：App／檔案／動作／剪貼板。
@@ -76,7 +76,9 @@ macOS 的 Contacts、Calendars、Automation 是不同權限；系統仍可能分
 
 非中文查詢會先搜尋 App／檔案，翻譯另外非同步顯示在最上方；原查詢及搜尋結果保持原樣，不會自動改用譯文搜尋。翻譯不搶走已選 App／檔案的 Return 動作。使用 Apple 的本機 Translation，缺少語言時顯示「準備本機繁體中文翻譯」，由使用者選取後按 Return 或連按兩下，開啟獨立語言視窗，再按「開啟語言下載設定」準備來源語言及繁體中文；回到 App 會自動檢查；已準備的語言可跨 App 共用。語言下載、支援範圍與完成狀態由 macOS 決定。一般搜尋不會自動跳出下載對話框；macOS 26 以上使用只接受已安裝語言的 session，macOS 26.4 以上偏好適合短查詢的 low-latency 模型。設定中可關閉自動翻譯。
 
-貨幣辨識支援前置／後置 NT、NT$、台幣、TWD，以及 RMB、人民幣、CNY 等寫法；例如 `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`、`100 USD to TWD`。它採用 [ExchangeRate-API 免費公開端點](https://www.exchangerate-api.com/docs/free)，**每日更新，非即時／盤中行情**。畫面附上來源連結、匯率資料時間與「每日更新」，也會標示離線時使用的過期快取（最多七天）。這是參考中間價，並非銀行買入／賣出或實際成交價。
+貨幣辨識支援前置／後置 NT、NT$、TB、台幣、TWD，以及 RMB、人民幣、CNY 等寫法；例如 `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`、`100 USD to TWD`。也支援 `3000tb=rmb` 或 `3000tb rmb`，`TB` 在貨幣查詢中代表台幣。在設定勾選多個預設目標後，輸入 `3000tb` 或 `3000台幣` 就會同時顯示；預設為 CNY、USD、JPY。明寫目標會優先於預設，也可輸入 `3000tb=rmb,usd,jpy` 或 `3000tb rmb usd`。多個目標共用同一份匯率表，不額外對每個幣別連網。`1 TB to GB` 這類容量換算仍交給單位換算。
+
+它採用 [ExchangeRate-API 免費公開端點](https://www.exchangerate-api.com/docs/free)，**每日更新，非即時／盤中行情**。畫面附上來源連結、匯率資料時間與「每日更新」，也會標示離線時使用的過期快取（最多七天）。這是參考中間價，並非銀行買入／賣出或實際成交價。
 
 只請求固定的公開 USD 匯率表，在本機換算；不傳送輸入金額、完整查詢、檔名、文件或私人資料。共用匯率快取並合併同時請求，失敗後會退避，避免每輸入一個字就連網。開源程式碼不包含即時匯率的付費帳號或 API Key。
 

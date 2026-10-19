@@ -20,17 +20,22 @@ actor CurrencyService {
     private init() {
         if let data = try? Data(contentsOf: cacheURL), let rates = try? JSONDecoder().decode(Rates.self, from: data), rates.valid { cached = rates }
     }
-    func result(for query: CurrencyQuery) async -> QuickResult {
+    func results(for queries: [CurrencyQuery]) async -> [QuickResult] {
+        guard !queries.isEmpty else { return [] }
         do {
             let data = try await load()
-            guard let conversion = query.converted(using: data.rates) else { throw ProcessFailure.failed("此貨幣目前沒有可用匯率。") }
-            let formatted = CurrencyQuery.money(conversion.amount, code: query.target)
             let timestamp = Date(timeIntervalSince1970: data.time_last_update_unix).formatted(date: .abbreviated, time: .shortened)
             let stale = Date().timeIntervalSince1970 >= data.time_next_update_unix
-            let subtitle = "1 \(query.source) ≈ \(String(format: "%.6g", conversion.rate)) \(query.target) · 資料 \(timestamp)" + (stale ? " · 過期快取" : "") + " · 每日更新 · 參考匯率，非銀行牌價"
-            return QuickResult(id: "currency", title: "≈ " + formatted, subtitle: subtitle, symbol: "dollarsign.circle", action: .copy(formatted))
+            return queries.map { query in
+                guard let conversion = query.converted(using: data.rates) else {
+                    return QuickResult(id: "currency:" + query.target, title: query.target + " 暫無可用匯率", subtitle: "來源沒有這個貨幣的有效資料", symbol: "exclamationmark.circle", action: .details("此幣別目前沒有可用匯率。"))
+                }
+                let formatted = CurrencyQuery.money(conversion.amount, code: query.target)
+                let subtitle = "1 \(query.source) ≈ \(String(format: "%.6g", conversion.rate)) \(query.target) · 資料 \(timestamp)" + (stale ? " · 過期快取" : "") + " · 每日更新 · 參考匯率"
+                return QuickResult(id: "currency:" + query.target, title: "≈ " + formatted, subtitle: subtitle, symbol: "dollarsign.circle", action: .copy(formatted))
+            }
         } catch {
-            return QuickResult(id: "currency", title: "目前無法取得匯率", subtitle: error.localizedDescription + " · 搜尋結果仍可使用", symbol: "exclamationmark.circle", action: .details(error.localizedDescription))
+            return [QuickResult(id: "currency:error", title: "目前無法取得匯率", subtitle: error.localizedDescription + " · 搜尋結果仍可使用", symbol: "exclamationmark.circle", action: .details(error.localizedDescription))]
         }
     }
     private func load() async throws -> Rates {

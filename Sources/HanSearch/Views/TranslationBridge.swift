@@ -42,7 +42,7 @@ struct TranslationBridge: View {
         let query = currentQuery
         guard store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
               query.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 2,
-              CurrencyQuery.parse(query) == nil, TaskCommandParser.parse(query) == nil,
+              !CurrencyQuery.isCurrencyQuery(query), TaskCommandParser.parse(query) == nil,
               !Calculator.looksLikeExpression(query), UnitConverter.convert(query) == nil,
               !query.contains("://"), !query.hasPrefix("define "), !query.hasPrefix("查 "),
               let language = NLLanguageRecognizer.dominantLanguage(for: query), language != .simplifiedChinese, language != .traditionalChinese else { return }

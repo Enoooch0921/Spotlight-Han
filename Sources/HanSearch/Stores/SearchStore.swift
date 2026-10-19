@@ -9,12 +9,16 @@ final class SearchStore: ObservableObject {
     @Published var results: [SearchItem] = []
     @Published var quickResults: [QuickResult] = []
     @Published var translationResult: QuickResult?
-    @Published var currencyResult: QuickResult?
+    @Published var currencyResults: [QuickResult] = []
+    @Published var currencyTargets: [String] = {
+        let saved = CurrencyQuery.cleanTargets(UserDefaults.standard.stringArray(forKey: "currencyTargets.v1") ?? CurrencyQuery.defaultTargets)
+        return saved.isEmpty ? CurrencyQuery.defaultTargets : saved
+    }()
     @Published var translationEnabled = UserDefaults.standard.object(forKey: "translationEnabled.v1") as? Bool ?? true {
         didSet { UserDefaults.standard.set(translationEnabled, forKey: "translationEnabled.v1") }
     }
     var prepareTranslation: ((String) -> Void)?
-    var allQuickResults: [QuickResult] { [currencyResult, translationResult].compactMap { $0 } + quickResults }
+    var allQuickResults: [QuickResult] { currencyResults + [translationResult].compactMap { $0 } + quickResults }
     private var currencyTask: Task<Void, Never>?
     private var currencyQuery = ""
     @Published var selection: String?
@@ -25,6 +29,9 @@ final class SearchStore: ObservableObject {
     @Published var indexNotice = ""
     @Published var hotkeyNotice = "⌃⌥Space"
     @Published var hotkeyError = ""
+    @Published var motionEnabled = UserDefaults.standard.object(forKey: "launcherMotion.v1") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(motionEnabled, forKey: "launcherMotion.v1") }
+    }
     var changeHotkey: ((ShortcutBinding) -> Void)?
     @Published var focusToken = UUID()
     @Published var catalogStatus = "準備檔名清單…"
@@ -131,7 +138,7 @@ final class SearchStore: ObservableObject {
             guard !Task.isCancelled, self.generation == token else { return }
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
-            self.selection = self.currencyResult?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id; self.milliseconds = elapsed; self.searching = false
+            self.selection = self.currencyResults.first?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id; self.milliseconds = elapsed; self.searching = false
             self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
             self.onLayoutChanged?()
         }
@@ -139,17 +146,28 @@ final class SearchStore: ObservableObject {
     private func updateCurrency(query: String) {
         let term = mode == .all ? query : ""
         guard term != currencyQuery else { return }
-        currencyQuery = term; currencyTask?.cancel(); currencyResult = nil
-        guard let request = CurrencyQuery.parse(term) else { return }
-        currencyResult = QuickResult(id: "currency", title: "正在取得匯率…", subtitle: "Rates by ExchangeRate-API · 每日更新", symbol: "dollarsign.circle", action: .details("正在取得公開匯率。"))
+        currencyQuery = term; currencyTask?.cancel(); currencyResults = []
+        let requests = CurrencyQuery.requests(term, defaultTargets: currencyTargets)
+        guard !requests.isEmpty else { return }
+        currencyResults = [QuickResult(id: "currency:loading", title: "正在取得匯率…", subtitle: "Rates by ExchangeRate-API · 每日更新", symbol: "dollarsign.circle", action: .details("正在取得公開匯率。"))]
         currencyTask = Task {
             do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
-            let result = await CurrencyService.shared.result(for: request)
+            let results = await CurrencyService.shared.results(for: requests)
             guard !Task.isCancelled, self.currencyQuery == term else { return }
-            currencyResult = result
-            if selection == nil { selection = allIDs.first }
+            currencyResults = results
+            if !allIDs.contains(selection ?? "") { selection = currencyResults.first?.id ?? allIDs.first }
             onLayoutChanged?()
         }
+    }
+    func setCurrencyTarget(_ code: String, enabled: Bool) {
+        var targets = currencyTargets
+        if enabled, !targets.contains(code) { targets.append(code) }
+        if !enabled { targets.removeAll { $0 == code } }
+        targets = CurrencyQuery.cleanTargets(targets)
+        guard !targets.isEmpty else { return }
+        currencyTargets = targets
+        UserDefaults.standard.set(targets, forKey: "currencyTargets.v1")
+        currencyQuery = ""; search()
     }
     func setTranslation(_ result: QuickResult?) {
         translationResult = result
