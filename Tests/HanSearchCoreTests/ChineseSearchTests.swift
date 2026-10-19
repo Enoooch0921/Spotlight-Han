@@ -35,7 +35,9 @@ struct CheckRunner {
         tests.testPersonalRecordCrossScriptMatching()
         tests.testSafeQuickActions()
         try tests.testTaskCommands()
-        print("PASS: 12 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries.")
+        tests.testCurrencyQueries()
+        try tests.testShortcutBindings()
+        print("PASS: 14 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation.")
     }
 }
 
@@ -189,6 +191,34 @@ final class ChineseSearchTests {
             _ = try ClockAlarmRequest.date(for: TaskPlan(kind: .alarm, title: "test", start: now.addingTimeInterval(25 * 3600)), now: now, calendar: calendar)
             preconditionFailure("Clock cannot schedule a dated alarm beyond the next occurrence")
         } catch {}
+    }
+
+    func testCurrencyQueries() {
+        let examples = ["3000台幣=rmb", "nt3000 = rmb", "3000nt = rmb", "NT$3,000 = 人民币", "3000新臺幣換成RMB", "3,000 TWD to CNY"]
+        let rates = ["USD": 1.0, "TWD": 30.0, "CNY": 6.9]
+        for text in examples {
+            guard let query = CurrencyQuery.parse(text) else { preconditionFailure("Currency parser rejected \(text)") }
+            XCTAssertEqual(query.amount, 3000); XCTAssertEqual(query.source, "TWD"); XCTAssertEqual(query.target, "CNY")
+            XCTAssertTrue(abs(query.converted(using: rates)!.amount - 690) < 1e-9)
+        }
+        XCTAssertEqual(CurrencyQuery.parse("RMB100=NT")?.target, "TWD")
+        XCTAssertEqual(CurrencyQuery.money(690, code: "CNY"), "CNY 690.00")
+        for invalid in ["nt3000nt=rmb", "3000nt=1rmb", "3000nt=rmb extra", "report3000nt=rmb", "1,2nt=rmb", "3000nt", "nanTWD=CNY", "100 XYZ to CNY", "1e1000TWD=CNY"] {
+            XCTAssertNil(CurrencyQuery.parse(invalid))
+        }
+        XCTAssertNil(CurrencyQuery.parse("3000nt=rmb")?.converted(using: ["TWD": 0, "CNY": 1]))
+        XCTAssertNil(CurrencyQuery.parse("3000nt=rmb")?.converted(using: ["TWD": 30]))
+    }
+    func testShortcutBindings() throws {
+        XCTAssertTrue(ShortcutBinding.standard.isValid)
+        XCTAssertTrue(ShortcutBinding.commandSpace.isValid)
+        XCTAssertEqual(ShortcutBinding.standard.display, "⌃⌥Space")
+        XCTAssertEqual(ShortcutBinding.commandSpace.display, "⌘Space")
+        XCTAssertFalse(ShortcutBinding(keyCode: 49, modifiers: 0, keyLabel: "Space").isValid)
+        XCTAssertFalse(ShortcutBinding(keyCode: 49, modifiers: 512, keyLabel: "Space").isValid)
+        XCTAssertFalse(ShortcutBinding(keyCode: 500, modifiers: 256, keyLabel: "bad").isValid)
+        let binding = ShortcutBinding(keyCode: 40, modifiers: 256 | 512, keyLabel: "K")
+        XCTAssertEqual(try JSONDecoder().decode(ShortcutBinding.self, from: JSONEncoder().encode(binding)), binding)
     }
 
 }

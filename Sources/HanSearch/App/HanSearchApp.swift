@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import HanSearchCore
+import OSLog
 
 @main
 struct HanSearchApp: App {
@@ -21,6 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = SearchStore()
     private let hotkey = HotKey()
     private var panel: LauncherPanel?
+    private var translationWindow: NSWindow?
+    private var keyMonitor: Any?
+    private var lastToggle = Date.distantPast
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 804, height: 140), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -34,9 +38,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak panel] in panel?.orderOut(nil) }
-        hotkey.action = { [weak self] in self?.showSearch() }
-        if !hotkey.register() { store.hotkeyNotice = "快捷鍵被占用 · 請從選單列開啟" }
+        store.prepareTranslation = { [weak self] source in
+            guard let self else { return }
+            if #available(macOS 15.0, *) {
+                self.panel?.orderOut(nil)
+                self.translationWindow?.close()
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 210), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                window.title = "Spotlight Han · 本機翻譯語言"; window.isReleasedWhenClosed = false
+                window.contentView = NSHostingView(rootView: TranslationSetupView(store: self.store, source: source, query: self.store.query.trimmingCharacters(in: .whitespacesAndNewlines), close: { [weak self, weak window] in window?.close(); self?.showSearch() }))
+                self.translationWindow = window
+                window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+        hotkey.action = { [weak self] in self?.toggleSearch() }
+        store.changeHotkey = { [weak self] binding in self?.setHotkey(binding) }
+        let saved = UserDefaults.standard.data(forKey: "shortcutBinding.v1").flatMap { try? JSONDecoder().decode(ShortcutBinding.self, from: $0) }
+        if let saved, hotkey.register(saved) { store.hotkeyNotice = saved.display }
+        else if hotkey.register() {
+            store.hotkeyNotice = ShortcutBinding.standard.display
+            if saved != nil { store.hotkeyError = "原快捷鍵無法註冊，已使用預設快捷鍵。" }
+        } else { store.hotkeyError = "快捷鍵被占用，請從選單列開啟並重新設定。" }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.panel?.isKeyWindow == true, self.hotkey.matches(event) else { return event }
+            if !event.isARepeat { self.toggleSearch() }
+            return nil
+        }
         showSearch()
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     }
     func applicationDidBecomeActive(_ notification: Notification) { store.checkClockSetupOnReturn() }
     private func command(_ key: String) -> Bool {
@@ -53,10 +83,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func resizePanel() {
         guard let panel else { return }
-        let count = store.results.count + store.quickResults.count
-        let height: CGFloat = !store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64)))
+        let count = store.results.count + store.allQuickResults.count
+        let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
+        let height: CGFloat = store.details != nil ? detailHeight : (!store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64))))
         let top = panel.frame.maxY
         panel.setFrame(NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height), display: true)
+    }
+    private func setHotkey(_ binding: ShortcutBinding) {
+        guard hotkey.register(binding) else {
+            store.hotkeyError = "無法使用 \(binding.display)，可能已被系統或其他 App 占用。原快捷鍵仍可使用；⌘Space 請先關閉 Spotlight 的同名快捷鍵。"
+            return
+        }
+        store.hotkeyNotice = binding.display; store.hotkeyError = ""
+        if let data = try? JSONEncoder().encode(binding) { UserDefaults.standard.set(data, forKey: "shortcutBinding.v1") }
+    }
+    func toggleSearch() {
+        guard NSApp.modalWindow == nil, translationWindow?.attachedSheet == nil else { return }
+        guard Date().timeIntervalSince(lastToggle) > 0.2 else { return }
+        lastToggle = Date()
+        let visible = panel?.isVisible == true
+        Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle launcher; visible=\(visible, privacy: .public)")
+        if visible { panel?.orderOut(nil) }
+        else { showSearch() }
+        Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle complete; visible=\(self.panel?.isVisible == true, privacy: .public)")
     }
     func showSearch() {
         guard let panel else { return }
@@ -69,7 +118,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         store.focusToken = UUID(); store.refreshIfNeeded()
     }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showSearch(); return true }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if let window = translationWindow, window.isVisible { window.makeKeyAndOrderFront(nil) }
+        else if NSApp.modalWindow == nil { showSearch() }
+        return true
+    }
 }
 
 private final class LauncherPanel: NSPanel {

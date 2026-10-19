@@ -19,3 +19,8 @@ jobs:
         run: swift run HanSearchChecks
       - name: Verify signed Clock companion source
         run: python3 script/verify_clock_shortcut.py
+      - name: Check folder bookmark persistence
+        run: |
+          mkdir -p work
+          swiftc -parse-as-library Sources/HanSearch/Services/FileAccessBookmarks.swift script/check_folder_bookmarks.swift -o work/BookmarkChecks
+          work/BookmarkChecks

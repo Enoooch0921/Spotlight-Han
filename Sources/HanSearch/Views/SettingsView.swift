@@ -10,8 +10,17 @@ struct SettingsView: View {
                 LabeledContent("喚出搜尋", value: store.hotkeyNotice)
                 Text("⌘1 App、⌘2 檔案、⌘3 動作、⌘4 剪貼板。Escape 收起面板。")
                     .font(.caption).foregroundStyle(.secondary)
-                Text("目前使用 ⌃⌥Space。接管 ⌘Space 的設定尚未提供；原本 Spotlight 仍可使用。")
+                HStack {
+                    ShortcutRecorder(title: "自訂：" + store.hotkeyNotice) { store.changeHotkey?($0) }.frame(width: 230, height: 26)
+                    Button("使用 ⌘Space") { store.changeHotkey?(.commandSpace) }
+                    Button("恢復預設") { store.changeHotkey?(.standard) }
+                }
+                if !store.hotkeyError.isEmpty { Text(store.hotkeyError).font(.caption).foregroundStyle(.orange) }
+                Text("快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再按上方「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。")
                     .font(.caption).foregroundStyle(.secondary)
+                Button("開啟 Spotlight 快捷鍵開關") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension?Spotlight")!)
+                }
             }
             Section("快速檔名搜尋") {
                 Text(store.catalogStatus).font(.caption)
@@ -23,10 +32,13 @@ struct SettingsView: View {
                     }
                 }
                 HStack {
-                    Button("加入資料夾…") { store.chooseCatalogFolder() }.disabled(store.catalogRefreshing)
-                    Button("更新檔名清單") { store.refreshCatalog() }.disabled(store.catalogRefreshing)
+                    Button("選擇搜尋資料夾…") { store.chooseCatalogFolder() }.disabled(store.catalogRefreshing)
+                    Button("更新檔名清單") { store.refreshCatalog() }.disabled(store.catalogRefreshing || store.indexing || store.catalogRoots.isEmpty)
+                    Button("忘記資料夾") { store.forgetFolders() }.disabled(store.catalogRefreshing || store.indexing || store.catalogRoots.isEmpty)
                 }
-                Text("只讀取檔名，使用自己的本機清單；不依賴 Spotlight。啟動及叫出面板時會更新（間隔至少 30 秒）。新檔案可手動更新。")
+                Text("開發測試版在重新編譯或重新簽章後，macOS 仍可能要求重新授權；正式發行需要固定的開發者簽章。")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("首次集中選擇搜尋範圍，之後使用已保存的資料夾書籤；不會在啟動時自動探查未選的下載或文件資料夾。選擇使用者資料夾可涵蓋下載、影片、文件。只讀取檔名、不依賴 Spotlight，更新間隔至少 30 秒。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Word 與 PDF 內容") {
@@ -66,6 +78,16 @@ struct SettingsView: View {
                 Text("資料只留在本次執行的記憶體；搜尋不修改或上傳；只有你確認新增指令時才寫入行事曆、提醒事項或系統時鐘。系統授權由你確認。移除來源會清除 App 內的搜尋副本；撤銷系統授權請至系統設定。")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("翻譯與貨幣換算") {
+                Toggle("非中文查詢顯示繁體中文翻譯", isOn: $store.translationEnabled)
+                Text("使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，在搜尋列上方的翻譯結果按 Return 準備。原查詢的檔案與 App 結果仍保留。")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("貨幣可輸入 3000台幣=rmb、nt3000 = rmb、3000nt = rmb。參考匯率每日更新；結果會標示來源、資料時間與過期快取。")
+                    .font(.caption).foregroundStyle(.secondary)
+                Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!)
+                Text("只下載公開的 USD 匯率表並在本機換算，金額與搜尋文字不會傳送。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("剪貼板") {
                 Toggle("記錄剪貼板文字", isOn: $store.clipboardEnabled)
                 Text("預設關閉。啟用後只在記憶體保留最近 50 筆、每筆最多 2,000 字；略過標示為隱藏／暫存的內容及常見密碼管理器。其他 App 未標示的敏感文字仍可能被記錄。")
@@ -84,8 +106,8 @@ struct SettingsView: View {
                 }
             }
             Section("關於") {
-                Text("Spotlight Han 0.4.0 · 繁簡中文搜尋")
-                Text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence、即時匯率或所有系統 App 動作。")
+                Text("Spotlight Han 0.5.0 · 繁簡中文搜尋")
+                Text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped).onAppear { store.hideLauncher?() }

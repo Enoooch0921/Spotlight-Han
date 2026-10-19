@@ -3,6 +3,7 @@ import Foundation
 public enum QuickAction: Hashable, Sendable {
     case copy(String), open(URL), note(String), shortcut(String), details(String)
     case createTask(TaskPlan)
+    case prepareTranslation(String)
 }
 
 public struct QuickResult: Identifiable, Hashable, Sendable {

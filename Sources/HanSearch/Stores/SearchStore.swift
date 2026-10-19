@@ -8,6 +8,15 @@ final class SearchStore: ObservableObject {
     @Published var mode: SearchMode = .all
     @Published var results: [SearchItem] = []
     @Published var quickResults: [QuickResult] = []
+    @Published var translationResult: QuickResult?
+    @Published var currencyResult: QuickResult?
+    @Published var translationEnabled = UserDefaults.standard.object(forKey: "translationEnabled.v1") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(translationEnabled, forKey: "translationEnabled.v1") }
+    }
+    var prepareTranslation: ((String) -> Void)?
+    var allQuickResults: [QuickResult] { [currencyResult, translationResult].compactMap { $0 } + quickResults }
+    private var currencyTask: Task<Void, Never>?
+    private var currencyQuery = ""
     @Published var selection: String?
     @Published var searching = false
     @Published var indexing = false
@@ -15,22 +24,25 @@ final class SearchStore: ObservableObject {
     @Published var notice = ""
     @Published var indexNotice = ""
     @Published var hotkeyNotice = "⌃⌥Space"
+    @Published var hotkeyError = ""
+    var changeHotkey: ((ShortcutBinding) -> Void)?
     @Published var focusToken = UUID()
     @Published var catalogStatus = "準備檔名清單…"
     @Published var catalogRefreshing = false
     @Published var catalogCount = 0
-    @Published var catalogRoots = FileCatalog.defaultRoots
+    @Published var catalogRoots: [URL] = []
     @Published var milliseconds: Double = 0
     @Published var personalStatus: [SearchMode: String] = [:]
     @Published var connecting = Set<SearchMode>()
     @Published var setupRunning = false
     @Published var setupStatus = ""
-    @Published var details: String?
+    @Published var details: String? { didSet { onLayoutChanged?() } }
     @Published var clockSetupPending = false
     @Published var actionInFlight = false
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
+    private let fileAccess = FileAccessBookmarks()
     private var documents: [IndexedDocument] = []
     private var entries: [CatalogEntry] = []
     private var personal: [PersonalRecord] = []
@@ -41,6 +53,11 @@ final class SearchStore: ObservableObject {
     private var searchTask: Task<Void, Never>?
 
     init() {
+        let allowed = fileAccess.urls
+        if let saved = UserDefaults.standard.stringArray(forKey: "indexRootPaths.v2") {
+            catalogRoots = saved.map { fileAccess.resolvedIndexURL($0) }.filter { root in allowed.contains { root.path == $0.path || root.path.hasPrefix($0.path + "/") } }
+        } else { catalogRoots = allowed }
+        UserDefaults.standard.set(catalogRoots.map(\.path), forKey: "indexRootPaths.v2")
         clipboard.changed = { [weak self] value in
             guard let self else { return }
             self.clips.removeAll { $0 == value }
@@ -56,14 +73,16 @@ final class SearchStore: ObservableObject {
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
-    var hasBody: Bool { !query.isEmpty || mode != .all }
-    var allIDs: [String] { quickResults.map(\.id) + results.map(\.id) }
+    var hasBody: Bool { !query.isEmpty || mode != .all || details != nil }
+    var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
 
     func search() {
+        details = nil
         onLayoutChanged?()
         searchTask?.cancel()
         let token = UUID(); generation = token
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
+        updateCurrency(query: term)
         if mode == .clipboard {
             quickResults = clips.enumerated().filter { term.isEmpty || ChineseSearch.matches($0.element, query: term) }.map {
                 QuickResult(id: "clip:\($0.offset)", title: String($0.element.prefix(100)), subtitle: "剪貼板 · 按 Return 複製", symbol: "doc.on.clipboard", action: .copy($0.element))
@@ -112,14 +131,35 @@ final class SearchStore: ObservableObject {
             guard !Task.isCancelled, self.generation == token else { return }
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
-            self.selection = self.allIDs.first; self.milliseconds = elapsed; self.searching = false
+            self.selection = self.currencyResult?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id; self.milliseconds = elapsed; self.searching = false
             self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
             self.onLayoutChanged?()
         }
     }
+    private func updateCurrency(query: String) {
+        let term = mode == .all ? query : ""
+        guard term != currencyQuery else { return }
+        currencyQuery = term; currencyTask?.cancel(); currencyResult = nil
+        guard let request = CurrencyQuery.parse(term) else { return }
+        currencyResult = QuickResult(id: "currency", title: "正在取得匯率…", subtitle: "Rates by ExchangeRate-API · 每日更新", symbol: "dollarsign.circle", action: .details("正在取得公開匯率。"))
+        currencyTask = Task {
+            do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
+            let result = await CurrencyService.shared.result(for: request)
+            guard !Task.isCancelled, self.currencyQuery == term else { return }
+            currencyResult = result
+            if selection == nil { selection = allIDs.first }
+            onLayoutChanged?()
+        }
+    }
+    func setTranslation(_ result: QuickResult?) {
+        translationResult = result
+        if let selection, !allIDs.contains(selection) { self.selection = allIDs.first }
+        onLayoutChanged?()
+    }
     private func loadCatalog() async {
+        guard !catalogRoots.isEmpty else { catalogStatus = "首次請在設定選擇搜尋資料夾"; return }
         if let cached = await Task.detached(priority: .utility, operation: { FileCatalog.load() }).value {
-            entries = cached.entries; catalogRoots = cached.roots.map { URL(fileURLWithPath: $0) }; catalogCount = entries.count
+            entries = cached.entries.filter { entry in catalogRoots.contains { entry.path.hasPrefix($0.path + "/") } }; catalogCount = entries.count
             catalogStatus = "已載入 \(entries.count) 筆檔名，正在更新"; search()
         }
         refreshCatalog()
@@ -127,6 +167,7 @@ final class SearchStore: ObservableObject {
     func refreshIfNeeded() { if Date().timeIntervalSince(lastRefresh) > 30 { refreshCatalog() } }
     func refreshCatalog() {
         guard !catalogRefreshing else { return }
+        guard !catalogRoots.isEmpty else { catalogStatus = "首次請在設定選擇搜尋資料夾"; return }
         catalogRefreshing = true
         let roots = catalogRoots
         catalogStatus = "正在掃描檔名（不讀取影片內容）…"
@@ -147,21 +188,40 @@ final class SearchStore: ObservableObject {
         }
     }
     func chooseCatalogFolder() {
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = "加入檔名範圍"; panel.message = "只讀取檔案名稱，不讀取影片內容。"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard !catalogRoots.contains(url) else { return }
-        catalogRoots.append(url); refreshCatalog()
+        guard !catalogRefreshing else { return }
+        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+        panel.prompt = "允許搜尋"; panel.message = "可按住 ⌘ 一次選擇多個資料夾；選擇你的使用者資料夾可一次涵蓋下載、影片、文件，只索引這三處。App 會記住選擇。"
+        guard panel.runModal() == .OK else { return }
+        do {
+            try fileAccess.add(panel.urls)
+            for url in panel.urls {
+                let roots = url.standardizedFileURL == FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL ? FileCatalog.defaultRoots : [url]
+                for root in roots where !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
+            }
+            saveCatalogRoots(); refreshCatalog()
+        } catch { catalogStatus = "無法記住資料夾授權：" + error.localizedDescription }
     }
+    private func saveCatalogRoots() { UserDefaults.standard.set(catalogRoots.map(\.path), forKey: "indexRootPaths.v2") }
     func removeRoot(_ url: URL) {
-        guard !catalogRefreshing else { return }; catalogRoots.removeAll { $0 == url }; refreshCatalog()
+        guard !catalogRefreshing else { return }
+        catalogRoots.removeAll { $0.path == url.path }; saveCatalogRoots()
+        entries.removeAll { entry in !catalogRoots.contains { entry.path.hasPrefix($0.path + "/") } }
+        catalogCount = entries.count; search(); refreshCatalog()
+    }
+    func forgetFolders() {
+        guard !catalogRefreshing, !indexing else { return }
+        fileAccess.clear(); catalogRoots = []; entries = []; documents = []; folder = nil; catalogCount = 0
+        saveCatalogRoots(); try? FileManager.default.removeItem(at: FileCatalog.cacheURL)
+        catalogStatus = "已忘記資料夾；可重新選擇搜尋範圍"; search()
     }
     func chooseFolder() {
         guard !indexing else { return }
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
         panel.prompt = "讀取文件內容"; panel.message = "直接讀取此資料夾的 Word、文字 PDF 與純文字，供繁簡全文搜尋。"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        folder = url; mode = .contents; rebuildIndex()
+        do { try fileAccess.add([url]); folder = url; mode = .contents; rebuildIndex() }
+        catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }
     }
     func rebuildIndex() {
         guard let folder, !indexing else { return }
@@ -244,12 +304,13 @@ final class SearchStore: ObservableObject {
     private func updateClipboard() { if clipboardEnabled { clipboard.start() } else { clipboard.stop(); clips = [] }; search() }
     func clearClipboard() { clips = []; search() }
     func openSelection() {
-        if let quick = quickResults.first(where: { $0.id == selection }) {
+        if let quick = allQuickResults.first(where: { $0.id == selection }) {
             switch quick.action {
             case .copy(let value):
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string); notice = "已複製"
             case .open(let url): NSWorkspace.shared.open(url)
             case .details(let text): details = text
+            case .prepareTranslation(let source): prepareTranslation?(source)
             case .createTask(let plan):
                 guard !actionInFlight else { return }
                 actionInFlight = true

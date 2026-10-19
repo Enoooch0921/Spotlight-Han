@@ -15,6 +15,9 @@ struct ContentView: View {
         .padding(40)
         .frame(width: 804, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
+        .background {
+            if #available(macOS 15.0, *) { TranslationBridge(store: store) }
+        }
         .onAppear { focused = true }
         .onChange(of: store.query) { _, _ in store.search() }
         .onChange(of: store.mode) { _, _ in store.search() }
@@ -25,22 +28,14 @@ struct ContentView: View {
         .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
         .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
         .onExitCommand { NSApp.keyWindow?.orderOut(nil) }
-        .sheet(isPresented: Binding(get: { store.details != nil }, set: { if !$0 { store.details = nil } })) {
-            VStack(alignment: .leading, spacing: 16) {
-                ScrollView { Text(store.details ?? "").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-                HStack {
-                    Button("複製內容") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(store.details ?? "", forType: .string) }
-                    Spacer(); Button("完成") { store.details = nil }.keyboardShortcut(.defaultAction)
-                }
-            }.padding(24).frame(width: 520, height: 400)
-        }
+
     }
     private var layout: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 13) {
                     Image(systemName: "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
-                    TextField("Spotlight 搜尋", text: $store.query)
+                    TextField("Spotlight Han 搜尋", text: $store.query)
                         .font(.system(size: 25, weight: .regular)).textFieldStyle(.plain)
                         .focused($focused).onSubmit { store.openSelection() }
                         .accessibilityLabel("Spotlight Han 繁簡搜尋")
@@ -78,7 +73,15 @@ struct ContentView: View {
                 }.padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
-            if store.mode == .alarms && store.quickResults.isEmpty {
+            if let details = store.details {
+                VStack(alignment: .leading, spacing: 16) {
+                    ScrollView { Text(details).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    HStack {
+                        Button("複製內容") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(details, forType: .string) }
+                        Spacer(); Button("返回搜尋") { store.details = nil; focused = true }
+                    }
+                }.padding(22).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.mode == .alarms && store.allQuickResults.isEmpty {
                 AlarmListView { store.connect(.alarms) }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if store.allIDs.isEmpty {
                 emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,7 +89,7 @@ struct ContentView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 3) {
-                            ForEach(store.quickResults) { item in quickRow(item).id(item.id) }
+                            ForEach(store.allQuickResults) { item in quickRow(item).id(item.id) }
                             ForEach(store.results) { item in
                                 ResultRow(item: item)
                                     .padding(.horizontal, 12).padding(.vertical, 4)
@@ -128,8 +131,11 @@ struct ContentView: View {
         HStack(spacing: 13) {
             Image(systemName: item.symbol).font(.system(size: 22)).foregroundStyle(.secondary).frame(width: 30, height: 32)
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(1)
+                Text(item.title).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
                 Text(item.subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                if item.id == "quick:currency" {
+                    Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!).font(.system(size: 10))
+                }
             }
             Spacer()
             if store.selection == item.id { Image(systemName: "return").font(.caption).foregroundStyle(.secondary) }
@@ -143,6 +149,9 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Text(emptyTitle).font(.system(size: 15, weight: .medium))
             Text(emptyDescription).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
+                Button("選擇搜尋資料夾…") { store.chooseCatalogFolder() }.buttonStyle(.bordered)
+            }
             if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
                 SettingsLink { Text("設定資料來源") }.buttonStyle(.bordered)
             }
@@ -158,7 +167,7 @@ struct ContentView: View {
         if store.mode == .clipboard { return "記錄預設關閉；啟用後只保留本次執行期間的文字。" }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
         if store.query.isEmpty { return "輸入關鍵字，繁體與簡體一起比對。" }
-        return "請縮短關鍵字，或在設定中加入檔案所在資料夾。"
+        return store.catalogRoots.isEmpty ? "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" : "請縮短關鍵字，或在設定中加入檔案所在資料夾。"
     }
 }
 
