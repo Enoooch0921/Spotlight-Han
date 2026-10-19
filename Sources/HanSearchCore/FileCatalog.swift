@@ -94,10 +94,11 @@ public enum FileCatalog {
         let prefix = folder.map { $0.path + "/" }
         let needle = ChineseSearch.normalized(query)
         let phoneticQuery = PhoneticSearch.Query(query)
+        let identifier = ModelSearch.Query(query)
         let hits = entries.filter { entry in
             if let prefix, !entry.path.hasPrefix(prefix) { return false }
             if mode == .videos && (entry.directory || !videoExtensions.contains(entry.ext)) { return false }
-            return terms.allSatisfy { entry.foldedName.contains($0) } || entry.phonetics.matches(phoneticQuery) || aliasPaths.contains(entry.path)
+            return (identifier.isIdentifier ? identifier.matches(entry.name) : terms.allSatisfy { entry.foldedName.contains($0) }) || entry.phonetics.matches(phoneticQuery, allowInitials: false) || aliasPaths.contains(entry.path)
         }
         func score(_ entry: CatalogEntry) -> Int {
             (entry.foldedName == needle ? 100 : 0) + (entry.foldedName.hasPrefix(needle) ? 20 : 0)

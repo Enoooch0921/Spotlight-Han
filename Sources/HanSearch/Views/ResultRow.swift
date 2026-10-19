@@ -6,10 +6,12 @@ struct ResultRow: View {
     let item: SearchItem
     let query: String
     var preview: DocumentPreview? = nil
+    @State private var creationDate: Date?
+    @State private var datedPath: String?
     private var needsPreview: Bool { item.excerpt.isEmpty && item.source == "文件・系統索引" }
     private var sourceLabel: String {
         if needsPreview, case .match = preview { return "文件・內文命中" }
-        if needsPreview, ChineseSearch.matches(item.name, query: query) { return "文件・檔名命中" }
+        if needsPreview, ModelSearch.matches(item.name, query: query) { return "文件・檔名命中" }
         return item.source
     }
     var body: some View {
@@ -23,6 +25,10 @@ struct ResultRow: View {
                     Text(L.text(sourceLabel)).font(.caption2).foregroundStyle(.secondary)
                 }
                 Text(item.url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                if !item.isApplication, datedPath == item.id {
+                    Text(creationDate.map { L.format("建立日期：%@", $0.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(L.language.locale))) } ?? L.text("建立日期無法取得"))
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
                 if !item.excerpt.isEmpty {
                     HighlightedText(text: item.excerpt, query: query).font(.callout).foregroundStyle(.secondary).lineLimit(3)
                 } else if needsPreview {
@@ -34,6 +40,13 @@ struct ResultRow: View {
                 }
             }
         }.padding(.vertical, 5)
+            .task(id: item.id) {
+                guard !item.isApplication else { return }
+                let value = await FileCreationDateStore.shared.date(for: item.url)
+                guard !Task.isCancelled else { return }
+                creationDate = value
+                datedPath = item.id
+            }
     }
     private var previewStatus: String {
         guard let preview else { return "正在準備命中段落…" }

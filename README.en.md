@@ -6,7 +6,7 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.2/Spotlight-Han-0.8.2-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.3/Spotlight-Han-0.8.3-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
@@ -18,7 +18,7 @@ This is script matching, not synonym search: `影片` and `視頻` are not autom
 
 ## What it does
 
-- Launch apps and search filenames, videos, Word/PDF/text content, with visible cross-script keyword highlights and hit-centred excerpts.
+- Launch apps and search filenames, videos, Word/PDF/PowerPoint/Excel/text content, with visible cross-script keyword highlights and hit-centred excerpts.
 - Search authorised Notes, Contacts, Calendar, Reminders and a limited Mail scope. Source status distinguishes fresh data, stale/partial copies and failed reads, with timestamps.
 - Refresh already-authorised sources in the background without requesting new permissions. Calendar and Reminders refresh every 5 minutes and after change notifications; other connected sources and document indexes every 15 minutes. Refresh can be disabled.
 - Create an event with `cal` + Tab, then `tomorrow at 3pm meeting for 30 minutes`. Use `rem` + Tab for a reminder. Chinese works too: `明天下午三點到四點開會`, `30分鐘後喝水`.
@@ -30,7 +30,7 @@ Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) 
 
 ## Install and try
 
-**v0.8.2 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v0.8.3 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 
@@ -66,6 +66,8 @@ Han checks public GitHub releases at most once daily and offers a DMG download w
 
 App searches such as `logicpro` now match **Logic Pro**; `fcp` / `fcpx` match **Final Cut Pro**. Curated aliases also include `ps`, `ai`, `ae`, `pr`, `vscode` and `ppt`. Local learning prioritizes repeated choices for the same query and gently adapts to preferred result types across apps, Notes and files. Raw queries and contents are not saved or uploaded; learning can be disabled or cleared.
 
-Chinese titles also support Pinyin, initials and Zhuyin (`hgdj` / `ㄏㄍㄉㄐ`). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Phonetic matching covers names and titles, not full document bodies.
+Chinese names support full Pinyin and Zhuyin; only apps automatically match initials (`hgdj` / `ㄏㄍㄉㄐ`). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Initials are App-only; filenames and personal titles require full phonetic input or an explicit custom alias. Model queries such as dl32 keep their digits.
 
-All now includes system-wide indexed Word, PDF and PowerPoint contents with Chinese script variants. Fast results appear first; content matches merge afterward without losing selection. Optional folder extraction supports PPTX slide/notes text and per-file failure details. System index coverage and access restrictions still apply.
+All now includes system-wide indexed Word, PDF, PowerPoint and Excel contents with Chinese script variants. Fast results appear first; content matches merge afterward without losing selection. Optional folder extraction supports PPTX slide/notes text, XLSX cells and per-file failure details. System index coverage and access restrictions still apply.
+
+File results show filesystem creation dates and times, read in the background without changing ranking. Unavailable dates are labelled explicitly.

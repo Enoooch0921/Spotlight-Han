@@ -520,5 +520,14 @@
   "文件・檔名命中": "Document · name match",
   "核對內文 %@／%@ 份": "Checking content %@/%@ documents",
   "核對文件內文": "Checking document content",
-  "查詢系統文件索引": "Querying the system document index"
+  "查詢系統文件索引": "Querying the system document index",
+  "建立日期：%@": "Created: %@",
+  "建立日期無法取得": "Creation date unavailable",
+  "Word、PDF、PowerPoint 與 Excel 內容": "Word, PDF, PowerPoint and Excel contents",
+  "直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PowerPoint、Excel 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。": "Search indexed Word, PDF, PowerPoint, Excel and text documents across your Mac in All. Apps and filenames appear first, followed by content results. Disabling the Spotlight shortcut does not disable indexing.",
+  "全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可補強繁簡比對、PPTX 與 XLSX 儲存格文字；「全部」仍保留全機搜尋，不必為此重掃整個使用者資料夾。舊版 PPT／XLS 取決於系統索引。": "System-wide content search uses the macOS index. Unindexed, excluded, cloud-only or inaccessible documents may be missing. Add a folder to supplement cross-script matching, PPTX text and XLSX cells. All still searches system-wide without rescanning your entire home folder. Legacy PPT/XLS depends on the system index.",
+  "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。": "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as hgdj or ㄏㄍㄉㄐ apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example hong2 guo3.",
+  "直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。": "Read Word, text-based PDF, PowerPoint, Excel and text files in this folder for cross-script content search.",
+  "舊版或二進位 Excel 請使用系統索引搜尋": "Use the system index for legacy or binary Excel files",
+  "Excel 結構或文字超過讀取上限": "Excel structure or text exceeds the reading limit"
 }

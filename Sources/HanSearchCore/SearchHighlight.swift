@@ -7,6 +7,7 @@ public enum SearchHighlight {
     }
 
     private static func matchingRanges(in text: String, query: String, firstOnly: Bool) -> [NSRange] {
+        if let ranges = ModelSearch.ranges(in: text, query: query, firstOnly: firstOnly) { return ranges }
         let terms = Array(Set(ChineseSearch.terms(ChineseSearch.normalized(String(query.prefix(200))))))
         guard !text.isEmpty, !terms.isEmpty else { return [] }
         let folded = ChineseSearch.normalized(text)

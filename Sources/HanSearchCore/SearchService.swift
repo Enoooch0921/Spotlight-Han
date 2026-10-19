@@ -21,7 +21,7 @@ public struct FolderIndex: Sendable {
 }
 
 public enum SearchService {
-    public static let documentExtensions: Set<String> = ["txt", "md", "csv", "tsv", "srt", "json", "html", "htm", "doc", "docx", "rtf", "rtfd", "odt", "pdf", "ppt", "pptx", "pps", "ppsx", "pot", "potx", "pptm"]
+    public static let documentExtensions: Set<String> = ["txt", "md", "csv", "tsv", "srt", "json", "html", "htm", "doc", "docx", "rtf", "rtfd", "odt", "pdf", "ppt", "pptx", "pps", "ppsx", "pot", "potx", "pptm", "xlsx", "xlsm", "xltx", "xltm", "xls", "xlsb"]
     /// Query the existing system index, never recursively read the entire disk per keystroke.
     public static func documentQuery(_ query: String) -> String {
         let clean = String(query.unicodeScalars.map { CharacterSet.controlCharacters.contains($0) ? Character(" ") : Character($0) }).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -124,6 +124,8 @@ public enum SearchService {
     public static func extractText(_ url: URL, cancellation: ProcessCancellation? = nil) throws -> String {
         if cancellation?.isCancelled == true { throw CancellationError() }
         let ext = url.pathExtension.lowercased()
+        if ["xlsx", "xlsm", "xltx", "xltm"].contains(ext) { return try SpreadsheetText.extract(url, cancellation: cancellation) }
+        if ["xls", "xlsb"].contains(ext) { throw DocumentReadReason.legacySpreadsheet }
         if ["pptx", "ppsx", "potx", "pptm"].contains(ext) { return try PresentationText.extract(url, cancellation: cancellation) }
         if ["ppt", "pps", "pot"].contains(ext) {
             let data = try ProcessRunner.run("/usr/bin/mdls", ["-raw", "-name", "kMDItemTextContent", url.path], timeout: 10, cancellation: cancellation, outputLimit: 8_000_000)
@@ -153,12 +155,14 @@ public enum SearchService {
             if byPath[item.id] == nil || !item.excerpt.isEmpty || (item.applicationIdentifier != nil && byPath[item.id]?.applicationIdentifier == nil) { byPath[item.id] = item }
         }
         let needle = ChineseSearch.normalized(query)
+        let model = ModelSearch.Query(query)
         func score(_ item: SearchItem) -> Int {
             let name = ChineseSearch.normalized(item.name)
             let compactName = item.isApplication ? ChineseSearch.applicationKey(item.name) : name
             let compactNeedle = item.isApplication ? ChineseSearch.applicationKey(query) : needle
             let alias = item.isApplication && ApplicationAliases.matches(query, aliases: ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier))
-            return (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (alias ? 80 : 0) + (item.isApplication ? 5 : 0)
+            let evidence = model.isIdentifier ? (model.matches(item.name) ? 400 : model.matches(item.excerpt) ? 200 : 0) : 0
+            return evidence + (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (alias ? 80 : 0) + (item.isApplication ? 5 : 0)
         }
         return Array(byPath.values.sorted { a, b in
             let x = score(a), y = score(b)

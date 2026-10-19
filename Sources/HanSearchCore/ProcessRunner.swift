@@ -11,8 +11,9 @@ public final class ProcessCancellation: @unchecked Sendable {
 
 public enum ProcessFailure: Error, LocalizedError {
     case failed(String)
+    case outputLimitExceeded
     public var errorDescription: String? {
-        switch self { case .failed(let message): return message }
+        switch self { case .failed(let message): return message; case .outputLimitExceeded: return "文件或搜尋輸出過大，請縮小搜尋範圍。" }
     }
 }
 
@@ -44,7 +45,7 @@ public enum ProcessRunner {
             if let outputLimit, data.count + chunk.count > outputLimit {
                 if process.isRunning { kill(process.processIdentifier, SIGKILL) }
                 process.waitUntilExit()
-                throw ProcessFailure.failed("文件或搜尋輸出過大，請縮小搜尋範圍。")
+                throw ProcessFailure.outputLimitExceeded
             }
             data.append(chunk)
             if let onLine {

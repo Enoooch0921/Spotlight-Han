@@ -52,11 +52,11 @@ struct SettingsView: View {
                 Text(L.text("首次集中選擇搜尋範圍，之後使用已保存的資料夾書籤；不會在啟動時自動探查未選的下載或文件資料夾。選擇使用者資料夾可涵蓋下載、影片、文件。只讀取檔名、不依賴 Spotlight，更新間隔至少 30 秒。"))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section(L.text("Word、PDF 與 PowerPoint 內容")) {
+            Section(L.text("Word、PDF、PowerPoint 與 Excel 內容")) {
                 Toggle(L.text("「全部」加入全機文件搜尋（含內文）"), isOn: $store.fullTextInAll)
-                Text(L.text("直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PPT／PPTX 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。"))
+                Text(L.text("直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PowerPoint、Excel 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。"))
                     .font(.caption).foregroundStyle(.secondary)
-                Text(L.text("全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可用 Han 直接讀取來補強繁簡比對與 PPTX 文字；「全部」仍保留全機搜尋。舊版 PPT 取決於系統索引。"))
+                Text(L.text("全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可補強繁簡比對、PPTX 與 XLSX 儲存格文字；「全部」仍保留全機搜尋，不必為此重掃整個使用者資料夾。舊版 PPT／XLS 取決於系統索引。"))
                     .font(.caption).foregroundStyle(.secondary)
                 Text(L.text("系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。"))
                     .font(.caption).foregroundStyle(.secondary)
@@ -154,7 +154,7 @@ struct SettingsView: View {
             }
             Section(L.text("搜尋習慣")) { SearchHabitSettingsView(habits: store.habits) }
             Section(L.text("拼音、注音與搜尋縮寫")) {
-                Text(L.text("中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。"))
+                Text(L.text("中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。"))
                     .font(.caption).foregroundStyle(.secondary)
                 Text(L.text("右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。"))
                     .font(.caption).foregroundStyle(.secondary)

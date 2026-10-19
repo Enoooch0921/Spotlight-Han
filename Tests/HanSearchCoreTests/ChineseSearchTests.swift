@@ -38,6 +38,7 @@ struct CheckRunner {
         tests.testMergeDeduplicatesAndKeepsPreview()
         try tests.testRealDocxExtractionAndCrossScriptContent()
         try tests.testPresentationContents()
+        try tests.testSpreadsheetContents()
         try tests.testRealSpotlightQueryDoesNotError()
         try tests.testCalculator()
         tests.testConversions()
@@ -60,7 +61,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 30 check groups — PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 31 check groups — Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -74,11 +75,31 @@ final class ChineseSearchTests {
         let terminal = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Terminal.app"), name: "Terminal", bundleID: "com.apple.Terminal")
         for query in ["zdj", "zhongduanji", "ㄓㄉㄐ", "终端机"] { XCTAssertTrue(terminal.matches(query)) }
         let file = CatalogEntry(url: URL(fileURLWithPath: "/fixture/紅果短劇.mp4"))
-        for query in ["hongguo", "hgdj", "ㄏㄍㄉㄐ"] { XCTAssertEqual(FileCatalog.search([file], query: query, mode: .videos).first?.id, file.path) }
+        for query in ["hongguo", "ㄏㄨㄥㄍㄨㄛ"] { XCTAssertEqual(FileCatalog.search([file], query: query, mode: .videos).first?.id, file.path) }
         XCTAssertTrue(FileCatalog.search([file], query: "other", mode: .videos, aliasPaths: [file.path]).count == 1)
         XCTAssertTrue(FileCatalog.search([file], query: "other", mode: .videos, folder: URL(fileURLWithPath: "/elsewhere"), aliasPaths: [file.path]).isEmpty)
         let record = PersonalRecord(id: "note:fixture", title: "鼎達叔叔", subtitle: "", text: "測試全文", symbol: "note", mode: .notes, action: .details("fixture"))
-        for query in ["dingda", "ddss", "ㄉㄧㄥˇ ㄉㄚˊ", "ㄉㄉㄕㄕ"] { XCTAssertNotNil(record.result(query: query, mode: .notes)) }
+        for query in ["dingda", "ㄉㄧㄥˇ ㄉㄚˊ"] { XCTAssertNotNil(record.result(query: query, mode: .notes)) }
+        for query in ["ddss", "ㄉㄉㄕㄕ"] { XCTAssertNil(record.result(query: query, mode: .notes)) }
+        for query in ["hgdj", "ㄏㄍㄉㄐ"] { XCTAssertTrue(FileCatalog.search([file], query: query, mode: .videos).isEmpty) }
+        let initialsTrap = PhoneticSearch("動力")
+        XCTAssertTrue(initialsTrap.matches("dl"))
+        for query in ["dl32", "DL32", "dl3", "m32", "dl 32"] { XCTAssertFalse(initialsTrap.matches(query)) }
+        let trapFile = CatalogEntry(url: URL(fileURLWithPath: "/fixture/動力.docx"))
+        XCTAssertTrue(FileCatalog.search([trapFile], query: "dl32", mode: .names).isEmpty)
+        XCTAssertTrue(FileCatalog.search([trapFile], query: "dl", mode: .names).isEmpty)
+        let trapNote = PersonalRecord(id: "note:trap", title: "動力", subtitle: "", text: "unrelated", symbol: "note", mode: .notes, action: .details("fixture"))
+        XCTAssertNil(trapNote.result(query: "dl32", mode: .all)); XCTAssertNil(trapNote.result(query: "dl", mode: .all))
+        XCTAssertNotNil(trapNote.result(query: "dl32", mode: .all, aliasMatch: true))
+        let trapApp = InstalledApplication(url: URL(fileURLWithPath: "/fixture/動力.app"), name: "動力")
+        XCTAssertTrue(trapApp.matches("dl")); XCTAssertFalse(trapApp.matches("dl32"))
+        for text in ["DL32", "DL-32 操作手冊", "DL 32", "音控DL32接線"] { XCTAssertTrue(ModelSearch.matches(text, query: "dl32")) }
+        for text in ["DL320", "abcdl32xyz", "DL3", "DL32A", "工作表!A1 DL\n工作表!B1 32"] { XCTAssertFalse(ModelSearch.matches(text, query: "dl32")) }
+        XCTAssertNil(ModelSearch.key("dl32 manual"))
+        let modelDoc = IndexedDocument(url: URL(fileURLWithPath: "/fixture/inventory.xlsx"), text: "清單!B3　DL-32 音控設備")
+        let modelHit = modelDoc.match(query: "dl32", mode: .contents)
+        XCTAssertNotNil(modelHit); XCTAssertTrue(!SearchHighlight.ranges(in: modelHit!.excerpt, query: "dl32").isEmpty)
+        XCTAssertNil(IndexedDocument(url: URL(fileURLWithPath: "/fixture/DL320.pdf"), text: "DL320").match(query: "dl32", mode: .all))
         XCTAssertNil(record.result(query: "ceshi", mode: .notes)) // Only titles are transliterated.
         XCTAssertNotNil(record.result(query: "nickname", mode: .notes, aliasMatch: true))
         XCTAssertNil(record.result(query: "nickname", mode: .contacts, aliasMatch: true))
@@ -509,6 +530,54 @@ final class ChineseSearchTests {
         XCTAssertEqual(SearchService.documentQuery("\u{0}\n"), "")
         XCTAssertTrue(ChineseSearch.indexedVariants("头发").contains("頭髮"))
         XCTAssertFalse(predicate.contains("kMDItemDisplayName"))
+    }
+
+    func testSpreadsheetContents() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("HanExcelChecks-" + UUID().uuidString)
+        let package = root.appendingPathComponent("package"), folder = root.appendingPathComponent("docs")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        func write(_ path: String, _ text: String) throws {
+            let url = package.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        }
+        try write("[Content_Types].xml", "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>")
+        try write("xl/workbook.xml", "<workbook xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"課程\" sheetId=\"2\" r:id=\"rId2\"/><sheet name=\"音控清單\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>")
+        try write("xl/_rels/workbook.xml.rels", "<Relationships><Relationship Id=\"rId1\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Target=\"/xl/worksheets/sheet2.xml\"/></Relationships>")
+        try write("xl/sharedStrings.xml", "<sst><si><t>型號</t></si><si><r><t>DL</t></r><r><t>32</t></r><rPh><t>NotVisiblePhonetics</t></rPh></si><si><t>本周教会活动</t></si><si><t>UnusedMustNeverMatch</t></si></sst>")
+        try write("xl/worksheets/sheet1.xml", "<worksheet><sheetData><row><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B3\" t=\"s\"><v>1</v></c><c r=\"C3\"><v>42</v></c><c r=\"D3\" t=\"b\"><v>1</v></c><c r=\"E3\" t=\"str\"><f>InvisibleFormulaCode</f><v>SavedFormulaResult</v></c></row></sheetData></worksheet>")
+        try write("xl/worksheets/sheet2.xml", "<worksheet><sheetData><row><c r=\"A2\" t=\"s\"><v>2</v></c><c r=\"C5\" t=\"inlineStr\"><is><r><t>繁體電腦</t></r><r><t>課程</t></r></is></c></row></sheetData></worksheet>")
+        try write("xl/vbaProject.bin", "ThisMacroMustNeverRunOrBeIndexed")
+        func archive(_ name: String) throws -> URL {
+            let url = folder.appendingPathComponent(name)
+            _ = try ProcessRunner.run("/usr/bin/ditto", ["-c", "-k", package.path, url.path]); return url
+        }
+        let book = try archive("cell-data.xlsx")
+        let text = try SearchService.extractText(book)
+        XCTAssertTrue(text.contains("音控清單!B3　DL32") && text.contains("課程!C5　繁體電腦課程"))
+        XCTAssertTrue(text.contains("音控清單!C3　42") && text.contains("TRUE") && text.contains("SavedFormulaResult"))
+        for absent in ["UnusedMustNeverMatch", "NotVisiblePhonetics", "InvisibleFormulaCode", "ThisMacroMustNeverRunOrBeIndexed"] { XCTAssertFalse(text.contains(absent)) }
+        let indexed = SearchService.index(folder: folder)
+        XCTAssertEqual(indexed.documents.count, 1); XCTAssertEqual(indexed.skippedText, 0)
+        for query in ["dl32", "DL-32", "教會活動", "电脑课程"] { XCTAssertNotNil(indexed.documents.first?.match(query: query, mode: .contents)) }
+        guard case let .match(snippet) = DocumentPreview.read(book, query: "dl32", cancellation: ProcessCancellation()) else { preconditionFailure("Missing Excel cell preview") }
+        XCTAssertTrue(snippet.contains("音控清單!B3") && !SearchHighlight.ranges(in: snippet, query: "dl32").isEmpty)
+        let macro = folder.appendingPathComponent("cell-data.xlsm"); try FileManager.default.copyItem(at: book, to: macro)
+        XCTAssertEqual(try SearchService.extractText(macro), text)
+        XCTAssertTrue(SearchService.documentExtensions.isSuperset(of: ["xlsx", "xlsm", "xltx", "xltm", "xls", "xlsb"]))
+        do { _ = try SearchService.extractText(folder.appendingPathComponent("legacy.xls")); preconditionFailure("Legacy Excel must not claim direct extraction") } catch DocumentReadReason.legacySpreadsheet {}
+        let cancelled = ProcessCancellation(); cancelled.cancel()
+        do { _ = try SpreadsheetText.extract(book, cancellation: cancelled); preconditionFailure("Ignored Excel cancellation") } catch is CancellationError {}
+        try write("xl/worksheets/sheet1.xml", "<worksheet><sheetData><row><c r=\"B3\" t=\"s\"><v>9999</v></c></row></sheetData></worksheet>")
+        let invalid = try archive("bad-reference.xlsx")
+        do { _ = try SearchService.extractText(invalid); preconditionFailure("Invalid shared string cannot become searchable data") } catch DocumentReadReason.readFailed {}
+        try write("xl/sharedStrings.xml", "<sst><si><t>" + String(repeating: "A", count: 8_000_001) + "</t></si></sst>")
+        let large = try archive("over-limit.xlsx")
+        do { _ = try SearchService.extractText(large); preconditionFailure("Ignored spreadsheet XML bound") } catch DocumentReadReason.spreadsheetLimit {}
+        try write("xl/workbook.xml", "<!DOCTYPE a [<!ENTITY x SYSTEM 'file:///fixture/never-read'>]><a>&x;</a>")
+        let unsafe = try archive("unsafe.xlsx")
+        do { _ = try SearchService.extractText(unsafe); preconditionFailure("Accepted external XML entity") } catch DocumentReadReason.readFailed {}
     }
 
     func testPresentationContents() throws {

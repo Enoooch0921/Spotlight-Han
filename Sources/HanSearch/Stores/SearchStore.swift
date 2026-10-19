@@ -505,7 +505,7 @@ final class SearchStore: ObservableObject {
     func chooseFolder() {
         guard !indexing else { return }
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = L.text("讀取文件內容"); panel.message = L.text("直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。")
+        panel.prompt = L.text("讀取文件內容"); panel.message = L.text("直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try fileAccess.add([url]); folder = url; mode = .contents; rebuildIndex() }
         catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }

@@ -35,15 +35,21 @@ public struct PhoneticSearch: Codable, Hashable, Sendable {
                 let plain = query.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
                     .replacingOccurrences(of: "([ln])(?:v|u:)", with: "$1u", options: .regularExpression)
                 let valid = plain.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.letters.contains($0) || CharacterSet.whitespaces.contains($0) || "12345'".unicodeScalars.contains($0)) }
+                // Unseparated letters + digits are identifiers/models, never stripped
+                // into initials (e.g. DL32 -> dl). Explicit spaced tone syllables remain supported.
+                let syllables = plain.split { $0.isWhitespace || $0 == "'" }
+                let toneQuery = !plain.contains(where: \.isNumber) || (syllables.count >= 2 && syllables.allSatisfy {
+                    $0.range(of: #"^[a-z]+[1-5]?$"#, options: .regularExpression) != nil && $0.contains(where: { "aeiou".contains($0) })
+                })
                 let letters = String(plain.filter { $0.isLetter })
-                key = valid && letters.count >= 2 ? letters : ""
+                key = valid && toneQuery && letters.count >= 2 ? letters : ""
             }
         }
     }
-    public func matches(_ query: String) -> Bool { matches(Query(query)) }
-    public func matches(_ query: Query) -> Bool {
+    public func matches(_ query: String, allowInitials: Bool = true) -> Bool { matches(Query(query), allowInitials: allowInitials) }
+    public func matches(_ query: Query, allowInitials: Bool = true) -> Bool {
         guard !pinyin.isEmpty, !query.key.isEmpty else { return false }
-        if query.symbols { return zhuyin.contains(query.key) || query.key.count >= 2 && zhuyinInitials.contains(query.key) }
-        return pinyin.contains(query.key) || initials.contains(query.key)
+        if query.symbols { return zhuyin.contains(query.key) || allowInitials && query.key.count >= 2 && zhuyinInitials.contains(query.key) }
+        return pinyin.contains(query.key) || allowInitials && initials.contains(query.key)
     }
 }

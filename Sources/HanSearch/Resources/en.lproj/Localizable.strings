@@ -21,6 +21,7 @@
 "Apple 本機翻譯 · 選取後 ↵ 複製" = "Apple on-device translation · Select then ↵ to copy";
 "Apple 系統時鐘橋接捷徑；首次加入一次，之後輸入指令即可" = "Apple Clock bridge. Add it once, then enter alarm commands.";
 "App、檔名與已連接資料" = "apps, filenames and connected sources";
+"Excel 結構或文字超過讀取上限" = "Excel structure or text exceeds the reading limit";
 "GitHub 專案與原始碼" = "GitHub project and source";
 "Google · 按下 Return 後開啟瀏覽器" = "Google · Press Return to open the browser";
 "Han 預設行事曆" = "Han default calendar";
@@ -35,6 +36,7 @@
 "Waves" = "Waves";
 "Word 與 PDF 內容" = "Word and PDF content";
 "Word、PDF 與 PowerPoint 內容" = "Word, PDF and PowerPoint Contents";
+"Word、PDF、PowerPoint 與 Excel 內容" = "Word, PDF, PowerPoint and Excel contents";
 "iZotope" = "iZotope";
 "↵ 開啟" = "↵ Open";
 "⌘1 App、⌘2 檔案、⌘3 捷徑、⌘4 剪貼板。Escape 收起面板。" = "⌘1 Apps, ⌘2 Files, ⌘3 Shortcuts, ⌘4 Clipboard. Escape dismisses search.";
@@ -50,6 +52,7 @@
 "下載新版本 %@" = "Download update %@";
 "不另設通知" = "No event notification";
 "中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。" = "Search Chinese app names, filenames and connected record titles using Pinyin or Zhuyin, such as hongguo / hg or ㄏㄨㄥˊ ㄍㄨㄛˇ / ㄏㄍ. System transliteration may choose a different pronunciation for polyphonic characters; custom aliases can add alternatives.";
+"中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。" = "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as hgdj or ㄏㄍㄉㄐ apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example hong2 guo3.";
 "也可以輸入「下下週一上午10點開會30分鐘」。只填日期會建立全天行程。" = "Try “tomorrow at 10am meeting for 30 minutes”. A date without a time creates an all-day event.";
 "也可以輸入「明天上午9點交報告」。只填日期會建立不指定時間的提醒事項。" = "Try “tomorrow at 9am submit report”. A date without a time creates a date-only reminder.";
 "也可用國名：3000NT=馬來西亞、3000NT 馬來、3000NT=Malaysia；New Zealand、South Korea 等英文國名也支援。" = "Country names work too: 3000NT=Malaysia, 3000NT=New Zealand or 3000NT=South Korea. Traditional and Simplified Chinese names and common aliases are supported.";
@@ -85,6 +88,7 @@
 "內文摘要已取消" = "Content preview cancelled";
 "全天" = "All day";
 "全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可用 Han 直接讀取來補強繁簡比對與 PPTX 文字；「全部」仍保留全機搜尋。舊版 PPT 取決於系統索引。" = "System-wide contents use the macOS index. Unindexed, excluded, unavailable or inaccessible files may be missing. Add a folder for direct Chinese script matching and PPTX extraction; All still searches the system index. Legacy PPT depends on system indexing.";
+"全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可補強繁簡比對、PPTX 與 XLSX 儲存格文字；「全部」仍保留全機搜尋，不必為此重掃整個使用者資料夾。舊版 PPT／XLS 取決於系統索引。" = "System-wide content search uses the macOS index. Unindexed, excluded, cloud-only or inaccessible documents may be missing. Add a folder to supplement cross-script matching, PPTX text and XLSX cells. All still searches system-wide without rescanning your entire home folder. Legacy PPT/XLS depends on the system index.";
 "全機文件內文・系統索引" = "Mac-wide document contents · System index";
 "全機文件結果會在背景核對候選文件，優先顯示有完整字詞命中的摘要；其餘系統索引結果預設收起，可展開查看。" = "Candidate documents are checked in the background. Literal content matches appear first; other system-index matches are collapsed by default.";
 "全機文件結果會在背景讀取顯示中的文件摘要，凸顯繁簡命中字；讀取失敗、沒有完整字詞命中或超限會明確標示。" = "Visible system-index document results load excerpts in the background with cross-script highlights. Unavailable, non-literal or limited previews are labeled.";
@@ -197,6 +201,8 @@
 "已達摘要讀取上限；可開啟文件查看" = "Preview limit reached; open the document to view content";
 "已釘選" = "Pinned";
 "建立所選分類" = "Create selected categories";
+"建立日期無法取得" = "Creation date unavailable";
+"建立日期：%@" = "Created: %@";
 "建議分類" = "Suggested categories";
 "影片" = "Videos";
 "影音播放" = "Media players";
@@ -361,7 +367,9 @@
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目標語言" = "Target language";
 "直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PPT／PPTX 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PPT/PPTX and text files across this Mac in All. App and filename results appear first, followed by document matches. Disabling the Spotlight shortcut does not disable its index.";
+"直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PowerPoint、Excel 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PowerPoint, Excel and text documents across your Mac in All. Apps and filenames appear first, followed by content results. Disabling the Spotlight shortcut does not disable indexing.";
 "直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。" = "Read Word, text-based PDF, PowerPoint and plain text in this folder for cross-script content search.";
+"直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。" = "Read Word, text-based PDF, PowerPoint, Excel and text files in this folder for cross-script content search.";
 "確認建立" = "Confirm creation";
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";
@@ -415,6 +423,7 @@
 "舊版 PPT 尚無可讀文字，需系統完成索引或轉存為 PPTX。" = "No readable text is available for this legacy PPT. Wait for system indexing or save it as PPTX.";
 "舊版 PPT 尚無系統文字索引" = "Legacy PPT has no system text index";
 "舊版 PPT 請使用系統索引搜尋" = "Use system index search for legacy PPT files";
+"舊版或二進位 Excel 請使用系統索引搜尋" = "Use the system index for legacy or binary Excel files";
 "藍牙" = "Bluetooth";
 "行事曆" = "Calendar";
 "行事曆排序" = "Calendar sort";

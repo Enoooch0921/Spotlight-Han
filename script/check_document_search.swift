@@ -58,6 +58,14 @@ private final class IndexFixture: @unchecked Sendable {
         try "内文测试词。失败时保留本机结果。".write(to: written, atomically: true, encoding: .utf8)
         // Directory enumeration may expose /private/var where temporaryDirectory uses /var.
         let local = SearchService.index(folder: root).documents.first!.url
+        let expectedCreation = Date(timeIntervalSince1970: 1_700_000_000)
+        let expectedModification = expectedCreation.addingTimeInterval(86_400)
+        try FileManager.default.setAttributes([.creationDate: expectedCreation, .modificationDate: expectedModification], ofItemAtPath: written.path)
+        let dates = FileCreationDateStore()
+        let readCreation = await dates.date(for: written)
+        precondition(readCreation.map { abs($0.timeIntervalSince(expectedCreation)) < 1 } == true, "Show the filesystem creation date, never substitute modification date")
+        let missingDate = await dates.date(for: root.appendingPathComponent("missing.txt"))
+        precondition(missingDate == nil, "Unavailable metadata must not invent a date")
         defer { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
         let fixture = IndexFixture(local: local)
         let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults, contentSearcher: { fixture.search($0, $1) })
@@ -134,6 +142,20 @@ private final class IndexFixture: @unchecked Sendable {
         try await wait { verifier.finishedOld && !ranked.searching && !ranked.verifyingDocumentContents }
         precondition(ranked.documentPreviews["/fixture/old.pdf"] == nil && ranked.allIDs == ["/fixture/z-real.docx"] && !ranked.showOtherIndexedResults, "Late old snippets must not leak into a new query")
         precondition(ranked.documentVerificationTotal == 25 && ranked.documentVerificationCompleted == 25, "A cancelled old query must not advance the new progress")
+        let modelName = SearchItem(url: URL(fileURLWithPath: "/fixture/z-DL32-manual.pdf"), source: "文件・系統索引")
+        let modelBody = SearchItem(url: URL(fileURLWithPath: "/fixture/b-inventory.xlsx"), source: "文件・系統索引")
+        let modelNoise = SearchItem(url: URL(fileURLWithPath: "/fixture/a-noise.pdf"), source: "文件・系統索引")
+        let models = SearchStore(loadSources: false, taskPreferences: defaults, sourcePreferences: defaults,
+                                 contentSearcher: { _, _ in SearchResponse(items: [modelNoise, modelBody, modelName]) },
+                                 documentPreviewLoader: { url, _ in url == modelBody.url ? .match("音控清單!B3　DL32") : .noLiteralMatch })
+        models.fullTextInAll = true
+        for _ in 0..<20 { models.habits.record(query: "dl32", identity: "file:" + modelBody.id, kind: .file) }
+        models.query = "dl32"; models.search()
+        try await wait { !models.searching && !models.verifyingDocumentContents && models.documentVerificationTotal == 3 }
+        precondition(models.allIDs == [modelName.id, modelBody.id] && models.otherIndexedResultCount == 1, "Model filenames must outrank generic body mentions and habits; unrelated index hits stay collapsed")
+        models.toggleOtherIndexedResults()
+        precondition(models.allIDs == [modelName.id, modelBody.id, modelNoise.id])
+        print("PASS: model filename/body evidence and history stay in relevance tiers; Excel participates in All with cell excerpts")
         print("PASS: literal content evidence outranks unrelated index matches and habits, candidates verified without scrolling, collapsed fallback, bounded concurrency and late-preview rejection")
         print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")
     }

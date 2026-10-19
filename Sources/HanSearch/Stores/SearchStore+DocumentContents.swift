@@ -3,7 +3,7 @@ import HanSearchCore
 
 extension SearchStore {
     func cacheDocumentFilenameMatches() {
-        documentFilenameMatches = Set(results.filter { $0.source == "文件・系統索引" && ChineseSearch.matches($0.name, query: query) }.map(\.id))
+        documentFilenameMatches = Set(results.filter { $0.source == "文件・系統索引" && ModelSearch.matches($0.name, query: query) }.map(\.id))
     }
     func isOtherIndexedResult(_ item: SearchItem) -> Bool {
         guard item.source == "文件・系統索引", item.excerpt.isEmpty else { return false }

@@ -42,7 +42,9 @@ public struct PersonalRecord: Sendable {
     public func result(query: String, mode: SearchMode, aliasMatch: Bool = false) -> QuickResult? {
         guard mode == .all || mode == self.mode else { return nil }
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
-        guard !terms.isEmpty, terms.allSatisfy({ folded.contains($0) }) || phonetics.matches(query) || aliasMatch else { return nil }
+        let model = ModelSearch.Query(query)
+        let literal = model.isIdentifier ? model.matches(title + "\n" + subtitle + "\n" + text) : terms.allSatisfy { folded.contains($0) }
+        guard !terms.isEmpty, literal || phonetics.matches(query, allowInitials: false) || aliasMatch else { return nil }
         let preview: String
         if self.mode == .notes {
             preview = SearchHighlight.excerpt(in: text, query: query)

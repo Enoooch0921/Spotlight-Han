@@ -36,8 +36,9 @@ public struct IndexedDocument: Sendable {
     public func match(query: String, mode: SearchMode) -> SearchItem? {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return nil }
-        let nameMatch = terms.allSatisfy { normalizedName.contains($0) }
-        let textMatch = terms.allSatisfy { normalizedText.contains($0) }
+        let identifier = ModelSearch.key(query) != nil
+        let nameMatch = identifier ? ModelSearch.matches(name, query: query) : terms.allSatisfy { normalizedName.contains($0) }
+        let textMatch = identifier ? ModelSearch.matches(text, query: query) : terms.allSatisfy { normalizedText.contains($0) }
         switch mode {
         case .apps: guard url.pathExtension == "app", nameMatch else { return nil }
         case .names: guard nameMatch else { return nil }
