@@ -14,6 +14,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 if [[ -f "$ROOT_DIR/Assets/SpotlightHan.icns" ]]; then cp "$ROOT_DIR/Assets/SpotlightHan.icns" "$APP_BUNDLE/Contents/Resources/SpotlightHan.icns"; fi
+cp "$ROOT_DIR/Assets/Shortcuts/Spotlight-Han-System-Clock.shortcut" "$APP_BUNDLE/Contents/Resources/"
 cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -24,10 +25,11 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>Spotlight Han</string>
 <key>CFBundleIconFile</key><string>SpotlightHan.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.3.0</string>
-<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleShortVersionString</key><string>0.4.0</string>
+<key>CFBundleVersion</key><string>4</string>
 <key>NSContactsUsageDescription</key><string>在本機搜尋你允許取用的聯絡人，不會上傳。</string>
-<key>NSCalendarsFullAccessUsageDescription</key><string>在本機搜尋行事曆行程，不會新增、修改或上傳行程。</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>搜尋行事曆，並依你確認的指令新增行程。</string>
+<key>NSRemindersFullAccessUsageDescription</key><string>搜尋提醒事項，並依你確認的指令新增提醒。</string>
 <key>NSAppleEventsUsageDescription</key><string>讀取備忘錄與 Mail 的內容以供本機搜尋，或開啟你選擇的項目。</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>14.0</string>

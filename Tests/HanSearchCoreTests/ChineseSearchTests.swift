@@ -34,7 +34,8 @@ struct CheckRunner {
         try tests.testIndependentFilenameCatalog()
         tests.testPersonalRecordCrossScriptMatching()
         tests.testSafeQuickActions()
-        print("PASS: 11 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions.")
+        try tests.testTaskCommands()
+        print("PASS: 12 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries.")
     }
 }
 
@@ -159,4 +160,35 @@ final class ChineseSearchTests {
             XCTAssertEqual(components?.queryItems?.first?.value, "a&b #中文")
         } else { preconditionFailure("Missing web action") }
     }
+    func testTaskCommands() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Taipei")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 19, hour: 8, minute: 0))!
+        let alarm = TaskCommandParser.parse("設定30分鐘後的鬧鐘", now: now, calendar: calendar)!
+        XCTAssertEqual(alarm.kind, .alarm)
+        XCTAssertEqual(alarm.start.timeIntervalSince(now), 1800)
+        XCTAssertEqual(alarm.resolved(at: now.addingTimeInterval(60)).start.timeIntervalSince(now), 1860)
+        XCTAssertEqual(TaskCommandParser.parse("設定半小時後的鬧鐘", now: now, calendar: calendar)?.relativeDelay, 1800)
+        XCTAssertNil(TaskCommandParser.parse("倒數半小時", now: now, calendar: calendar))
+        let reminder = TaskCommandParser.parse("提醒我10分鐘後喝水", now: now, calendar: calendar)!
+        XCTAssertEqual(reminder.kind, .reminder); XCTAssertEqual(reminder.title, "喝水")
+        let event = TaskCommandParser.parse("明天下午3點開會30分鐘", now: now, calendar: calendar)!
+        XCTAssertEqual(event.kind, .event); XCTAssertEqual(event.title, "開會"); XCTAssertEqual(event.duration, 1800)
+        XCTAssertEqual(calendar.component(.day, from: event.start), 20)
+        XCTAssertEqual(calendar.component(.hour, from: event.start), 15)
+        let tomorrow = TaskCommandParser.parse("提醒我明天上午9點交報告", now: now, calendar: calendar)!
+        XCTAssertEqual(tomorrow.kind, .reminder); XCTAssertEqual(tomorrow.title, "交報告")
+        for invalid in ["2027-2-30下午3點開會", "今天上午7點的鬧鐘", "明天25:00開會", "設定0分鐘後的鬧鐘", "設定1小時30分鐘後的鬧鐘"] {
+            XCTAssertNil(TaskCommandParser.parse(invalid, now: now, calendar: calendar))
+        }
+        let rounded = try ClockAlarmRequest.date(for: TaskPlan(kind: .alarm, title: "test", start: now.addingTimeInterval(1801)), now: now, calendar: calendar)
+        XCTAssertEqual(rounded.timeIntervalSince(now), 1860)
+        let afterMidnight = TaskPlan(kind: .alarm, title: "test", start: now.addingTimeInterval(18 * 3600))
+        XCTAssertEqual(try ClockAlarmRequest.date(for: afterMidnight, now: now, calendar: calendar), afterMidnight.start)
+        do {
+            _ = try ClockAlarmRequest.date(for: TaskPlan(kind: .alarm, title: "test", start: now.addingTimeInterval(25 * 3600)), now: now, calendar: calendar)
+            preconditionFailure("Clock cannot schedule a dated alarm beyond the next occurrence")
+        } catch {}
+    }
+
 }

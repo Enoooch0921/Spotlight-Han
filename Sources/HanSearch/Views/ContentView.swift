@@ -5,15 +5,15 @@ import HanSearchCore
 struct ContentView: View {
     @ObservedObject var store: SearchStore
     @FocusState private var focused: Bool
-    private let filters: [SearchMode] = [.all, .videos, .contents, .notes, .contacts, .calendar, .mail]
+    private let filters: [SearchMode] = [.all, .videos, .contents, .notes, .contacts, .calendar, .reminders, .alarms, .mail]
     var body: some View {
         Group {
             if #available(macOS 26, *) {
-                GlassEffectContainer(spacing: 12) { layout }
+                GlassEffectContainer(spacing: 0) { layout }
             } else { layout }
         }
-        .padding(.horizontal, 8).padding(.top, 8)
-        .frame(width: 740, alignment: .top)
+        .padding(40)
+        .frame(width: 804, alignment: .top)
         .frame(maxHeight: .infinity, alignment: .top)
         .onAppear { focused = true }
         .onChange(of: store.query) { _, _ in store.search() }
@@ -44,7 +44,7 @@ struct ContentView: View {
                         .font(.system(size: 25, weight: .regular)).textFieldStyle(.plain)
                         .focused($focused).onSubmit { store.openSelection() }
                         .accessibilityLabel("Spotlight Han 繁簡搜尋")
-                    if store.searching { ProgressView().controlSize(.small) }
+                    if store.searching || store.actionInFlight { ProgressView().controlSize(.small) }
                 }.padding(.horizontal, 20).frame(height: 60).spotlightGlass(Capsule())
                 category(.apps, symbol: "square.grid.2x2", hint: "應用程式 ⌘1")
                 category(.names, symbol: "folder", hint: "檔案 ⌘2")
@@ -78,7 +78,9 @@ struct ContentView: View {
                 }.padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
-            if store.allIDs.isEmpty {
+            if store.mode == .alarms && store.quickResults.isEmpty {
+                AlarmListView { store.connect(.alarms) }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.allIDs.isEmpty {
                 emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
@@ -117,7 +119,7 @@ struct ContentView: View {
     private var statusText: String {
         if !store.notice.isEmpty { return store.notice }
         if store.mode == .contents { return store.folder == nil ? "系統文件索引 · 可在設定加入資料夾加強全文比對" : store.indexNotice }
-        if store.mode == .notes || store.mode == .contacts || store.mode == .calendar || store.mode == .mail || store.mode == .shortcuts {
+        if store.mode == .notes || store.mode == .contacts || store.mode == .calendar || store.mode == .reminders || store.mode == .mail || store.mode == .shortcuts {
             return store.personalStatus[store.mode] ?? "尚未連接 · 前往設定啟用"
         }
         return store.catalogStatus + (store.query.isEmpty ? "" : String(format: " · 比對 %.1f ms", store.milliseconds))
@@ -141,20 +143,20 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Text(emptyTitle).font(.system(size: 15, weight: .medium))
             Text(emptyDescription).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            if [.notes, .contacts, .calendar, .mail, .shortcuts, .clipboard].contains(store.mode) {
+            if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
                 SettingsLink { Text("設定資料來源") }.buttonStyle(.bordered)
             }
         }.padding(24)
     }
     private var emptyTitle: String {
         if store.mode == .clipboard { return store.clipboardEnabled ? "尚無剪貼板記錄" : "啟用剪貼板記錄" }
-        if [.notes, .contacts, .calendar, .mail, .shortcuts].contains(store.mode) && store.personalStatus[store.mode] == nil { return "連接" + store.mode.rawValue }
+        if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) && store.personalStatus[store.mode] == nil { return "連接" + store.mode.rawValue }
         if store.query.isEmpty { return "搜尋" + store.mode.rawValue }
         return store.searching ? "正在搜尋…" : "找不到符合的項目"
     }
     private var emptyDescription: String {
         if store.mode == .clipboard { return "記錄預設關閉；啟用後只保留本次執行期間的文字。" }
-        if [.notes, .contacts, .calendar, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
+        if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
         if store.query.isEmpty { return "輸入關鍵字，繁體與簡體一起比對。" }
         return "請縮短關鍵字，或在設定中加入檔案所在資料夾。"
     }

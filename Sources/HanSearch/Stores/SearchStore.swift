@@ -26,6 +26,8 @@ final class SearchStore: ObservableObject {
     @Published var setupRunning = false
     @Published var setupStatus = ""
     @Published var details: String?
+    @Published var clockSetupPending = false
+    @Published var actionInFlight = false
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
@@ -66,10 +68,10 @@ final class SearchStore: ObservableObject {
             quickResults = clips.enumerated().filter { term.isEmpty || ChineseSearch.matches($0.element, query: term) }.map {
                 QuickResult(id: "clip:\($0.offset)", title: String($0.element.prefix(100)), subtitle: "剪貼板 · 按 Return 複製", symbol: "doc.on.clipboard", action: .copy($0.element))
             }
-            results = []; selection = quickResults.first?.id; searching = false; return
+            results = []; selection = quickResults.first?.id; searching = false; onLayoutChanged?(); return
         }
         guard !term.isEmpty else {
-            results = []; quickResults = []; selection = nil; searching = false; notice = ""; return
+            results = []; quickResults = []; selection = nil; searching = false; notice = ""; onLayoutChanged?(); return
         }
         searching = true
         let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal
@@ -80,8 +82,8 @@ final class SearchStore: ObservableObject {
                 let start = Date()
                 var files: [SearchItem] = [], quick: [QuickResult] = []
                 var warning: String?
-                let utilities = mode == .all ? QuickProvider.results(query: term) : []
-                let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" }
+                let utilities = [SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term) : []
+                let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
                     files += FileCatalog.search(entries, query: term, mode: mode)
                 }
@@ -174,11 +176,24 @@ final class SearchStore: ObservableObject {
     func connect(_ source: SearchMode) {
         Task { await loadSource(source) }
     }
+    func beginClockSetup() {
+        clockSetupPending = true
+        hideLauncher?()
+        SystemClockService.install()
+    }
+    func checkClockSetupOnReturn() {
+        guard clockSetupPending, !connecting.contains(.alarms) else { return }
+        Task {
+            if (try? await Task.detached { try SystemClockService.isConnected() }.value) == true {
+                await loadSource(.alarms)
+            }
+        }
+    }
     func setupAllSources() {
         guard !setupRunning else { return }
         setupRunning = true
         Task {
-            let sources: [SearchMode] = [.notes, .contacts, .calendar, .mail, .shortcuts]
+            let sources: [SearchMode] = [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .alarms]
             for (index, source) in sources.enumerated() {
                 setupStatus = "\(index + 1)/\(sources.count) · \(source.rawValue)"
                 if personalStatus[source]?.hasPrefix("已連接") != true { await loadSource(source) }
@@ -192,16 +207,28 @@ final class SearchStore: ObservableObject {
         guard !connecting.contains(source) else { return }
         connecting.insert(source); personalStatus[source] = "正在連接，請留意系統授權視窗…"
             do {
-                let loaded = try await Task.detached(priority: .utility) { () async throws -> PersonalLoad in
+                let loaded: PersonalLoad
+                if source == .alarms {
+                    let connected = try await Task.detached { try SystemClockService.isConnected() }.value
+                    guard connected else {
+                        beginClockSetup()
+                        personalStatus[source] = "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。"
+                        connecting.remove(source); return
+                    }
+                    clockSetupPending = false
+                    loaded = PersonalLoad(records: [], status: "已連接 Apple 系統時鐘")
+                }
+                else { loaded = try await Task.detached(priority: .utility) { () async throws -> PersonalLoad in
                     switch source {
                     case .contacts: return try await PersonalSources.contacts()
                     case .calendar: return try await PersonalSources.calendar()
+                    case .reminders: return try await PersonalSources.reminders()
                     case .notes: return try PersonalSources.notes()
                     case .mail: return try PersonalSources.mail()
                     case .shortcuts: return try PersonalSources.shortcuts()
                     default: throw ProcessFailure.failed("此來源不支援連接。")
                     }
-                }.value
+                }.value }
                 personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
                 var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
                 remembered.insert(source.rawValue)
@@ -223,6 +250,30 @@ final class SearchStore: ObservableObject {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string); notice = "已複製"
             case .open(let url): NSWorkspace.shared.open(url)
             case .details(let text): details = text
+            case .createTask(let plan):
+                guard !actionInFlight else { return }
+                actionInFlight = true
+                searchTask?.cancel(); generation = UUID()
+                let originalQuery = query
+                notice = "正在建立…"
+                Task {
+                    do {
+                        let resolved = plan.resolved(at: Date())
+                        let message = resolved.kind == .alarm ? try await Task.detached { try SystemClockService.create(resolved) }.value : try await TaskService.create(resolved)
+                        if query == originalQuery {
+                            quickResults = [QuickResult(id: "task-created", title: message.components(separatedBy: .newlines).first ?? "已建立", subtitle: message.components(separatedBy: .newlines).dropFirst().joined(separator: " · "), symbol: "checkmark.circle", action: .details(message))]
+                            results = []; selection = quickResults.first?.id; onLayoutChanged?()
+                        }
+                        notice = "已建立"
+                    } catch {
+                        notice = error.localizedDescription
+                        if plan.kind == .alarm, query == originalQuery {
+                            quickResults = [QuickResult(id: "check-clock", title: "請先核對系統時鐘", subtitle: error.localizedDescription, symbol: "alarm", action: .open(URL(fileURLWithPath: "/System/Applications/Clock.app")))]
+                            results = []; selection = quickResults.first?.id; onLayoutChanged?()
+                        }
+                    }
+                    actionInFlight = false
+                }
             case .note(let identifier):
                 Task {
                     do { try await Task.detached { try PersonalSources.openNote(identifier) }.value }

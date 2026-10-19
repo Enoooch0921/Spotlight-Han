@@ -17,3 +17,5 @@ jobs:
         run: ./script/build_and_run.sh --build-only
       - name: Run functional checks
         run: swift run HanSearchChecks
+      - name: Verify signed Clock companion source
+        run: python3 script/verify_clock_shortcut.py

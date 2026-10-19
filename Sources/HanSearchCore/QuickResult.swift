@@ -2,6 +2,7 @@ import Foundation
 
 public enum QuickAction: Hashable, Sendable {
     case copy(String), open(URL), note(String), shortcut(String), details(String)
+    case createTask(TaskPlan)
 }
 
 public struct QuickResult: Identifiable, Hashable, Sendable {
@@ -42,6 +43,19 @@ public enum QuickProvider {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
         var items: [QuickResult] = []
+        if let plan = TaskCommandParser.parse(query) {
+            let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
+            let displayDate: Date
+            if plan.kind == .alarm {
+                do { displayDate = try ClockAlarmRequest.date(for: plan, now: Date()) }
+                catch { return [QuickResult(id: "task-command", title: "此時間無法建立系統鬧鐘", subtitle: error.localizedDescription, symbol: "exclamationmark.circle", action: .details(error.localizedDescription))] }
+            } else { displayDate = plan.start }
+            let kind = plan.kind == .alarm ? "設定鬧鐘" : (plan.kind == .reminder ? "新增提醒事項" : "新增行事曆行程")
+            let destination = plan.kind == .alarm ? "Apple 系統時鐘 · 分鐘精度，向上取整" : (plan.kind == .reminder ? "系統提醒事項（預設清單）" : "系統行事曆（預設行事曆）")
+            let duration = plan.kind == .event ? " · \(Int(plan.duration / 60)) 分鐘" : ""
+            items.append(QuickResult(id: "task-command", title: kind + "：" + plan.title, subtitle: formatter.string(from: displayDate) + (plan.relativeDelay != nil ? " · 按 Return 起算" : "") + duration + " · " + destination + " · ↵ 建立", symbol: plan.kind == .alarm ? "alarm" : (plan.kind == .reminder ? "checklist" : "calendar.badge.plus"), action: .createTask(plan)))
+            return items
+        }
         if Calculator.looksLikeExpression(query), let value = try? Calculator.evaluate(query) {
             let result = Calculator.format(value)
             items.append(QuickResult(id: "calculator", title: result, subtitle: query + "　↵ 複製答案", symbol: "equal", action: .copy(result)))

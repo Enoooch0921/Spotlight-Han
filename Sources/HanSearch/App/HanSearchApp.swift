@@ -23,13 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: LauncherPanel?
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 740, height: 76), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 804, height: 140), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Spotlight Han"
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
         panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
-        panel.contentView = NSHostingView(rootView: ContentView(store: store))
+        panel.contentView = TransparentHostingView(rootView: ContentView(store: store))
         panel.command = { [weak self] key in self?.command(key) ?? false }
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !hotkey.register() { store.hotkeyNotice = "快捷鍵被占用 · 請從選單列開啟" }
         showSearch()
     }
+    func applicationDidBecomeActive(_ notification: Notification) { store.checkClockSetupOnReturn() }
     private func command(_ key: String) -> Bool {
         switch key {
         case "1": store.mode = .apps
@@ -53,9 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func resizePanel() {
         guard let panel else { return }
         let count = store.results.count + store.quickResults.count
-        let height: CGFloat = !store.hasBody ? 76 : (count == 0 ? 330 : min(570, CGFloat(190 + count * 58)))
+        let height: CGFloat = !store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64)))
         let top = panel.frame.maxY
-        panel.setFrame(NSRect(x: panel.frame.minX, y: top - height, width: 740, height: height), display: true)
+        panel.setFrame(NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height), display: true)
     }
     func showSearch() {
         guard let panel else { return }
@@ -80,4 +81,14 @@ private final class LauncherPanel: NSPanel {
         return super.performKeyEquivalent(with: event)
     }
     override func cancelOperation(_ sender: Any?) { orderOut(nil) }
+}
+
+/// Keep the hosting surface clear; only the individual native glass shapes draw chrome.
+private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
+    override var isOpaque: Bool { false }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+    }
 }

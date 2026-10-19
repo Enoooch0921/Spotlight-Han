@@ -6,7 +6,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 用自己習慣的中文搜尋 App、影片、檔名和文件。目標是成為 Spotlight 的開源替代品，先把「緊急時找得到檔案」做好。
 
-**目前版本：0.3.0，開發預覽。尚未達到 Spotlight 的完整功能對等。**
+**目前版本：0.4.0，開發預覽。尚未達到 Spotlight 的完整功能對等。**
 
 ## 為什麼做 Spotlight Han？
 
@@ -35,15 +35,18 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 | 備忘錄 | 選擇連接後讀取系統 Notes 標題、純文字；最多 2,000 則，不讀取密碼保護筆記。 |
 | 聯絡人 | 經授權讀取姓名、電話與電郵，顯示與複製詳細資料。 |
 | 行事曆 | 經授權搜尋前後各一年行程，最多 10,000 筆，顯示與複製詳細資料。 |
+| 提醒事項 | 經授權搜尋未完成事項；可用中文指令新增到系統預設清單。 |
+| 系統鬧鐘 | 一次加入內附捷徑後，由 Apple「時鐘」建立及管理。精度為分鐘，向上取整；只支援下一次指定時分。 |
+| 中文建立指令 | 行程、提醒、鬧鐘先預覽，再按 Return 建立。例：`明天下午3點開會30分鐘`。 |
 | 郵件 | 系統 Mail 收件匣前 200 封，每封內文前 16,000 字；按結果開啟郵件。不是全信箱索引。 |
 | 捷徑 | 手動連接本機捷徑清單；執行前再次確認。 |
 | 剪貼板 | 預設關閉，選擇啟用後只在記憶體保留本次執行期間最近 50 筆文字。 |
 
-備忘錄、郵件、聯絡人、行事曆、捷徑需要在設定中連接；受系統授權、帳號配置及 App 腳本介面影響。這些私人資料來源的真實內容不屬於自動化測試範圍。未連接、連接失敗、讀取範圍會顯示於設定。
+備忘錄、郵件、聯絡人、行事曆、提醒事項、捷徑需要在設定中連接；受系統授權、帳號配置及 App 腳本介面影響。這些私人資料來源的真實內容不屬於自動化測試範圍。未連接、連接失敗、讀取範圍會顯示於設定。
 
 ## 介面與快捷鍵
 
-以 [Apple 的 macOS 27 Spotlight 官方參考](https://support.apple.com/zh-tw/guide/mac-help/mchl4d69efd3/27/mac/27)為設計依據：浮動搜尋膠囊、四個圓形分類入口、輸入後展開的結果面板。macOS 26 以上使用原生 Liquid Glass；較舊系統使用原生模糊材質。
+以 [Apple 的 macOS 27 Spotlight 官方參考](https://support.apple.com/zh-tw/guide/mac-help/mchl4d69efd3/27/mac/27)為設計依據：浮動搜尋膠囊、四個圓形分類入口、輸入後展開的結果面板。macOS 26 以上使用原生 Liquid Glass；較舊系統使用原生模糊材質。透明的 AppKit 容器與四周留白讓系統陰影自然延伸，避免矩形底板及截斷邊緣。
 
 - `Control + Option + Space`：喚出搜尋。
 - `Command + 1 / 2 / 3 / 4`：App／檔案／動作／剪貼板。
@@ -54,11 +57,23 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 ## 一次集中設定，之後自動連接
 
-在設定中按 **「一次設定所有資料來源」**，會依序連接備忘錄、聯絡人、行事曆、郵件與捷徑。成功啟用的來源會記住，之後啟動會自動讀取，不需要每次逐個連接。
+在設定中按 **「一次設定所有資料來源」**，會依序連接備忘錄、聯絡人、行事曆、提醒事項、郵件、捷徑與系統時鐘。成功啟用的來源會記住，之後啟動會自動讀取，不需要每次逐個連接。
 
 macOS 的 Contacts、Calendars、Automation 是不同權限；系統仍可能分別請你確認。完整磁碟存取也不能取代這些權限，App 沒有一個可略過它們的總開關。[Apple 權限說明](https://support.apple.com/en-au/guide/mac-help/mchl211c911f/mac)
 
 目前本機建置預設是 ad hoc 簽章，重新編譯後程式的代碼身份可能改變，系統可能重新詢問權限。正式版本應使用穩定的 Apple Development／Developer ID 簽章；可透過 `CODE_SIGN_IDENTITY` 指定已有的簽章身份。腳本不會建立憑證、改寫系統授權資料庫或關閉系統保護。
+
+## 系統時鐘：只需加入一次
+
+1. 在 App 的設定按 **「連接系統時鐘」**。
+2. 在 Apple 捷徑視窗檢視並按 **「加入捷徑」**。不用編輯動作或填寫時間參數。
+3. 回到 App 會自動檢查連接；也可手動按「檢查連接」。之後直接輸入 `設定30分鐘後的鬧鐘`，預覽後按 Return。
+
+內附的 `Spotlight-Han-System-Clock` 只把本機 JSON 中的時間與標籤交給 Apple 時鐘的「加入鬧鐘」動作，最後回傳完成標記。App 使用 [Apple 支援的 shortcuts 命令列介面](https://support.apple.com/en-gb/guide/shortcuts-mac/apd455c82f02/mac)，不需要使用者手動製作捷徑。捷徑可檢閱原始碼於 [SystemClock.plist](Assets/Shortcuts/SystemClock.plist)；發行檔已簽署。App 會建立並清除本機暫存 JSON，不使用剪貼板，不上傳鬧鐘資料。首次加入的系統操作無法由 App 靜默代替；系統仍可能顯示自己的執行確認。
+
+鬧鐘由 Apple 時鐘響鈴及管理，Spotlight Han 不維護另一份鬧鐘清單。超出下一次指定時分的未來日期會拒絕建立，請改用提醒事項，避免系統鬧鐘提早響鈴。秒數向上取整到分鐘，實際時間在預覽顯示；相對時間在按 Return 時起算。此版本尚未接入系統「計時器」，不把倒數指令悄悄改成鬧鐘。
+
+已在 macOS 26.6.1 實測由橋接捷徑建立有名稱的系統鬧鐘、核對時間與名稱，並清除測試鬧鐘。若捷徑執行失敗或未收到完成回覆，App 會要求先開啟時鐘核對，避免盲目重試。行事曆／提醒事項的寫入使用 EventKit，需你授權；私人帳號的實際寫入未納入自動化測試。
 
 ## 建置
 
@@ -75,6 +90,7 @@ cd Spotlight-Han
 ```sh
 swift run HanSearchChecks
 swift run HanSearchChecks --benchmark
+python3 script/verify_clock_shortcut.py
 ```
 
 使用獨立檢查程式，能在沒有 XCTest 的 Command Line Tools 環境執行。涵蓋真實 DOCX 擷取、檔名索引、繁簡比對、算式安全、單位換算與查詢跳脫。`--benchmark` 使用本機現有檔名快取，僅印數量與比對時間，不印私人路徑或檔名。
@@ -89,7 +105,7 @@ swift run HanSearchChecks --benchmark
 
 - 沒有伺服器、分析追蹤或自動上傳。
 - 檔名及其所在路徑快取於使用者的 `Library/Caches/local.hansearch.mac/Filenames-v1.json`。它包含私人檔名，不應分享。
-- 文件內文與已連接的私人資料只留在記憶體；不存進檔名快取。
+- 文件內文與已連接的私人資料搜尋副本只留在記憶體；不存進檔名快取。只有按 Return 確認的新增指令會寫入系統行事曆、提醒事項或時鐘。
 - 剪貼板預設關閉。會略過隱藏／暫存標記及常見密碼管理器，但其他 App 沒標示的敏感文字仍可能被記錄。關閉即清除記錄。
 - 備忘錄不會解鎖受密碼保護的筆記。來源移除會清掉記憶體副本；撤銷系統授權請到系統設定。
 - `work/`、`outputs/`、建置產物和本機索引不納入 Git。
@@ -101,6 +117,7 @@ swift run HanSearchChecks --benchmark
 - [ ] 檔案變更事件的增量索引、外接磁碟／NAS 明確狀態
 - [ ] 備忘錄與全信箱的增量更新、更多資料範圍選項
 - [ ] 原生行程／聯絡人深層連結與完整預覽
+- [ ] 系統計時器、更多日期語法、行程／提醒寫入的完整互動驗收
 - [ ] 即時匯率、天氣，以及更多系統動作
 - [ ] OCR、更多文件格式與可持久化的內容索引
 - [ ] Developer ID 簽章、公證、可安裝發行包

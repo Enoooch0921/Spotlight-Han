@@ -43,6 +43,23 @@ enum PersonalSources {
         return PersonalLoad(records: records, status: "已連接 \(records.count) 個行程（前後各一年）")
     }
 
+    static func reminders() async throws -> PersonalLoad {
+        let store = EKEventStore()
+        guard try await store.requestFullAccessToReminders() else { throw ProcessFailure.failed("提醒事項未授權。") }
+        let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: nil)
+        let reminders: [EKReminder] = await withCheckedContinuation { continuation in
+            store.fetchReminders(matching: predicate) { continuation.resume(returning: $0 ?? []) }
+        }
+        let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
+        let records = reminders.prefix(10000).map { reminder -> PersonalRecord in
+            let title = reminder.title ?? "未命名提醒事項"
+            let date = reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) }.map { formatter.string(from: $0) } ?? "未設定時間"
+            let details = [title, date, reminder.calendar.title, reminder.notes ?? ""].joined(separator: "\n")
+            return PersonalRecord(id: "reminder:" + reminder.calendarItemIdentifier, title: title, subtitle: date + " · " + reminder.calendar.title, text: details, symbol: "checklist", mode: .reminders, action: .details(details))
+        }
+        return PersonalLoad(records: records, status: "已連接 \(records.count) 個未完成提醒事項（10,000 筆上限）")
+    }
+
     private struct RawItem: Decodable { let id: String; let title: String; let text: String; let detail: String }
     private struct RawLoad: Decodable { let items: [RawItem]; let skipped: Int; let capped: Bool }
 
