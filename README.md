@@ -34,6 +34,7 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 - **少猜一次字形。** App、檔名與支援的文件內容採用繁簡比對，保留原始名稱與文字。
 - **找檔案有自己的索引。** 檔名與影片搜尋獨立建立本機清單；選擇搜尋範圍後，不依賴 Spotlight 的檔名索引。
+- **命中的字看得見。** 標題及內容摘要凸顯繁簡命中的字，長文摘要會定位到關鍵字附近。
 - **搜尋範圍看得見。** 自己選擇資料夾、查看索引狀態，也能手動更新清單。
 - **本機搜尋、開源可檢閱。** 搜尋資料在本機處理；沒有自建搜尋伺服器、分析追蹤或自動上傳查詢。
 
@@ -46,6 +47,7 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 | 計算 | `(1200+300)*0.9` |
 | 單位換算 | `5 km to m` |
 | 開啟系統設定子頁 | `隱私安全性`、`wifi`、`蓝牙` 或 `Bluetooth`。 |
+| 直接用國名換算 | `3000NT=馬來西亞`、`3000nt 马来`、`3000NT=Malaysia`。 |
 | 台幣換人民幣 | `3000tb rmb` |
 | 同時看多個幣別 | `3000tb`，預設顯示 CNY、USD、JPY，可在設定更改。 |
 | 新增系統提醒事項 | `提醒我明天上午9點交報告`，預覽後按 Return。 |
@@ -57,9 +59,9 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 ## 開始使用
 
-**目前為 0.6.0 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
+**目前為 0.6.1 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
-**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.6.0-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
+**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.6.1-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
 
 若要自行從原始碼建置，需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
 

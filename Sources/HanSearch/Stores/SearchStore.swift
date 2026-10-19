@@ -164,7 +164,7 @@ final class SearchStore: ObservableObject {
                     }
                 }
                 quick += utilities
-                if !utilityOnly { quick += personal.compactMap { $0.result(query: term, mode: mode) }.prefix(50) }
+                if !utilityOnly { quick += personal.lazy.compactMap { $0.result(query: term, mode: mode) }.prefix(50) }
                 if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {

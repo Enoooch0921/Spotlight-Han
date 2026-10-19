@@ -44,11 +44,7 @@ public struct IndexedDocument: Sendable {
         default: guard nameMatch || textMatch else { return nil }
         }
         // Show original text, even when the hit used a different script.
-        let lines = text.components(separatedBy: .newlines)
-        let line = lines.first { value in
-            let normalized = ChineseSearch.normalized(value)
-            return terms.contains { normalized.contains($0) }
-        } ?? ""
-        return SearchItem(url: url, source: nameMatch && mode != .contents ? "資料夾・檔名" : "資料夾・內容", excerpt: String(line.prefix(220)))
+        let excerpt = textMatch ? SearchHighlight.excerpt(in: text, query: query, limit: 220) : ""
+        return SearchItem(url: url, source: nameMatch && mode != .contents ? "資料夾・檔名" : "資料夾・內容", excerpt: excerpt)
     }
 }

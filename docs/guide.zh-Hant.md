@@ -2,13 +2,14 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：0.6.0，開發預覽。
+目前版本：0.6.1，開發預覽。
 
 ## 功能
 
 | 功能 | 目前範圍 |
 | --- | --- |
 | 繁簡互搜 | 查詢與文字統一字形；保留原始檔案與顯示文字。不是同義詞搜尋。 |
+| 命中字凸顯 | 標題、摘要及 Han 內的文字詳情使用柔和底色與粗體標示命中字；繁簡互搜保留原文字形。長文摘要顯示命中位置附近的段落。 |
 | App | 本機應用程式名稱，包含繁簡比對。 |
 | 快速檔名／影片 | 首次選擇搜尋範圍，再自行掃描使用者授權的資料夾；不依賴 Spotlight。影片只按副檔名篩選，不讀取影音內容。 |
 | Word／PDF 內容 | 可指定資料夾讀取 DOC、DOCX、RTF、ODT、UTF-8 文字與有文字層的 PDF。未指定時，僅此模式使用 Spotlight。 |
@@ -77,7 +78,7 @@ macOS 的 Contacts、Calendars、Automation 是不同權限；系統仍可能分
 
 設定快捷鍵時會檢查系統使用中的組合；⌘Space 若仍被 Spotlight 使用，會明確提示並保留原快捷鍵。可直接前往系統 Spotlight 快捷鍵頁面；回到 Han 後會再檢查。搜尋區的細進度條與底部文字顯示實際搜尋／讀取／索引階段，並非完成百分比。
 
-貨幣辨識支援前置／後置 NT、NT$、TB、台幣、TWD，以及 RMB、人民幣、CNY 等寫法；例如 `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`、`100 USD to TWD`。也支援 `3000tb=rmb` 或 `3000tb rmb`，`TB` 在貨幣查詢中代表台幣。在設定勾選多個預設目標後，輸入 `3000tb` 或 `3000台幣` 就會同時顯示；預設為 CNY、USD、JPY。明寫目標會優先於預設，也可輸入 `3000tb=rmb,usd,jpy` 或 `3000tb rmb usd`。多個目標共用同一份匯率表，不額外對每個幣別連網。`1 TB to GB` 這類容量換算仍交給單位換算。
+貨幣辨識支援前置／後置 NT、NT$、TB、台幣、TWD，以及 RMB、人民幣、CNY 等寫法；例如 `3000台幣=rmb`、`nt3000 = rmb`、`3000nt = rmb`、`100 USD to TWD`。也支援 `3000tb=rmb` 或 `3000tb rmb`，`TB` 在貨幣查詢中代表台幣。在設定勾選多個預設目標後，輸入 `3000tb` 或 `3000台幣` 就會同時顯示；預設為 CNY、USD、JPY。明寫目標會優先於預設，也可輸入 `3000tb=rmb,usd,jpy` 或 `3000tb rmb usd`。支援以國名和常用簡稱指定貨幣：`3000NT=馬來西亞`、`3000NT 马来`、`3000NT=Malaysia` 都是 MYR；`3000NT=New Zealand` 是 NZD，亦可寫 `3000NT=馬來, United States, South Korea`。國名由本機系統語系資料對應目前支援的幣別，另補常見別名；英文大小寫和多餘空格均可辨識。歐盟／歐洲等涉及多個幣別的區域不自動猜測。結果顯示貨幣名稱與代碼。多個目標共用同一份匯率表，不額外對每個幣別連網。`1 TB to GB` 這類容量換算仍交給單位換算。
 
 它採用 [ExchangeRate-API 免費公開端點](https://www.exchangerate-api.com/docs/free)，**每日更新，非即時／盤中行情**。畫面附上來源連結、匯率資料時間與「每日更新」，也會標示離線時使用的過期快取（最多七天）。這是參考中間價，並非銀行買入／賣出或實際成交價。
 
@@ -107,7 +108,7 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
-公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.6.0 的打包目標為 Apple Silicon ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.6.1 的打包目標為 Apple Silicon ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
 
 ```sh
 ./script/package_release.sh
@@ -128,7 +129,7 @@ work/BookmarkChecks
 
 使用獨立檢查程式，能在沒有 XCTest 的 Command Line Tools 環境執行。涵蓋真實 DOCX 擷取、檔名索引、繁簡比對、算式安全、單位換算與查詢跳脫。`--benchmark` 使用本機現有檔名快取，僅印數量與比對時間，不印私人路徑或檔名。
 
-目前共 20 組核心檢查，包含來源佇列排隊／去重／取消、系統回呼逾時／取消／延遲回覆，以及讀取程序的串流與強制逾時。備忘錄另以假的 Notes 橋接測試實際使用的 JXA 腳本，驗證分批輸出、Unicode、受保護項目跳過與文字容量上限；不會讀取私人備忘錄，也不能取代真實系統授權視窗的互動驗收。
+目前共 22 組核心檢查，包含來源佇列排隊／去重／取消、系統回呼逾時／取消／延遲回覆，以及讀取程序的串流與強制逾時。備忘錄另以假的 Notes 橋接測試實際使用的 JXA 腳本，驗證分批輸出、Unicode、受保護項目跳過與文字容量上限；不會讀取私人備忘錄，也不能取代真實系統授權視窗的互動驗收。
 
 ## 搜尋範圍與更新
 

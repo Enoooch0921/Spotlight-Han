@@ -93,6 +93,7 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Text(L.text("貨幣可輸入 3000tb=rmb、3000tb rmb、nt3000 = rmb。只輸入 3000tb 或 3000台幣，會顯示下方選取的目標；也可明寫 3000tb=rmb,usd,jpy。參考匯率每日更新，結果標示資料時間及過期快取，非銀行成交價。"))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("也可用國名：3000NT=馬來西亞、3000NT 馬來、3000NT=Malaysia；New Zealand、South Korea 等英文國名也支援。")).font(.caption).foregroundStyle(.secondary)
                 Text(L.text("預設換算目標（至少選一種，可多選）")).font(.caption)
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
                     ForEach(CurrencyQuery.supportedCodes, id: \.self) { code in

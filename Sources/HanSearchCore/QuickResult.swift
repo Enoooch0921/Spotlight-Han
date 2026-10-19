@@ -35,7 +35,13 @@ public struct PersonalRecord: Sendable {
         guard mode == .all || mode == self.mode else { return nil }
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty, terms.allSatisfy({ folded.contains($0) }) else { return nil }
-        return QuickResult(id: id, title: title, subtitle: subtitle, symbol: symbol, action: action)
+        let preview: String
+        if self.mode == .notes {
+            preview = SearchHighlight.excerpt(in: text, query: query)
+        } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query) {
+            preview = SearchHighlight.excerpt(in: text, query: query)
+        } else { preview = subtitle }
+        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action)
     }
 }
 

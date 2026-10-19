@@ -36,6 +36,8 @@ struct CheckRunner {
         tests.testSafeQuickActions()
         try tests.testTaskCommands()
         tests.testCurrencyQueries()
+        tests.testCurrencyCountryNames()
+        tests.testSearchHighlights()
         try tests.testShortcutBindings()
         tests.testLauncherVisibilityAfterSwitchingApps()
         tests.testSourceConnectionQueue()
@@ -43,7 +45,7 @@ struct CheckRunner {
         try tests.testCancellableStreamingProcesses()
         tests.testSystemShortcutPreferences()
         tests.testSystemSettingsSearch()
-        print("PASS: 20 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search.")
+        print("PASS: 22 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -303,6 +305,56 @@ final class ChineseSearchTests {
             _ = try ClockAlarmRequest.date(for: TaskPlan(kind: .alarm, title: "test", start: now.addingTimeInterval(25 * 3600)), now: now, calendar: calendar)
             preconditionFailure("Clock cannot schedule a dated alarm beyond the next occurrence")
         } catch {}
+    }
+
+    func testCurrencyCountryNames() {
+        for name in ["马来西亚", "馬來西亞", "马来", "馬來", "大马", "Malaysia", "mAlAySiA", "Malay", "Msia", "MY", "令吉", "Malaysian Ringgit"] {
+            for query in ["3000Nt = " + name, "3000nt " + name] {
+                let parsed = CurrencyQuery.parse(query)
+                XCTAssertEqual(parsed?.source, "TWD"); XCTAssertEqual(parsed?.target, "MYR"); XCTAssertEqual(parsed?.amount, 3000)
+            }
+        }
+        let examples = [("New Zealand", "NZD"), ("紐西蘭", "NZD"), ("新西兰", "NZD"), ("United States", "USD"), ("United States of America", "USD"), ("美国", "USD"), ("United Kingdom", "GBP"), ("英國", "GBP"), ("South Korea", "KRW"), ("韓國", "KRW"), ("南韓", "KRW"), ("日本", "JPY"), ("Japan", "JPY"), ("新加坡", "SGD"), ("Singapore", "SGD"), ("法國", "EUR"), ("Germany", "EUR")]
+        for (country, code) in examples { XCTAssertEqual(CurrencyQuery.parse("3000 NT = " + country)?.target, code) }
+        XCTAssertEqual(CurrencyQuery.parse("Malaysia 100 = 台灣")?.source, "MYR")
+        XCTAssertEqual(CurrencyQuery.parse("100 United States to Malaysia")?.source, "USD")
+        XCTAssertEqual(CurrencyQuery.requests("3000NT = 馬來, New Zealand, United States", defaultTargets: []).map(\.target), ["MYR", "NZD", "USD"])
+        XCTAssertEqual(CurrencyQuery.requests("3000NT Malaysia New Zealand South Korea", defaultTargets: []).map(\.target), ["MYR", "NZD", "KRW"])
+        XCTAssertEqual(CurrencyQuery.requests("3000NT = 馬來/Malaysia/MYR/日本", defaultTargets: []).map(\.target), ["MYR", "JPY"])
+        XCTAssertEqual(CurrencyQuery.cleanTargets(["馬來", "Malaysia", "New  Zealand", "美國"]), ["MYR", "NZD", "USD"])
+        let conversion = CurrencyQuery.parse("3000Nt=馬來")?.converted(using: ["TWD": 30, "MYR": 4.5])
+        XCTAssertEqual(conversion?.amount, 450) // Deliberately synthetic rates, not live market data.
+        for invalid in ["3000NT = Malaysia unknown", "3000NT = New", "3000NT = South", "3000NT = 歐盟", "3000NT = Europe", "3000NT = United States nonsense", "1 TB to GB"] {
+            XCTAssertTrue(CurrencyQuery.requests(invalid, defaultTargets: ["CNY"]).isEmpty)
+        }
+    }
+
+    func testSearchHighlights() {
+        func highlighted(_ text: String, _ query: String) -> [String] {
+            SearchHighlight.ranges(in: text, query: query).map { range in
+                guard let source = Range(range, in: text) else { preconditionFailure("Invalid original Unicode range") }
+                return String(text[source])
+            }
+        }
+        XCTAssertEqual(highlighted("🎬鼎達叔叔來了，鼎达叔叔也來了", "鼎达叔叔"), ["鼎達叔叔", "鼎达叔叔"])
+        XCTAssertEqual(highlighted("鼎達叔叔", "鼎达 叔叔"), ["鼎達叔叔"])
+        XCTAssertEqual(highlighted("叔叔叔", "叔叔"), ["叔叔叔"])
+        XCTAssertEqual(highlighted("Hello，HELLO", "hello"), ["Hello", "HELLO"])
+        XCTAssertEqual(highlighted("Ｈｅｌｌｏ", "hello"), ["Ｈｅｌｌｏ"])
+        XCTAssertEqual(highlighted("Cafe\u{301} ﬃ 乾坤乾杯", "café ffi 乾坤干杯"), ["Cafe\u{301}", "ﬃ", "乾坤乾杯"])
+        XCTAssertEqual(highlighted("檔案[1]*.txt", "[1]*"), ["[1]*"])
+        XCTAssertTrue(SearchHighlight.ranges(in: "不相符", query: "鼎達叔叔").isEmpty)
+        XCTAssertTrue(SearchHighlight.ranges(in: "鼎達叔叔", query: "  ").isEmpty)
+        let body = String(repeating: "沒有命中的前言", count: 100) + "鼎達叔叔帶來內容" + String(repeating: "後文", count: 100)
+        let snippet = SearchHighlight.excerpt(in: body, query: "鼎达叔叔")
+        XCTAssertTrue(snippet.contains("鼎達叔叔")); XCTAssertTrue(snippet.hasPrefix("…")); XCTAssertTrue(snippet.count <= 162)
+        XCTAssertEqual(highlighted(snippet, "鼎达叔叔"), ["鼎達叔叔"])
+        let longNeedle = String(repeating: "鼎", count: 170) + "達"
+        XCTAssertTrue(SearchHighlight.excerpt(in: String(repeating: "前", count: 100) + longNeedle + "後文", query: longNeedle).contains(longNeedle))
+        let document = IndexedDocument(url: URL(fileURLWithPath: "/test/highlight.docx"), text: body)
+        XCTAssertTrue(document.match(query: "鼎达叔叔", mode: .contents)?.excerpt.contains("鼎達叔叔") == true)
+        let note = PersonalRecord(id: "note:highlight-test", title: "測試筆記", subtitle: "開頭摘要", text: body, symbol: "note.text", mode: .notes, action: .note("highlight-test"))
+        XCTAssertTrue(note.result(query: "鼎达叔叔", mode: .all)?.subtitle.contains("鼎達叔叔") == true)
     }
 
     func testCurrencyQueries() {

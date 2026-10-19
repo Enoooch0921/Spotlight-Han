@@ -93,7 +93,7 @@ struct ContentView: View {
             }.frame(height: 3).padding(.horizontal, 18)
             if let details = store.details {
                 VStack(alignment: .leading, spacing: 16) {
-                    ScrollView { Text(details).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    ScrollView { HighlightedText(text: details, query: store.query).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                     HStack {
                         Button(L.text("複製內容")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(details, forType: .string) }
                         Spacer(); Button(L.text("返回搜尋")) { store.details = nil; focused = true }
@@ -109,7 +109,7 @@ struct ContentView: View {
                         LazyVStack(spacing: 3) {
                             ForEach(store.allQuickResults) { item in quickRow(item).id(item.id) }
                             ForEach(store.results) { item in
-                                ResultRow(item: item)
+                                ResultRow(item: item, query: store.query)
                                     .padding(.horizontal, 12).padding(.vertical, 4)
                                     .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
                                     .contentShape(Rectangle())
@@ -153,8 +153,8 @@ struct ContentView: View {
         HStack(spacing: 13) {
             Image(systemName: item.symbol).font(.system(size: 22)).foregroundStyle(.secondary).frame(width: 30, height: 32)
             VStack(alignment: .leading, spacing: 3) {
-                Text(quickTitle(item)).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
-                Text(quickSubtitle(item)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                HighlightedText(text: quickTitle(item), query: store.query).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
+                HighlightedText(text: quickSubtitle(item), query: store.query).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
                 if item.id.hasPrefix("quick:currency:") {
                     Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!).font(.system(size: 10))
                 }
@@ -174,6 +174,10 @@ struct ContentView: View {
         return item.title
     }
     private func quickSubtitle(_ item: QuickResult) -> String {
+        if item.id.hasPrefix("quick:currency:"), let code = item.id.split(separator: ":").last.map(String.init),
+           CurrencyQuery.supportedCodes.contains(code), let name = store.interfaceLanguage.locale.localizedString(forCurrencyCode: code) {
+            return name + " · " + L.text(item.subtitle)
+        }
         if ["quick:note:", "quick:contact:", "quick:event:", "quick:reminder:", "quick:mail:", "quick:dictionary"].contains(where: { item.id.hasPrefix($0) }) { return item.subtitle }
         return L.text(item.subtitle)
     }

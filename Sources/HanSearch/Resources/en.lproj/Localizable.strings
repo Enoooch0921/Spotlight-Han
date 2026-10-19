@@ -29,6 +29,7 @@
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
 "上次檢查：%@ · 系統未提供下載百分比" = "Last checked: %@ · Download percentage is not provided by macOS";
+"也可用國名：3000NT=馬來西亞、3000NT 馬來、3000NT=Malaysia；New Zealand、South Korea 等英文國名也支援。" = "Country names work too: 3000NT=Malaysia, 3000NT=New Zealand or 3000NT=South Korea. Traditional and Simplified Chinese names and common aliases are supported.";
 "介面語言" = "Interface language";
 "你允許取用的聯絡人姓名、電話與電子郵件" = "Names, phone numbers and email addresses you permit";
 "使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，選取翻譯結果按 Return 開啟語言視窗，再進入系統語言下載設定。下載後可跨 App 共用。原查詢的檔案與 App 結果仍保留。" = "Uses Apple on-device translation on macOS 15+. Choose source and target languages. Missing models can be prepared through the language window. Your original search results remain available.";
