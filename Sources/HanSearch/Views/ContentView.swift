@@ -59,6 +59,7 @@ struct ContentView: View {
                 .frame(width: 54, height: 60)
                 .background(store.mode == mode ? Color.primary.opacity(0.08) : .clear, in: Circle())
                 .spotlightGlass(Circle())
+                .contentShape(.interaction, Circle())
         }.buttonStyle(.plain).help(hint).accessibilityLabel(hint)
             .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
     }

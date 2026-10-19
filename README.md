@@ -6,7 +6,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 用自己習慣的中文搜尋 App、影片、檔名和文件。目標是成為 Spotlight 的開源替代品，先把「緊急時找得到檔案」做好。
 
-**目前版本：0.5.1，開發預覽。尚未達到 Spotlight 的完整功能對等。**
+**目前版本：0.5.2，開發預覽。尚未達到 Spotlight 的完整功能對等。**
 
 ## 為什麼做 Spotlight Han？
 
