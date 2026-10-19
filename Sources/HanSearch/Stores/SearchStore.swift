@@ -35,6 +35,7 @@ final class SearchStore: ObservableObject {
     @Published var hotkeyError = "" { didSet { onLayoutChanged?() } }
     let loginItem = LoginItemService()
     let appLibrary = AppLibraryStore()
+    let appUpdater = AppUpdateService()
     @Published var interfaceLanguage = L.language {
         didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
     }

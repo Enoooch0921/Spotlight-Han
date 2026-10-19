@@ -139,7 +139,12 @@ struct SettingsView: View {
                     Button(L.text("開啟時鐘")) { SystemClockService.openClock() }
                 }
             }
+            Section(L.text("軟體更新")) { AppUpdateSettingsView(updater: store.appUpdater) }
             Section(L.text("關於")) {
+                HStack {
+                    Link(L.text("GitHub 專案與原始碼"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han")!)
+                    Link(L.text("回報問題"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han/issues")!)
+                }
                 Text(L.format("Spotlight Han %@ · 繁簡中文搜尋", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"))
                 Text(L.text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。"))
                     .font(.caption).foregroundStyle(.secondary)

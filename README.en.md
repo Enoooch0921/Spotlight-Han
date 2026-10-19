@@ -61,3 +61,5 @@ Spotlight Han is an independent project and is not affiliated with Apple.
 Press **⌘1** for a grid or list of local apps. All Apps uses a stable name order; fixed purpose categories, pinning and manual category overrides keep navigation predictable. Recents include only successful launches through Han.
 
 Create your own sidebar categories and drag app icons or list rows into them. Drag any category to reorder. Custom categories offer 22 system icons and can be renamed or deleted. Local suggestions cover Waves, iZotope, audio/video production, Office and common workflows, while preserving manual assignments. Organization stays on this Mac and never moves or deletes installed apps.
+
+Han checks public GitHub releases at most once daily and offers a DMG download when a compatible newer version is available. Manual checks, preview-release preferences and an auto-check switch are included. Installation remains under your control.

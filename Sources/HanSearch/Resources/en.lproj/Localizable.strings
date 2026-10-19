@@ -20,11 +20,13 @@
 "Apple 本機翻譯 · 選取後 ↵ 複製" = "Apple on-device translation · Select then ↵ to copy";
 "Apple 系統時鐘橋接捷徑；首次加入一次，之後輸入指令即可" = "Apple Clock bridge. Add it once, then enter alarm commands.";
 "App、檔名與已連接資料" = "apps, filenames and connected sources";
+"GitHub 專案與原始碼" = "GitHub project and source";
 "Google · 按下 Return 後開啟瀏覽器" = "Google · Press Return to open the browser";
 "Han 預設行事曆" = "Han default calendar";
 "Microsoft Office" = "Microsoft Office";
 "Rates by ExchangeRate-API · 每日更新" = "Rates by ExchangeRate-API · Updated daily";
 "Spotlight Han %@ · 繁簡中文搜尋" = "Spotlight Han %@ · Traditional/Simplified Chinese search";
+"Spotlight Han %@ 可更新" = "Spotlight Han %@ is available";
 "Spotlight Han 搜尋" = "Search Spotlight Han";
 "Spotlight Han 繁簡搜尋" = "Spotlight Han search";
 "Spotlight 的 %@ 仍然開啟。請先關閉系統 Spotlight 快捷鍵，再回來設定 Han。" = "Spotlight still uses %@. Disable its shortcut, then return to Han.";
@@ -37,7 +39,10 @@
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
 "上次完整更新：%@" = "Last complete refresh: %@";
+"上次檢查：%@" = "Last checked: %@";
 "上次檢查：%@ · 系統未提供下載百分比" = "Last checked: %@ · Download percentage is not provided by macOS";
+"下載 DMG" = "Download DMG";
+"下載新版本 %@" = "Download update %@";
 "不另設通知" = "No event notification";
 "也可以輸入「下下週一上午10點開會30分鐘」。只填日期會建立全天行程。" = "Try “tomorrow at 10am meeting for 30 minutes”. A date without a time creates an all-day event.";
 "也可以輸入「明天上午9點交報告」。只填日期會建立不指定時間的提醒事項。" = "Try “tomorrow at 9am submit report”. A date without a time creates a date-only reminder.";
@@ -89,6 +94,7 @@
 "剪貼板 ⌘4" = "Clipboard ⌘4";
 "加入文件資料夾…" = "Add document folder…";
 "勾選分類，展開可查看全部 App。建立時會保留原本手動分類。" = "Select categories and expand to see every app. Existing manual categories are preserved.";
+"包含測試版更新" = "Include preview releases";
 "匯率服務暫不可用。" = "Exchange rate service is unavailable.";
 "匯率資料不完整，無法換算。" = "Incomplete rate data; conversion is unavailable.";
 "即將到來" = "Upcoming";
@@ -106,6 +112,7 @@
 "右鍵 App 即可釘選常用項目" = "Right-click an app to pin it here";
 "啟用剪貼板記錄" = "Enable clipboard history";
 "喚出搜尋" = "Show search";
+"回報問題" = "Report an issue";
 "圖示" = "Grid";
 "在 Finder 顯示" = "Show in Finder";
 "在設定中啟用，並依系統提示授權。" = "Enable this source in Settings and approve access if you wish.";
@@ -118,6 +125,7 @@
 "專注模式" = "Focus";
 "尚未完成授權" = "Permission not yet completed";
 "尚未授權" = "Not authorised";
+"尚未檢查更新" = "Updates have not been checked";
 "尚未辨識到時間，試試「明天下午3點開會」。" = "No time recognised. Try “tomorrow at 3pm meeting”.";
 "尚未連接 · 前往設定啟用" = "Not connected · Enable in Settings";
 "尚無剪貼板記錄" = "No clipboard history yet";
@@ -212,6 +220,7 @@
 "新增提醒事項：%@" = "Create reminder: %@";
 "新增行事曆行程" = "New calendar event";
 "新增行事曆行程：%@" = "Create event: %@";
+"新版本 %@" = "New version %@";
 "新行程會先選這個行事曆；確認預覽時仍可更改。此設定只影響 Han。" = "New events start with this calendar. You can change it during review. This setting affects Han only.";
 "日期或時間無效，請重新輸入。" = "Invalid date or time. Please try again.";
 "日期由新到舊" = "Event date: newest first";
@@ -225,6 +234,7 @@
 "更新 App 清單" = "Refresh App List";
 "更新檔名清單" = "Refresh file index";
 "最近開啟" = "Recently Opened";
+"有新版本可下載" = "An update is available";
 "未完成提醒事項，最多 10,000 筆；亦可依輸入指令新增" = "Incomplete reminders, up to 10,000. Chinese commands can create new reminders.";
 "未指定資料夾：文件內容模式使用 Spotlight 索引" = "No folder selected: content search uses Spotlight";
 "未連接" = "Not connected";
@@ -235,6 +245,7 @@
 "本次選擇只套用這一筆；預設行事曆可在 Han 設定更改。" = "This choice applies to this event only. Change the default in Han Settings.";
 "柔和過渡動畫" = "Smooth transitions";
 "查看全部 App" = "View All Apps";
+"查看更新內容" = "Release notes";
 "查看系統語言下載" = "View system language downloads";
 "桌面與 Dock" = "Desktop & Dock";
 "標題" = "Title";
@@ -242,6 +253,7 @@
 "檔名" = "Filename";
 "檔案 ⌘2" = "Files ⌘2";
 "檔案已移動或刪除，請更新檔名清單" = "The file moved or was deleted. Refresh the index.";
+"檢查更新…" = "Check for updates…";
 "檢查狀態" = "Check status";
 "檢查連接" = "Check connection";
 "正在取得公開匯率。" = "Fetching public exchange rates.";
@@ -253,6 +265,7 @@
 "正在搜尋應用程式…" = "Searching applications…";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
 "正在檢查授權…" = "Checking permission…";
+"正在檢查更新…" = "Checking for updates…";
 "正在檢查本機語言…" = "Checking local languages…";
 "正在比對%@…" = "Matching %@…";
 "正在比對已載入的文件內容…" = "Matching loaded document content…";
@@ -271,6 +284,7 @@
 "此捷徑會執行你在捷徑 App 中設定的動作。請確認內容後執行。" = "This runs the actions defined in Shortcuts. Review them before continuing.";
 "此時間無法建立系統鬧鐘" = "Cannot create a Clock alarm at this time";
 "此模式僅支援行事曆與提醒事項。" = "This mode supports Calendar and Reminders only.";
+"每天最多自動檢查一次 GitHub 公開版本；只讀取版本資訊，不傳送搜尋內容或 App 清單。更新由你下載與安裝。" = "Automatically checks public GitHub releases at most once a day. Search text and installed apps are not sent. You download and install updates.";
 "沒有符合的 App" = "No matching apps";
 "清單" = "List";
 "清除搜尋，瀏覽全部" = "Clear Search and Browse All";
@@ -282,6 +296,7 @@
 "瀏覽器" = "Browsers";
 "無法使用 %@，可能已被系統或其他 App 占用。原快捷鍵仍可使用；⌘Space 請先關閉 Spotlight 的同名快捷鍵。" = "Cannot use %@; macOS or another app may own it. Your previous shortcut still works. Disable Spotlight before using ⌘Space.";
 "無法保存文件資料夾授權：%@" = "Could not save document folder access: %@";
+"無法檢查更新，請稍後再試" = "Could not check for updates. Try again later.";
 "無法記住資料夾授權：%@" = "Could not save folder access: %@";
 "無法開啟 App；可能已移動或刪除，請更新清單。" = "Could not open the app. It may have moved or been deleted; refresh the list.";
 "無法開啟備忘錄，請檢查自動化授權。" = "Cannot open Notes. Check Automation permission.";
@@ -289,12 +304,14 @@
 "登入 Mac 時自動啟動" = "Launch at login";
 "登入項目與延伸功能" = "Login Items & Extensions";
 "目前不會在登入時自動開啟。" = "Launch at login is off.";
+"目前已是最新可用版本" = "You have the latest available version";
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目標語言" = "Target language";
 "確認建立" = "Confirm creation";
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";
 "移除" = "Remove";
+"稍後" = "Later";
 "等待前一個來源完成…" = "Waiting for the previous source…";
 "等待授權" = "Waiting for permission";
 "等待系統授權；請在系統視窗選擇允許或不允許…" = "Waiting for system consent. Choose Allow or Don't Allow in the system dialog.";
@@ -330,6 +347,7 @@
 "背景圖片" = "Wallpaper";
 "背景自動更新已連接來源" = "Refresh connected sources in the background";
 "自動偵測" = "Detect automatically";
+"自動檢查新版本" = "Automatically check for updates";
 "自訂：%@" = "Custom: %@";
 "藍牙" = "Bluetooth";
 "行事曆" = "Calendar";
@@ -375,7 +393,7 @@
 "資料有變動，待更新" = "Data changed; refresh needed";
 "跟隨系統" = "Follow system";
 "跟隨系統預設" = "Follow system default";
-"軟體更新" = "Software Update";
+"軟體更新" = "Software updates";
 "輔助使用" = "Accessibility";
 "輸入「設定30分鐘後的鬧鐘」，先預覽時間，按 Return 交給系統時鐘新增。" = "Type a Chinese alarm command, review the time, then press Return to create it in Apple Clock.";
 "輸入後先看解析結果，再按 Return 檢查預覽。" = "Check the parsed result, then press Return to review.";

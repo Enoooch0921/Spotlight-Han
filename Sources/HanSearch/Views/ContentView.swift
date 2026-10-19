@@ -69,6 +69,7 @@ struct ContentView: View {
                     category(.clipboard, symbol: "doc.on.clipboard", hint: "剪貼板 ⌘4")
                 }
             }
+            AppUpdateBanner(updater: store.appUpdater)
             if store.composerMode == nil, let command = TaskComposerMode.command(store.query) {
                 Button { store.enterComposer() } label: {
                     HStack {
@@ -268,7 +269,7 @@ struct ContentView: View {
     }
 }
 
-private extension View {
+extension View {
     @ViewBuilder func spotlightGlass<S: Shape>(_ shape: S) -> some View {
         if #available(macOS 26, *) { self.glassEffect(.regular, in: shape) }
         else { self.background(.ultraThinMaterial, in: shape) }

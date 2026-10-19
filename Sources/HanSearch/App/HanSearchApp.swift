@@ -3,6 +3,7 @@ import AppKit
 import HanSearchCore
 import OSLog
 import Carbon
+import Combine
 
 @main
 struct HanSearchApp: App {
@@ -22,6 +23,8 @@ private struct HanMenuView: View {
         Group {
             Button(L.text("開啟 Spotlight Han"), action: open)
             SettingsLink { Text(L.text("設定與資料來源…")) }
+            AppUpdateMenu(updater: store.appUpdater)
+            Link(L.text("GitHub 專案與原始碼"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han")!)
             Divider()
             Button(L.text("結束 Spotlight Han")) { NSApp.terminate(nil) }.keyboardShortcut("q")
         }.environment(\.locale, store.interfaceLanguage.locale)
@@ -40,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var presentation = LauncherPresentation()
     private var fadeGeneration = 0
     private var layoutTarget: NSRect?
+    private var updateObservation: AnyCancellable?
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 804, height: 140), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -112,6 +116,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let loginLaunch = launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAELaunchedAsLogInItem))?.booleanValue == true ||
             launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem)
         if !loginLaunch { showSearch() }
+        updateObservation = store.appUpdater.$available.combineLatest(store.appUpdater.$dismissedVersion).sink { [weak self] _ in
+            DispatchQueue.main.async { self?.resizePanel() }
+        }
+        store.appUpdater.start()
     }
     func applicationWillTerminate(_ notification: Notification) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
@@ -139,7 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel else { return }
         let count = store.results.count + store.allQuickResults.count
         let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
-        let desired: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : store.isAppBrowser ? 650 : count == 0 ? 410 : 580))
+        let baseHeight: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : store.isAppBrowser ? 650 : count == 0 ? 410 : 580))
+        let desired = baseHeight + (store.appUpdater.showsBanner ? 48 : 0)
         let screen = presentation.isPresented ? (panel.screen ?? NSScreen.main) : (NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main)
         let visible = screen?.visibleFrame
         let preferredTop = visible.map { $0.maxY - $0.height * 0.26 } ?? panel.frame.maxY
