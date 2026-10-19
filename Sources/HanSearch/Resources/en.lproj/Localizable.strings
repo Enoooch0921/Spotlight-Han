@@ -203,6 +203,8 @@
 "建立所選分類" = "Create selected categories";
 "建立日期無法取得" = "Creation date unavailable";
 "建立日期：%@" = "Created: %@";
+"建立日期：新到舊" = "Created: newest first";
+"建立日期：舊到新" = "Created: oldest first";
 "建議分類" = "Suggested categories";
 "影片" = "Videos";
 "影音播放" = "Media players";
@@ -303,6 +305,7 @@
 "檔名" = "Filename";
 "檔案 ⌘2" = "Files ⌘2";
 "檔案已移動或刪除，請更新檔名清單" = "The file moved or was deleted. Refresh the index.";
+"檔案排序" = "File sorting";
 "檢查更新…" = "Check for updates…";
 "檢查狀態" = "Check status";
 "檢查連接" = "Check connection";
@@ -331,6 +334,7 @@
 "正在讀取%@…" = "Reading %@…";
 "正在讀取「%@」中的文件…" = "Reading documents in “%@”…";
 "正在讀取備忘錄 %@/%@；已載入 %@ 則，可先搜尋" = "Reading Notes %@/%@; %@ loaded and searchable";
+"正在讀取建立日期…" = "Reading creation dates…";
 "正在讀取文件內容…" = "Reading document content…";
 "正在讀取（已有部分資料）" = "Reading (partial data available)";
 "正在連接%@；可隨時停止" = "Connecting %@; you can stop at any time";
@@ -370,6 +374,7 @@
 "直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PowerPoint、Excel 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PowerPoint, Excel and text documents across your Mac in All. Apps and filenames appear first, followed by content results. Disabling the Spotlight shortcut does not disable indexing.";
 "直接讀取此資料夾的 Word、文字 PDF、PowerPoint 與純文字，供繁簡全文搜尋。" = "Read Word, text-based PDF, PowerPoint and plain text in this folder for cross-script content search.";
 "直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。" = "Read Word, text-based PDF, PowerPoint, Excel and text files in this folder for cross-script content search.";
+"相關度" = "Relevance";
 "確認建立" = "Confirm creation";
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";

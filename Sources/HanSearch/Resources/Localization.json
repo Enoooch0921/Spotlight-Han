@@ -529,5 +529,10 @@
   "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。": "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as hgdj or ㄏㄍㄉㄐ apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example hong2 guo3.",
   "直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。": "Read Word, text-based PDF, PowerPoint, Excel and text files in this folder for cross-script content search.",
   "舊版或二進位 Excel 請使用系統索引搜尋": "Use the system index for legacy or binary Excel files",
-  "Excel 結構或文字超過讀取上限": "Excel structure or text exceeds the reading limit"
+  "Excel 結構或文字超過讀取上限": "Excel structure or text exceeds the reading limit",
+  "檔案排序": "File sorting",
+  "相關度": "Relevance",
+  "建立日期：新到舊": "Created: newest first",
+  "建立日期：舊到新": "Created: oldest first",
+  "正在讀取建立日期…": "Reading creation dates…"
 }

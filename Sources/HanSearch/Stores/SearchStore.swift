@@ -8,7 +8,14 @@ import Combine
 final class SearchStore: ObservableObject {
     @Published var query = ""
     @Published var mode: SearchMode = .all
-    @Published var results: [SearchItem] = [] { didSet { cacheDocumentFilenameMatches() } }
+    @Published var results: [SearchItem] = [] { didSet { cacheDocumentFilenameMatches(); refreshFileDates() } }
+    @Published var fileSort: FileResultSort = .relevance {
+        didSet { taskPreferences.set(fileSort.rawValue, forKey: "fileResultSort.v1"); refreshFileDates(); onLayoutChanged?() }
+    }
+    @Published var fileDates: [String: Date] = [:]
+    @Published var readingFileDates = false
+    var fileDatesTask: Task<Void, Never>?
+    var fileDatesGeneration = UUID()
     var documentFilenameMatches = Set<String>()
     @Published var documentPreviews: [String: DocumentPreview] = [:]
     @Published var verifyingDocumentContents = false
@@ -136,6 +143,7 @@ final class SearchStore: ObservableObject {
     private let noteOpener: @Sendable (String) async throws -> Void
     private let contentSearcher: @Sendable (String, ProcessCancellation) -> SearchResponse
     let documentPreviewLoader: @Sendable (URL, String) async -> DocumentPreview
+    let fileCreationDateLoader: @Sendable (URL) async -> Date?
     private var cachedGlobalQuery: String?
     private var cachedGlobalContents: [SearchItem] = []
     private let sourcePreferences: UserDefaults
@@ -167,10 +175,12 @@ final class SearchStore: ObservableObject {
          noteOpener: @escaping @Sendable (String) async throws -> Void = { id in try await Task.detached { try PersonalSources.openNote(id) }.value },
          contentSearcher: @escaping @Sendable (String, ProcessCancellation) -> SearchResponse = { query, cancellation in SearchService.searchDocumentContents(query: query, cancellation: cancellation) },
          documentPreviewLoader: @escaping @Sendable (URL, String) async -> DocumentPreview = { url, query in await DocumentPreviewStore.shared.preview(url: url, query: query) },
+         fileCreationDateLoader: @escaping @Sendable (URL) async -> Date? = { await FileCreationDateStore.shared.date(for: $0) },
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.contentSearcher = contentSearcher
         self.documentPreviewLoader = documentPreviewLoader
+        self.fileCreationDateLoader = fileCreationDateLoader
         self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
         self.aliases = SearchAliasStore(defaults: taskPreferences)
@@ -179,6 +189,7 @@ final class SearchStore: ObservableObject {
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.fileSort = FileResultSort(rawValue: taskPreferences.string(forKey: "fileResultSort.v1") ?? "") ?? .relevance
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
         appLibrary.onOpened = { [weak self] app, query in
             self?.habits.record(query: query, identity: "app:" + app.preferenceID, kind: .app)

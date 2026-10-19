@@ -115,6 +115,18 @@ struct ContentView: View {
                 }.padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
+            if store.canSortFileResults {
+                HStack(spacing: 10) {
+                    Picker(L.text("檔案排序"), selection: $store.fileSort) {
+                        ForEach(FileResultSort.allCases, id: \.self) { order in Text(L.text(order.title)).tag(order) }
+                    }.fixedSize()
+                    if store.readingFileDates {
+                        ProgressView().controlSize(.mini)
+                        Text(L.text("正在讀取建立日期…")).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }.controlSize(.small).padding(.horizontal, 18).padding(.vertical, 8)
+            }
             if store.mode == .calendar || (store.mode == .all && store.allQuickResults.contains(where: { $0.id.hasPrefix("quick:event:") })) {
                 Picker(L.text("行事曆排序"), selection: $store.calendarSort) {
                     ForEach(CalendarResultSort.allCases, id: \.self) { order in Text(L.text(order.title)).tag(order) }

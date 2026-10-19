@@ -155,6 +155,40 @@ private final class IndexFixture: @unchecked Sendable {
         precondition(models.allIDs == [modelName.id, modelBody.id] && models.otherIndexedResultCount == 1, "Model filenames must outrank generic body mentions and habits; unrelated index hits stay collapsed")
         models.toggleOtherIndexedResults()
         precondition(models.allIDs == [modelName.id, modelBody.id, modelNoise.id])
+        let oldest = SearchItem(url: URL(fileURLWithPath: "/fixture/old-dl32.pdf"), source: "檔名")
+        let newest = SearchItem(url: URL(fileURLWithPath: "/fixture/new-dl32.xlsx"), source: "資料夾・內容", excerpt: "DL32")
+        let unknown = SearchItem(url: URL(fileURLWithPath: "/fixture/missing-dl32.txt"), source: "檔名")
+        let app = SearchItem(url: URL(fileURLWithPath: "/fixture/DL32.app"), source: "App")
+        let dated = SearchStore(loadSources: false, taskPreferences: defaults, sourcePreferences: defaults,
+                                fileCreationDateLoader: { url in
+                                    if url == newest.url { try? await Task.sleep(for: .milliseconds(30)); return expectedCreation.addingTimeInterval(100) }
+                                    return url == oldest.url ? expectedCreation : nil
+                                })
+        dated.query = "dl32"; dated.mode = .contents; dated.results = [oldest, newest, unknown]
+        dated.selection = oldest.id
+        precondition(dated.fileSort == .relevance && !dated.readingFileDates)
+        dated.fileSort = .createdNewest
+        try await wait { !dated.readingFileDates }
+        precondition(dated.allIDs == [newest.id, oldest.id, unknown.id] && dated.selection == oldest.id)
+        dated.fileSort = .createdOldest
+        try await wait { !dated.readingFileDates }
+        precondition(dated.allIDs == [oldest.id, newest.id, unknown.id])
+        dated.mode = .all; dated.results = [oldest, app, newest, unknown]
+        try await wait { !dated.readingFileDates }
+        let withApp = dated.allIDs
+        dated.fileSort = .createdNewest
+        try await wait { !dated.readingFileDates }
+        precondition(dated.allIDs.firstIndex(of: app.id) == withApp.firstIndex(of: app.id), "Date sorting must keep apps in their existing All slots")
+        precondition(dated.allIDs.filter { $0 != app.id } == [newest.id, oldest.id, unknown.id])
+        dated.results = [newest]; dated.results = [oldest]
+        try await wait { !dated.readingFileDates }
+        try await Task.sleep(for: .milliseconds(50))
+        precondition(dated.fileDates.keys.sorted() == [oldest.id], "A late metadata response must not restore replaced results")
+        let restoredSort = SearchStore(loadSources: false, taskPreferences: defaults, sourcePreferences: defaults)
+        precondition(restoredSort.fileSort == .createdNewest)
+        dated.fileSort = .relevance
+        precondition(!dated.readingFileDates && defaults.string(forKey: "fileResultSort.v1") == "relevance")
+        print("PASS: file creation-date ordering in both directions, missing dates last, App slots, stable selection, stale metadata rejection and sort preference persistence")
         print("PASS: model filename/body evidence and history stay in relevance tiers; Excel participates in All with cell excerpts")
         print("PASS: literal content evidence outranks unrelated index matches and habits, candidates verified without scrolling, collapsed fallback, bounded concurrency and late-preview rejection")
         print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")

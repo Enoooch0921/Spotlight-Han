@@ -70,4 +70,4 @@ Chinese names support full Pinyin and Zhuyin; only apps automatically match init
 
 All now includes system-wide indexed Word, PDF, PowerPoint and Excel contents with Chinese script variants. Fast results appear first; content matches merge afterward without losing selection. Optional folder extraction supports PPTX slide/notes text, XLSX cells and per-file failure details. System index coverage and access restrictions still apply.
 
-File results show filesystem creation dates and times, read in the background without changing ranking. Unavailable dates are labelled explicitly.
+File results show filesystem creation dates and times, read in the background. Choose relevance, newest first or oldest first; the preference is remembered. Unavailable dates are labelled explicitly and sorted last.
