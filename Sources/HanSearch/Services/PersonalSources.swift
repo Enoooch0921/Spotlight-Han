@@ -34,6 +34,11 @@ enum PersonalSources {
             let status = CNContactStore.authorizationStatus(for: .contacts)
             return SourceAccessFailure(source: source.rawValue, status: status == .denied ? .denied : status == .restricted ? .restricted : .notDetermined)
         }
+        if source == .notes || source == .mail {
+            let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
+            let result = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false)
+            return SourceAccessFailure(source: source.rawValue, status: result == errAEEventNotPermitted ? .denied : .notDetermined)
+        }
         return SourceAccessFailure(source: source.rawValue)
     }
 
@@ -64,8 +69,14 @@ enum PersonalSources {
                 // Ask using an application-name read, then release the consent UI before slow content indexing.
                 try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", "function run(a) { return Application(a[0]).name(); }", target], timeout: 120, cancellation: cancellation)
             }
-            _ = try await withTaskCancellationHandler { try await worker.value }
-                onCancel: { cancellation.cancel(); worker.cancel() }
+            do {
+                _ = try await withTaskCancellationHandler { try await worker.value }
+                    onCancel: { cancellation.cancel(); worker.cancel() }
+            } catch {
+                let permission = permissionFailure(source)
+                if !Task.isCancelled, permission.status == .denied { throw permission }
+                throw error
+            }
             granted = isAuthorized(source)
         default: return
         }
@@ -73,7 +84,7 @@ enum PersonalSources {
     }
 
     static func contacts() async throws -> PersonalLoad {
-        guard await isAuthorized(.contacts) else { throw ProcessFailure.failed("聯絡人尚未授權，請按連接。") }
+        guard await isAuthorized(.contacts) else { throw await permissionFailure(.contacts) }
         let store = CNContactStore()
         let keys: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactEmailAddressesKey as CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)

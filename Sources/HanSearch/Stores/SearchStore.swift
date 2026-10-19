@@ -59,6 +59,7 @@ final class SearchStore: ObservableObject {
     }
     private var eventChangeStore: EKEventStore?
     private var eventChangeObserver: AnyCancellable?
+    private var activationObserver: AnyCancellable?
     private var backgroundRefreshTask: Task<Void, Never>?
     private var eventRefreshTask: Task<Void, Never>?
     @Published var autoRefreshEnabled = UserDefaults.standard.object(forKey: "autoRefreshSources.v1") as? Bool ?? true {
@@ -103,6 +104,7 @@ final class SearchStore: ObservableObject {
     private var connectionGeneration = UUID()
     private var sourceReading = false
     private var sourceOwnsAuthorization = false
+    private var batchSources: [SearchMode] = []
     private let fileAccess: FileAccessBookmarks
     private var documents: [IndexedDocument] = []
     private var entries: [CatalogEntry] = []
@@ -119,6 +121,9 @@ final class SearchStore: ObservableObject {
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
         guard loadSources else { return }
+        activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
+            Task { @MainActor in self?.reconcileSourcePermissions() }
+        }
         eventChangeStore = EventKitAccess.store
         eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged).receive(on: DispatchQueue.main).sink { [weak self] _ in
             Task { @MainActor in
@@ -393,6 +398,18 @@ final class SearchStore: ObservableObject {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?" + anchor) else { return }
         NSWorkspace.shared.open(url)
     }
+    func shouldOfferSourcePrivacy(_ source: SearchMode) -> Bool {
+        guard sourceHealth[source]?.phase == .needsPermission, !PersonalSources.isAuthorized(source) else { return false }
+        let current = PersonalSources.permissionFailure(source)
+        return SourceHealth(phase: .needsPermission, permissionStatus: current.status).offersPrivacySettings
+    }
+    func reconcileSourcePermissions() {
+        guard !authorizationInFlight, !actionInFlight else { return }
+        for source in [SearchMode.contacts, .calendar, .reminders, .notes, .mail] where sourceHealth[source]?.phase == .needsPermission && !connecting.contains(source) {
+            if PersonalSources.isAuthorized(source) { enqueueSource(source, allowPrompt: false) }
+            else { sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status }
+        }
+    }
     func refreshSource(_ source: SearchMode) {
         if source == .names { refreshCatalog() }
         else if source == .contents { rebuildIndex() }
@@ -415,12 +432,28 @@ final class SearchStore: ObservableObject {
         }
     }
     func setupAllSources() {
-        guard !setupRunning else { return }
+        guard !setupRunning, connecting.isEmpty, !authorizationInFlight, !actionInFlight else { return }
         setupRunning = true
+        batchSources = [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms]
         // Request the short native permissions before potentially slow Notes/Mail indexing.
-        for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
-            if personalStatus[source]?.hasPrefix("已連接") != true || sourceHealth[source]?.isStale(at: Date()) == true { enqueueSource(source, allowPrompt: true) }
+        for source in batchSources {
+            enqueueSource(source, allowPrompt: true)
         }
+        finishSetupIfIdle()
+    }
+    var refreshableSources: [SearchMode] {
+        let enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+        return [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms].filter {
+            enabled.contains($0.rawValue) || sourceHealth[$0] != nil
+        }
+    }
+    func refreshAllConnectedSources() {
+        guard !setupRunning, connecting.isEmpty, !authorizationInFlight, !actionInFlight else { return }
+        batchSources = refreshableSources
+        guard !batchSources.isEmpty else { return }
+        setupRunning = true
+        // A manual bulk refresh ignores age/backoff, but never opens a consent dialog.
+        for source in batchSources { enqueueSource(source, allowPrompt: false) }
         finishSetupIfIdle()
     }
     func refreshAuthorizedSources(changedOnly: Bool = false) {
@@ -473,8 +506,11 @@ final class SearchStore: ObservableObject {
     }
     private func finishSetupIfIdle() {
         guard setupRunning, sourceTask == nil, sourceQueue.pending.isEmpty else { return }
-        let successful = personalStatus.values.filter { $0.hasPrefix("已連接") }.count
-        setupStatus = "已連接 \(successful)/7 個來源；已啟用的來源會在下次啟動自動連接"
+        let successful = batchSources.filter { sourceHealth[$0]?.phase == .ready }.count
+        let partial = batchSources.filter { sourceHealth[$0]?.phase == .incomplete }.count
+        let attention = batchSources.count - successful
+        setupStatus = L.format("已完成 %@/%@ 個來源；%@ 個需注意（其中 %@ 個部分讀取），詳見下方狀態。", String(successful), String(batchSources.count), String(attention), String(partial))
+        batchSources = []
         setupRunning = false
     }
     func cancelConnections() {
@@ -486,13 +522,15 @@ final class SearchStore: ObservableObject {
             sourceHealth[source, default: SourceHealth()].phase = .stopped
             sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
         }
-        connecting.removeAll(); setupRunning = false
+        connecting.removeAll(); setupRunning = false; batchSources = []
         if sourceOwnsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false }
         setupStatus = "已停止，可稍後逐一重新連接。"; search()
     }
     private func loadSource(_ source: SearchMode, allowPrompt: Bool, token: UUID) async {
         personalStatus[source] = "正在檢查授權…"
-        if setupRunning { setupStatus = "正在連接\(source.rawValue)；可隨時停止" }
+        if setupRunning {
+            setupStatus = L.format("正在處理 %@（%@/%@）；可隨時停止", L.text(source.rawValue), String((batchSources.firstIndex(of: source) ?? 0) + 1), String(batchSources.count))
+        }
         let cancellation = ProcessCancellation()
         var ownsAuthorization = false
         defer { if token == connectionGeneration {
@@ -502,7 +540,7 @@ final class SearchStore: ObservableObject {
         do {
             if !PersonalSources.isAuthorized(source) {
                 guard allowPrompt else {
-                    personalStatus[source] = "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。"
+                    personalStatus[source] = PersonalSources.permissionFailure(source).localizedDescription
                     sourceHealth[source, default: SourceHealth()].phase = .needsPermission
                     sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status; return
                 }
@@ -566,7 +604,9 @@ final class SearchStore: ObservableObject {
         } catch is CancellationError { return }
         catch {
             guard token == connectionGeneration else { return }
-            if ownsAuthorization {
+            // A completed denial can proceed to the next source. An unresolved native
+            // prompt (timeout/error) must stop the queue to avoid stacking dialogs.
+            if ownsAuthorization && !(error is SourceAccessFailure) {
                 for request in sourceQueue.discardPending() {
                     connecting.remove(request.source)
                     sourceHealth[request.source, default: SourceHealth()].phase = .stopped

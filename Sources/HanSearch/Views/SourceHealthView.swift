@@ -70,7 +70,7 @@ struct SearchSourceHealthBanner: View {
                             Text(L.text(source.rawValue)).font(.caption.weight(.medium)).frame(width: 58, alignment: .leading)
                             SourceHealthView(health: store.sourceHealth[source], now: context.date)
                             Spacer(minLength: 2)
-                            if store.sourceHealth[source]?.phase == .needsPermission {
+                            if store.shouldOfferSourcePrivacy(source) {
                                 Button(L.text("開啟隱私權設定")) { store.openSourcePrivacy(source) }.controlSize(.small)
                             }
                             Button(L.text(store.sourceHealth[source]?.phase == .needsPermission ? "連接" : "重新讀取")) { store.refreshSource(source) }.controlSize(.small)

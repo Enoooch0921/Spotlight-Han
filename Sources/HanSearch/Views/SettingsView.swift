@@ -69,11 +69,13 @@ struct SettingsView: View {
                 Text(L.text("授權有效時安靜更新，不會反覆詢問。行事曆／提醒事項每5分鐘及收到變更後更新；其他已連接來源與文件索引每15分鐘更新。權限失效會暫停並顯示狀態，等你主動重新連接。"))
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
-                    Button(L.text("一次設定所有資料來源")) { store.setupAllSources() }.disabled(store.setupRunning || !store.connecting.isEmpty)
+                    Button(L.text("全部重新讀取")) { store.refreshAllConnectedSources() }
+                        .disabled(store.refreshableSources.isEmpty || store.setupRunning || !store.connecting.isEmpty || store.authorizationInFlight || store.actionInFlight)
+                    Button(L.text("一次設定所有資料來源")) { store.setupAllSources() }.disabled(store.setupRunning || !store.connecting.isEmpty || store.authorizationInFlight || store.actionInFlight)
                     if store.setupRunning { ProgressView().controlSize(.small) }
                     if !store.connecting.isEmpty { Button(L.text("停止連接")) { store.cancelConnections() } }
                 }
-                Text(L.text(store.setupStatus.isEmpty ? "所有連接依序處理，避免同時跳出多個授權視窗。備忘錄分批載入並顯示進度；可按停止，已載入內容仍可搜尋。成功後會記住，之後自動讀取已授權的來源。" : store.setupStatus))
+                Text(L.text(store.setupStatus.isEmpty ? "按「全部重新讀取」即可一次更新所有已連接來源，不會彈出授權視窗。首次使用可按「一次設定所有資料來源」，缺少的系統授權會依序詢問。更新顯示各來源進度，可隨時停止。" : store.setupStatus))
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(sources, id: \.self) { source in
                     VStack(alignment: .leading, spacing: 5) {
@@ -81,7 +83,7 @@ struct SettingsView: View {
                             Text(L.text(source.rawValue)).fontWeight(.medium)
                             Spacer()
                             if store.connecting.contains(source) { ProgressView().controlSize(.small) }
-                            if store.sourceHealth[source]?.phase == .needsPermission {
+                            if store.shouldOfferSourcePrivacy(source) {
                                 Button(L.text("開啟隱私權設定")) { store.openSourcePrivacy(source) }
                             }
                             Button(L.text(source == .alarms ? "檢查連接" : (store.personalStatus[source] == nil || store.sourceHealth[source]?.phase == .needsPermission ? "連接" : "重新讀取"))) { store.connect(source) }.disabled(store.connecting.contains(source) || store.setupRunning)
@@ -143,7 +145,7 @@ struct SettingsView: View {
         }.formStyle(.grouped)
             .environment(\.locale, store.interfaceLanguage.locale)
             .id(store.interfaceLanguage.rawValue)
-            .onAppear { store.settingsPresented = true; store.settingsVisibilityChanged?(true) }
+            .onAppear { store.settingsPresented = true; store.settingsVisibilityChanged?(true); store.reconcileSourcePermissions() }
             .onDisappear { store.settingsPresented = false; store.settingsVisibilityChanged?(false) }
     }
     private func scope(_ mode: SearchMode) -> String {

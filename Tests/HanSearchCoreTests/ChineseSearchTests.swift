@@ -115,6 +115,15 @@ final class ChineseSearchTests {
         XCTAssertEqual(partial.phase, .incomplete); XCTAssertEqual(partial.lastSuccess, now)
         partial.recordFailure(SourceAccessFailure(source: "行事曆", status: .denied), at: now)
         XCTAssertEqual(partial.phase, .needsPermission); XCTAssertEqual(partial.permissionStatus, .denied)
+        XCTAssertTrue(partial.offersPrivacySettings)
+        for status: EventAccessState.Status? in [nil, .notDetermined, .fullAccess] {
+            XCTAssertFalse(SourceHealth(phase: .needsPermission, permissionStatus: status).offersPrivacySettings)
+        }
+        for status: EventAccessState.Status in [.denied, .restricted, .writeOnly] {
+            XCTAssertTrue(SourceHealth(phase: .needsPermission, permissionStatus: status).offersPrivacySettings)
+            XCTAssertFalse(SourceHealth(phase: .ready, permissionStatus: status).offersPrivacySettings)
+            XCTAssertFalse(SourceHealth(phase: .loading, permissionStatus: status).offersPrivacySettings)
+        }
         XCTAssertEqual(partial.lastSuccess, now)
         partial.recordFailure(ProcessFailure.failed("讀取逾時"), at: now)
         XCTAssertEqual(partial.phase, .failed); XCTAssertNil(partial.permissionStatus)

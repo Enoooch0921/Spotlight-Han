@@ -23,6 +23,11 @@ public struct SourceHealth: Equatable, Sendable {
         }
     }
     public var hasSnapshot: Bool { lastSuccess != nil || partialUpdate != nil }
+    /// A settings detour is useful only when the OS has explicitly limited access.
+    /// An undetermined permission should use the normal Connect flow instead.
+    public var offersPrivacySettings: Bool {
+        phase == .needsPermission && [.denied, .restricted, .writeOnly].contains(permissionStatus)
+    }
     public func shouldRefresh(at now: Date, interval: TimeInterval, force: Bool = false) -> Bool {
         if [.queued, .authorizing, .loading].contains(phase) { return false }
         if force && ![.failed, .incomplete, .stopped].contains(phase) { return true }
