@@ -1,0 +1,19 @@
+name: macOS checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-check:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: ./script/build_and_run.sh --build-only
+      - name: Run functional checks
+        run: swift run HanSearchChecks
