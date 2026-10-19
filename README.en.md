@@ -6,7 +6,7 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.7.2/Spotlight-Han-0.7.2-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.0/Spotlight-Han-0.8.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
@@ -30,7 +30,7 @@ Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) 
 
 ## Install and try
 
-**v0.7.2 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v0.8.0 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 
@@ -55,3 +55,9 @@ Han is an early independent launcher and does not yet match all Spotlight featur
 If Chinese script differences have made a file hard to find, please share a reproducible example using test data. A report with the macOS/Han version, query and expected result is more useful than a broad feature request.
 
 Spotlight Han is an independent project and is not affiliated with Apple.
+
+### Browse apps without typing
+
+Press **⌘1** for a grid or list of local apps. All Apps uses a stable name order; fixed purpose categories, pinning and manual category overrides keep navigation predictable. Recents include only successful launches through Han.
+
+Create your own sidebar categories and drag app icons or list rows into them. Drag any category to reorder. Custom categories offer 22 system icons and can be renamed or deleted. Local suggestions cover Waves, iZotope, audio/video production, Office and common workflows, while preserving manual assignments. Organization stays on this Mac and never moves or deletes installed apps.

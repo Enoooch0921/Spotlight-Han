@@ -5,6 +5,7 @@ import HanSearchCore
 struct ContentView: View {
     @ObservedObject var store: SearchStore
     @FocusState private var focused: Bool
+    @FocusState private var appGridFocused: Bool
     private let filters: [SearchMode] = [.all, .videos, .contents, .notes, .contacts, .calendar, .reminders, .alarms, .mail]
     var body: some View {
         Group {
@@ -20,14 +21,21 @@ struct ContentView: View {
         }
         .onAppear { focused = true }
         .onChange(of: store.query) { _, _ in store.search() }
-        .onChange(of: store.mode) { _, _ in store.search() }
+        .onChange(of: store.mode) { _, mode in
+            appGridFocused = false; focused = true
+            if mode == .apps { store.appLibrary.select(.all) }
+            store.search()
+        }
         .onChange(of: store.focusToken) { _, _ in
-            focused = false
+            appGridFocused = false; focused = false
             DispatchQueue.main.async { focused = true }
         }
-        .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
-        .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
-        .onExitCommand { if store.composerMode != nil { store.cancelComposer() } else { store.hideLauncher?() } }
+        .onKeyPress(.downArrow) { vertical(1) }
+        .onKeyPress(.upArrow) { vertical(-1) }
+        .onKeyPress(.leftArrow) { horizontal(-1) }
+        .onKeyPress(.rightArrow) { horizontal(1) }
+        .onKeyPress(.return) { if store.isAppBrowser && appGridFocused && !store.appLibrary.isEditingCategory && !store.appLibrary.isPreviewingSuggestions { openApp(); return .handled }; return .ignored }
+        .onExitCommand { if store.appLibrary.isEditingCategory { store.appLibrary.isEditingCategory = false } else if store.appLibrary.isPreviewingSuggestions { store.appLibrary.isPreviewingSuggestions = false } else if store.composerMode != nil { store.cancelComposer() } else { store.hideLauncher?() } }
         .environment(\.locale, store.interfaceLanguage.locale)
         .id(store.interfaceLanguage.rawValue)
 
@@ -37,9 +45,14 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 HStack(spacing: 13) {
                     Image(systemName: store.composerMode == .event ? "calendar.badge.plus" : store.composerMode == .reminder ? "checklist" : "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
-                    TextField(L.text(store.composerMode == nil ? "Spotlight Han 搜尋" : "輸入時間和事項…"), text: $store.query)
+                    TextField(L.text(store.composerMode == nil ? (store.isAppBrowser ? "搜尋應用程式…" : "Spotlight Han 搜尋") : "輸入時間和事項…"), text: $store.query)
                         .font(.system(size: 25, weight: .regular)).textFieldStyle(.plain)
-                        .focused($focused).onSubmit { store.openSelection() }
+                        .focused($focused).onSubmit {
+                            if store.isAppBrowser {
+                                if let quick = store.appSettingsResults.first { store.selection = quick.id; store.openSelection() }
+                                else { openApp() }
+                            } else { store.openSelection() }
+                        }
                         .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
                         .disabled(store.actionInFlight || store.composerCreated != nil)
                         .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
@@ -65,9 +78,14 @@ struct ContentView: View {
                 }.buttonStyle(.plain).spotlightGlass(Capsule())
             }
             if store.composerMode != nil { TaskComposerView(store: store).spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous)).transition(.opacity) }
-            else if store.hasBody { resultPanel.transition(.opacity) }
+            else if store.hasBody {
+                VStack(spacing: 0) {
+                    if store.isAppBrowser { AppBrowserView(store: store, library: store.appLibrary, gridFocused: $appGridFocused).transition(.opacity) }
+                    else { resultPanel.transition(.opacity) }
+                }.spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous)).transition(.opacity)
+            }
         }
-        .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.hasBody)
+        .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.isAppBrowser)
     }
     private func category(_ mode: SearchMode, symbol: String, hint: String) -> some View {
         Button {
@@ -156,7 +174,28 @@ struct ContentView: View {
                 Text(L.text("↵ 開啟")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
-        .spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+    private func openApp() {
+        if let app = store.appLibrary.selected(query: store.query), store.appLibrary.open(app) { store.hideLauncher?() }
+    }
+    private func vertical(_ direction: Int) -> KeyPress.Result {
+        guard !store.appLibrary.isEditingCategory, !store.appLibrary.isPreviewingSuggestions else { return .ignored }
+        guard store.isAppBrowser else { store.moveSelection(direction); return .handled }
+        if !appGridFocused {
+            guard direction > 0 else { return .ignored }
+            focused = false; appGridFocused = true; store.appLibrary.selectFirst(query: store.query)
+        } else {
+            let apps = store.appLibrary.items(query: store.query)
+            let index = apps.firstIndex { $0.id == store.appLibrary.selection } ?? 0
+            let columns = store.appLibrary.listView ? 1 : 5
+            if direction < 0 && index < columns { appGridFocused = false; focused = true }
+            else { store.appLibrary.move(direction * columns, query: store.query) }
+        }
+        return .handled
+    }
+    private func horizontal(_ direction: Int) -> KeyPress.Result {
+        guard store.isAppBrowser, appGridFocused, !store.appLibrary.isEditingCategory, !store.appLibrary.isPreviewingSuggestions else { return .ignored }
+        store.appLibrary.move(direction, query: store.query); return .handled
     }
     private var statusText: String {
         if let activity = store.activityDescription { return activity }

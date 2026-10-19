@@ -2,7 +2,7 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：0.7.2，開發預覽。
+目前版本：0.8.0，開發預覽。
 
 ## 功能
 
@@ -51,6 +51,24 @@
 啟動時不會自動探查未選的下載／文件資料夾。按「選擇搜尋資料夾…」，可按住 Command 多選；選擇自己的使用者資料夾時，只把下載、影片、文件加入索引。選擇其他資料夾則索引該資料夾。App 保存並恢復 security-scoped bookmarks，維持已選範圍的存取；資料夾移動／重新命名時會嘗試恢復位置。未選範圍不讀取，也不載入舊快取中的結果。
 
 「移除」停止索引指定範圍；「忘記資料夾」會停止存取、移除保存的書籤及檔名快取。macOS 撤銷權限、磁碟變更、簽章改變或書籤失效時仍可能需要重新選擇，不保證永久免授權。首次檔案選擇、Notes／Calendar 等系統隱私權也仍由使用者確認，並非同一個總開關。
+
+## App 圖示頁與自己的分類
+
+按右側「應用程式」或 ⌘1，直接瀏覽本機 App 圖示，不需先輸入文字；也能切成列表。預設「全部 App」按名稱排列。搜尋仍支援繁簡互搜；搜尋 Wi-Fi 等設定項目時，系統設定入口會另列在上方。
+
+左側內建提供全部、已釘選、最近開啟、系統內建 App，以及工作與學習、影音與設計、通訊與網路、開發工具、系統與工具、遊戲、其他。用途分類由 App 的 `LSApplicationCategoryType` 對應，未提供或無法辨識時放「其他」，不以檔名猜測。「系統內建 App」是獨立入口，依系統 Applications 路徑與 Safari 識別碼判斷，另購的 Apple 專業 App 不會混入。即使手動改分類，仍可在此找到內建 App。每個 App 只有一個用途分類；右鍵「更改分類」可覆寫，亦可還原。點「新增分類」可建立自己的分類（名稱 1–30 字），把 App 圖示或列表項目拖到左側分類即可加入；拖到「已釘選」則釘選。所有分類（包含內建分類）都能上下拖動排序並保存順序；自訂分類右鍵可編輯名稱、選擇22款常用系統圖示或刪除。刪除分類時，App 回到原始用途分類，釘選與最近記錄仍保留。這些操作只整理 Han 內的分類，不搬動、刪除或啟動 App。分類與釘選依 bundle ID 儲存（沒有 ID 時依路徑），移動或升級同一 App 後盡可能沿用。
+
+「建議分類」會在本機比對已安裝 App 的廠商與產品識別碼，預覽 Waves、iZotope、影音製作、Microsoft Office，以及瀏覽器、通訊與會議、影音播放、設計與截圖、雲端與遠端。預覽頁佔滿右側空間，每組可展開完整圖示與 App 名稱；尺寸由面板管理，避免大型清單觸發反覆量測。預設勾選前四組，其他組可自行勾選；確認後建立分類並整理尚未手動分類的 App，不覆寫既有安排，也不傳送 App 清單。這是明確規則的建議分類，未涵蓋的 App 可拖動補上。Waves／iZotope 收錄可啟動的 App 與管理工具，不把 AU／VST 音訊外掛當作獨立 App。
+
+右鍵可釘選常用 App。最近開啟最多20筆，只記錄成功從 Han 開啟的 App，不讀取其他 App 的使用紀錄。這些設定只存本機。App 清單讀取應用程式、系統應用程式與使用者 Applications 資料夾；略過內嵌輔助 App，連結至同一 App 的重複項目只顯示一次。可手動更新清單，新 App 也會在下次進入且距上次超過30秒時重新整理。
+
+點一下圖示即可開啟。搜尋列按↓進入圖示頁，以方向鍵移動、Return 開啟；第一排按↑回搜尋列，左右鍵在輸入框仍保留文字游標操作。⌘R 可在 Finder 顯示目前選取的 App。
+
+面板沿用同一塊系統玻璃材質，以原生視窗過渡維持搜尋列頂部位置；搜尋結果不再依每次筆數變動而反覆伸縮，視窗亦限制在當前螢幕可見範圍。減少動態效果與 Han 動畫開關都會套用到內容切換。這是獨立實作，動畫仍需實際裝置上的手感驗收。
+
+分類參考：[Apple 常見 App 分類](https://developer.apple.com/app-store/categories/)、[Waves 產品用途](https://www.waves.com/products)、[iZotope 音訊修復](https://www.izotope.com/collections/audio-repair)、[Smaart 音訊測量](https://www.rationalacoustics.com/pages/about-smaart)、[Microsoft 365 App](https://www.microsoft.com/EN/microsoft-365/products-apps-services)。
+
+參考：[Apple 的 App 瀏覽操作](https://support.apple.com/en-ie/guide/mac-help/mh35840/27/mac/27)、[App 宣告用途的官方欄位](https://developer.apple.com/documentation/bundleresources/information-property-list/lsapplicationcategorytype)。
 
 ## 一次集中設定，之後自動連接
 
@@ -137,7 +155,7 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
-公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.7.2 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.8.0 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
 
 ```sh
 ./script/package_release.sh

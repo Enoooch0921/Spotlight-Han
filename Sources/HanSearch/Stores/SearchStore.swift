@@ -34,6 +34,7 @@ final class SearchStore: ObservableObject {
     @Published var hotkeyNotice = "⌃⌥Space"
     @Published var hotkeyError = "" { didSet { onLayoutChanged?() } }
     let loginItem = LoginItemService()
+    let appLibrary = AppLibraryStore()
     @Published var interfaceLanguage = L.language {
         didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
     }
@@ -184,6 +185,11 @@ final class SearchStore: ObservableObject {
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
     var hasBody: Bool { composerMode != nil || !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
+    var isAppBrowser: Bool { mode == .apps && composerMode == nil && details == nil }
+    var appSettingsResults: [QuickResult] {
+        let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
+        return completedMode == .apps && completedQuery == term ? quickResults : []
+    }
     var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
     var activityDescription: String? {
         if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
@@ -815,8 +821,10 @@ final class SearchStore: ObservableObject {
         guard let item = results.first(where: { $0.id == selection }) else { return }
         guard FileManager.default.fileExists(atPath: item.url.path) else { notice = "檔案已移動或刪除，請更新檔名清單"; return }
         if !NSWorkspace.shared.open(item.url) { notice = "無法開啟檔案" }
+        else if item.isApplication { appLibrary.recordOpened(InstalledApplication(url: item.url, name: item.name, bundleID: Bundle(url: item.url)?.bundleIdentifier)) }
     }
     func revealSelection() {
+        if isAppBrowser, let app = appLibrary.selected(query: query) { NSWorkspace.shared.activateFileViewerSelecting([app.url]); return }
         guard let item = results.first(where: { $0.id == selection }) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([item.url])
     }

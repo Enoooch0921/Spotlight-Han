@@ -15,3 +15,8 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_source_refresh.swift -o "$BUILD_DIR/HanSourceRefreshChecks"
 "$BUILD_DIR/HanSourceRefreshChecks"
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_app_library.swift -o "$BUILD_DIR/HanAppLibraryChecks"
+"$BUILD_DIR/HanAppLibraryChecks"

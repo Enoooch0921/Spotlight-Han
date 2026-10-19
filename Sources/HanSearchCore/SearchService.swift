@@ -49,20 +49,7 @@ public enum SearchService {
     }
 
     private static func loadApplications() -> [SearchItem] {
-        let roots = ["/Applications", "/System/Applications", NSHomeDirectory() + "/Applications"]
-        var items: [SearchItem] = []
-        for path in roots {
-            guard let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
-            for case let url as URL in enumerator where url.pathExtension.lowercased() == "app" {
-                let bundle = Bundle(url: url)
-                let name = (bundle?.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
-                    ?? (bundle?.localizedInfoDictionary?["CFBundleName"] as? String)
-                    ?? (bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
-                    ?? url.deletingPathExtension().lastPathComponent
-                items.append(SearchItem(url: url, name: name, source: "App・繁簡比對"))
-            }
-        }
-        return items
+        ApplicationCatalog.scan().map(\.searchItem)
     }
 
     public static func index(folder: URL) -> FolderIndex {

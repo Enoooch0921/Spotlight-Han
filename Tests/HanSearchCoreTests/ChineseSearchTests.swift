@@ -28,6 +28,7 @@ struct CheckRunner {
             print("PASS: relocated local date parser, Chinese/English drafts, ranges and validation")
             return
         }
+        try tests.testApplicationCatalog()
         tests.testAppAndFilenameAcrossScripts()
         tests.testNormalizationAvoidsOneSimplifiedToManyTraditionalMisses()
         tests.testMetadataPredicateTreatsInputAsData()
@@ -55,11 +56,44 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 27 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 28 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
 final class ChineseSearchTests {
+    func testApplicationCatalog() throws {
+        XCTAssertEqual(ApplicationGroup.declared("public.app-category.productivity"), .work)
+        XCTAssertEqual(ApplicationGroup.declared("public.app-category.graphics-design"), .creative)
+        XCTAssertEqual(ApplicationGroup.declared("public.app-category.developer-tools"), .development)
+        XCTAssertEqual(ApplicationGroup.declared("public.app-category.role-playing-games"), .games)
+        XCTAssertEqual(ApplicationGroup.declared("fake-games"), .other)
+        XCTAssertEqual(ApplicationGroup.declared(nil), .other)
+        XCTAssertFalse(ApplicationGroup.assignable.contains(.pinned))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("HanAppCatalog-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        func bundle(_ relative: String, _ name: String, _ id: String, _ category: String?) throws {
+            let contents = root.appendingPathComponent(relative).appendingPathComponent("Contents")
+            try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+            var info: [String: Any] = ["CFBundleIdentifier": id, "CFBundleName": name, "CFBundlePackageType": "APPL", "CFBundleExecutable": "Fixture"]
+            info["LSApplicationCategoryType"] = category
+            let data = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            try data.write(to: contents.appendingPathComponent("Info.plist"))
+        }
+        try bundle("Drama.app", "紅果短劇", "fixture.drama", "public.app-category.video")
+        try bundle("Tools/Tool.app", "工具", "fixture.tool", nil)
+        try bundle("Drama.app/Contents/Helpers/HiddenHelper.app", "Helper", "fixture.helper", nil)
+        try bundle(".Hidden.app", "Hidden", "fixture.hidden", nil)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("Alias.app"), withDestinationURL: root.appendingPathComponent("Drama.app"))
+        let apps = ApplicationCatalog.scan(roots: [root])
+        XCTAssertEqual(apps.count, 2)
+        let drama = apps.first { $0.bundleID == "fixture.drama" }!
+        XCTAssertEqual(drama.name, "紅果短劇"); XCTAssertEqual(drama.group, .creative)
+        XCTAssertTrue(drama.matches("红果短剧")); XCTAssertTrue(drama.matches("Drama"))
+        XCTAssertFalse(drama.matches("Not installed"))
+        XCTAssertEqual(apps.first { $0.bundleID == "fixture.tool" }?.group, .other)
+    }
+
     func testEventAccessCallbackState() {
         var events = EventAccessState()
         XCTAssertFalse(events.observe(.notDetermined))

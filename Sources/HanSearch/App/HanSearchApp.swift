@@ -48,9 +48,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
-        panel.contentView = TransparentHostingView(rootView: ContentView(store: store))
+        panel.animationBehavior = .none
+        let hosting = TransparentHostingView(rootView: ContentView(store: store))
+        // AppKit owns this panel's finite frame. Intrinsic/min/max probes can loop
+        // when a large expandable category preview changes its content height.
+        hosting.sizingOptions = []
+        panel.contentView = hosting
         panel.command = { [weak self] key in self?.command(key) ?? false }
-        panel.dismiss = { [weak self] in self?.hideSearch() }
+        panel.dismiss = { [weak self] in
+            guard let self else { return }
+            if self.store.appLibrary.isEditingCategory { self.store.appLibrary.isEditingCategory = false }
+            else if self.store.appLibrary.isPreviewingSuggestions { self.store.appLibrary.isPreviewingSuggestions = false }
+            else { self.hideSearch() }
+        }
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
@@ -115,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func command(_ key: String) -> Bool {
         if store.composerMode != nil, key != "f" { return false }
         switch key {
-        case "1": store.mode = .apps
+        case "1": store.appLibrary.isEditingCategory = false; store.appLibrary.isPreviewingSuggestions = false; store.appLibrary.select(.all); store.mode = .apps
         case "2": store.mode = .names
         case "3": store.mode = .shortcuts
         case "4": store.mode = .clipboard
@@ -129,11 +139,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel else { return }
         let count = store.results.count + store.allQuickResults.count
         let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
-        let height: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64)))))
-        let top = panel.frame.maxY
-        let target = NSRect(x: panel.frame.minX, y: top - max(410, height), width: 804, height: max(410, height))
-        let collapsed = NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height)
-        let frame = store.hasBody && store.details == nil ? target : collapsed
+        let desired: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : store.isAppBrowser ? 650 : count == 0 ? 410 : 580))
+        let screen = presentation.isPresented ? (panel.screen ?? NSScreen.main) : (NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main)
+        let visible = screen?.visibleFrame
+        let preferredTop = visible.map { $0.maxY - $0.height * 0.26 } ?? panel.frame.maxY
+        let top = presentation.isPresented ? panel.frame.maxY : preferredTop
+        let available = visible.map { max(140, top - $0.minY - 16) } ?? desired
+        let height = min(desired, available)
+        let frame = NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height)
         guard layoutTarget != frame else { return }
         layoutTarget = frame
         if presentation.isPresented, panel.isVisible, store.motionEnabled, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
