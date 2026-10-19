@@ -68,6 +68,8 @@ struct SettingsView: View {
                     .onChange(of: store.autoRefreshEnabled) { _, enabled in if enabled { store.refreshAuthorizedSources() } }
                 Text(L.text("授權有效時安靜更新，不會反覆詢問。行事曆／提醒事項每5分鐘及收到變更後更新；其他已連接來源與文件索引每15分鐘更新。權限失效會暫停並顯示狀態，等你主動重新連接。"))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("備忘錄會分批續讀，已載入內容可先搜尋；行事曆與提醒事項獨立在背景更新，不必等待備忘錄。"))
+                    .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button(L.text("全部重新讀取")) { store.refreshAllConnectedSources() }
                         .disabled(store.refreshableSources.isEmpty || store.setupRunning || !store.connecting.isEmpty || store.authorizationInFlight || store.actionInFlight)

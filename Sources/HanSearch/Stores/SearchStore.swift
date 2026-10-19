@@ -62,8 +62,8 @@ final class SearchStore: ObservableObject {
     private var activationObserver: AnyCancellable?
     private var backgroundRefreshTask: Task<Void, Never>?
     private var eventRefreshTask: Task<Void, Never>?
-    @Published var autoRefreshEnabled = UserDefaults.standard.object(forKey: "autoRefreshSources.v1") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(autoRefreshEnabled, forKey: "autoRefreshSources.v1") }
+    @Published var autoRefreshEnabled = true {
+        didSet { sourcePreferences.set(autoRefreshEnabled, forKey: "autoRefreshSources.v1") }
     }
     @Published var connecting = Set<SearchMode>()
     @Published var authorizationInFlight = false
@@ -105,6 +105,12 @@ final class SearchStore: ObservableObject {
     private var sourceReading = false
     private var sourceOwnsAuthorization = false
     private var batchSources: [SearchMode] = []
+    private var notesReadState: NotesReadState?
+    private var eventWorkers: [SearchMode: Task<Void, Never>] = [:]
+    private var eventWorkerTokens: [SearchMode: UUID] = [:]
+    private let sourcePreferences: UserDefaults
+    private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
+    private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
     private let fileAccess: FileAccessBookmarks
     private var documents: [IndexedDocument] = []
     private var entries: [CatalogEntry] = []
@@ -115,9 +121,18 @@ final class SearchStore: ObservableObject {
     private var generation = UUID()
     private var searchTask: Task<Void, Never>?
 
-    init(loadSources: Bool = true, fileAccess: FileAccessBookmarks? = nil, taskPreferences: UserDefaults = .standard, eventCalendarLoader: @escaping @MainActor () -> [TaskCalendarChoice] = { TaskService.eventCalendars() }, taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
+    init(loadSources: Bool = true, fileAccess: FileAccessBookmarks? = nil,
+         taskPreferences: UserDefaults = .standard, sourcePreferences: UserDefaults = .standard,
+         sourceAccessCheck: @escaping @MainActor (SearchMode) -> Bool = { PersonalSources.isAuthorized($0) },
+         eventSourceLoader: @escaping @MainActor (SearchMode) async throws -> PersonalLoad = { source in
+             source == .calendar ? try await PersonalSources.calendar() : try await PersonalSources.reminders()
+         },
+         eventCalendarLoader: @escaping @MainActor () -> [TaskCalendarChoice] = { TaskService.eventCalendars() },
+         taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
         self.taskWriter = taskWriter
+        self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
+        self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
         guard loadSources else { return }
@@ -125,14 +140,10 @@ final class SearchStore: ObservableObject {
             Task { @MainActor in self?.reconcileSourcePermissions() }
         }
         eventChangeStore = EventKitAccess.store
-        eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged).receive(on: DispatchQueue.main).sink { [weak self] _ in
+        eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: eventChangeStore).receive(on: DispatchQueue.main).sink { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                for source: SearchMode in [.calendar, .reminders] where self.sourceHealth[source]?.hasSnapshot == true {
-                    self.sourceHealth[source]?.invalidated = true
-                }
-                self.refreshEventCalendars()
-                self.scheduleEventSourceRefresh()
+                self.eventSourcesDidChange()
             }
         }
         backgroundRefreshTask = Task { [weak self] in
@@ -141,9 +152,9 @@ final class SearchStore: ObservableObject {
                 self?.refreshAuthorizedSources()
             }
         }
-        if let saved = UserDefaults.standard.stringArray(forKey: "enabledSources.v1") {
+        if let saved = sourcePreferences.stringArray(forKey: "enabledSources.v1") {
             let renamed = saved.map { $0 == "動作" ? SearchMode.shortcuts.rawValue : $0 }
-            if renamed != saved { UserDefaults.standard.set(renamed, forKey: "enabledSources.v1") }
+            if renamed != saved { sourcePreferences.set(renamed, forKey: "enabledSources.v1") }
         }
         let allowed = self.fileAccess.urls
         if let saved = UserDefaults.standard.stringArray(forKey: "indexRootPaths.v2") {
@@ -159,7 +170,7 @@ final class SearchStore: ObservableObject {
         }
         Task {
             await loadCatalog()
-            let enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+            let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
             for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
                 if enabled.contains(source.rawValue) { enqueueSource(source, allowPrompt: false) }
             }
@@ -399,14 +410,14 @@ final class SearchStore: ObservableObject {
         NSWorkspace.shared.open(url)
     }
     func shouldOfferSourcePrivacy(_ source: SearchMode) -> Bool {
-        guard sourceHealth[source]?.phase == .needsPermission, !PersonalSources.isAuthorized(source) else { return false }
+        guard sourceHealth[source]?.phase == .needsPermission, !sourceAccessCheck(source) else { return false }
         let current = PersonalSources.permissionFailure(source)
         return SourceHealth(phase: .needsPermission, permissionStatus: current.status).offersPrivacySettings
     }
     func reconcileSourcePermissions() {
         guard !authorizationInFlight, !actionInFlight else { return }
         for source in [SearchMode.contacts, .calendar, .reminders, .notes, .mail] where sourceHealth[source]?.phase == .needsPermission && !connecting.contains(source) {
-            if PersonalSources.isAuthorized(source) { enqueueSource(source, allowPrompt: false) }
+            if sourceAccessCheck(source) { enqueueSource(source, allowPrompt: false) }
             else { sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status }
         }
     }
@@ -416,6 +427,7 @@ final class SearchStore: ObservableObject {
         else { connect(source) }
     }
     func connect(_ source: SearchMode) {
+        guard eventWorkers[source] == nil else { return }
         enqueueSource(source, allowPrompt: true)
     }
     func beginClockSetup() {
@@ -442,7 +454,7 @@ final class SearchStore: ObservableObject {
         finishSetupIfIdle()
     }
     var refreshableSources: [SearchMode] {
-        let enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+        let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
         return [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms].filter {
             enabled.contains($0.rawValue) || sourceHealth[$0] != nil
         }
@@ -457,37 +469,85 @@ final class SearchStore: ObservableObject {
         finishSetupIfIdle()
     }
     func refreshAuthorizedSources(changedOnly: Bool = false) {
-        guard autoRefreshEnabled, !authorizationInFlight, !actionInFlight, !setupRunning, NSApp.modalWindow == nil else { return }
-        let now = Date(), enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+        guard autoRefreshEnabled, !authorizationInFlight, !actionInFlight, NSApp?.modalWindow == nil else { return }
+        let now = Date(), enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
         for source: SearchMode in [.calendar, .reminders, .contacts, .shortcuts, .notes, .mail, .alarms] {
             guard enabled.contains(source.rawValue), !connecting.contains(source), let health = sourceHealth[source] else { continue }
+            let isEventSource = source == .calendar || source == .reminders
+            if setupRunning && !isEventSource { continue }
             if changedOnly && (source != .calendar && source != .reminders || !health.invalidated) { continue }
             let interval: TimeInterval = source == .calendar || source == .reminders ? 300 : 900
-            guard health.shouldRefresh(at: now, interval: interval, force: changedOnly) else { continue }
-            guard PersonalSources.isAuthorized(source) else {
+            guard health.shouldRefresh(at: now, interval: interval, force: health.invalidated) else { continue }
+            guard sourceAccessCheck(source) else {
                 sourceHealth[source]?.phase = .needsPermission
                 sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status
                 personalStatus[source] = "需要重新授權；背景更新已暫停，請主動按連接。"
                 continue
             }
-            // The worker checks again when it reaches the front of the shared queue.
-            enqueueSource(source, allowPrompt: false)
+            if isEventSource { startEventRefresh(source) }
+            else { enqueueSource(source, allowPrompt: false) }
         }
-        if !changedOnly {
+        if !changedOnly && !setupRunning {
             if !catalogRoots.isEmpty, sourceHealth[.names]?.shouldRefresh(at: now, interval: 900) == true { refreshCatalog() }
             if folder != nil, sourceHealth[.contents]?.shouldRefresh(at: now, interval: 900) == true { rebuildIndex() }
         }
     }
-    private func scheduleEventSourceRefresh() {
-        eventRefreshTask?.cancel()
-        eventRefreshTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(2)) } catch { return }
-            self?.refreshAuthorizedSources(changedOnly: true)
+    func eventSourcesDidChange() {
+        for source: SearchMode in [.calendar, .reminders] where sourceHealth[source]?.hasSnapshot == true {
+            sourceHealth[source]?.markChanged()
+        }
+        refreshEventCalendars()
+        scheduleEventSourceRefresh()
+    }
+    /// Authorised EventKit refreshes have a separate lane from slow Notes / Mail
+    /// scripting. The shared store remains main-actor isolated and never asks consent.
+    private func startEventRefresh(_ source: SearchMode) {
+        guard eventWorkers[source] == nil, !connecting.contains(source), sourceAccessCheck(source) else { return }
+        let token = UUID(), revision = sourceHealth[source]?.changeRevision
+        eventWorkerTokens[source] = token
+        connecting.insert(source)
+        sourceHealth[source, default: SourceHealth()].phase = .loading
+        sourceHealth[source]?.lastAttempt = Date()
+        personalStatus[source] = "正在背景更新\(source.rawValue)…"
+        eventWorkers[source] = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let loaded = try await self.eventSourceLoader(source)
+                try Task.checkCancellation()
+                guard self.eventWorkerTokens[source] == token else { return }
+                self.personal.removeAll { $0.mode == source }; self.personal += loaded.records
+                self.personalStatus[source] = loaded.status
+                self.sourceHealth[source, default: SourceHealth()].completed(at: Date(), complete: loaded.complete, observedRevision: revision)
+            } catch is CancellationError { return }
+            catch {
+                guard self.eventWorkerTokens[source] == token else { return }
+                self.sourceHealth[source, default: SourceHealth()].recordFailure(error, at: Date())
+                self.personalStatus[source] = error is SourceAccessFailure ? error.localizedDescription : "連接失敗：" + error.localizedDescription
+            }
+            guard self.eventWorkerTokens[source] == token else { return }
+            self.eventWorkers[source] = nil; self.eventWorkerTokens[source] = nil; self.connecting.remove(source)
+            self.search(); self.finishSetupIfIdle(); self.scheduleEventSourceRefresh()
         }
     }
-    private func enqueueSource(_ source: SearchMode, allowPrompt: Bool) {
-        if sourceQueue.enqueue(source, allowPrompt: allowPrompt) {
-            connecting.insert(source); personalStatus[source] = "等待前一個來源完成…"
+    private func scheduleEventSourceRefresh() {
+        guard eventRefreshTask == nil, autoRefreshEnabled else { return }
+        eventRefreshTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            guard let self else { return }
+            self.eventRefreshTask = nil
+            self.refreshAuthorizedSources(changedOnly: true)
+            // Permission dialogs / task writes may temporarily prevent a refresh. Keep
+            // the dirty request until it can be queued instead of losing the notification.
+            if [.calendar, .reminders].contains(where: { self.sourceHealth[$0]?.phase == .ready && self.sourceHealth[$0]?.invalidated == true }) {
+                self.scheduleEventSourceRefresh()
+            }
+        }
+    }
+    private func enqueueSource(_ source: SearchMode, allowPrompt: Bool, priority: Bool = false) {
+        if sourceQueue.enqueue(source, allowPrompt: allowPrompt, priority: priority) {
+            connecting.insert(source)
+            if source == .notes, let scan = notesReadState, scan.hasMore { personalStatus[source] = NotesReader.progressStatus(scan) }
+            else { personalStatus[source] = "等待前一個來源完成…" }
             sourceHealth[source, default: SourceHealth()].phase = .queued
             sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
         }
@@ -501,11 +561,17 @@ final class SearchStore: ObservableObject {
             await loadSource(request.source, allowPrompt: request.allowPrompt, token: token)
             guard token == connectionGeneration else { return }
             connecting.remove(request.source); sourceQueue.finish(); sourceTask = nil
+            // Changes received during a Notes slice run in the separate EventKit lane;
+            // the next Notes worker resumes the same scan without asking permission.
+            refreshAuthorizedSources(changedOnly: true)
+            if request.source == .notes, notesReadState?.hasMore == true, sourceHealth[.notes]?.phase == .loading {
+                enqueueSource(.notes, allowPrompt: false, priority: true)
+            }
             startNextSource(); finishSetupIfIdle()
         }
     }
     private func finishSetupIfIdle() {
-        guard setupRunning, sourceTask == nil, sourceQueue.pending.isEmpty else { return }
+        guard setupRunning, sourceTask == nil, sourceQueue.pending.isEmpty, batchSources.allSatisfy({ !connecting.contains($0) }) else { return }
         let successful = batchSources.filter { sourceHealth[$0]?.phase == .ready }.count
         let partial = batchSources.filter { sourceHealth[$0]?.phase == .incomplete }.count
         let attention = batchSources.count - successful
@@ -514,6 +580,8 @@ final class SearchStore: ObservableObject {
         setupRunning = false
     }
     func cancelConnections() {
+        for worker in eventWorkers.values { worker.cancel() }
+        eventWorkers.removeAll(); eventWorkerTokens.removeAll()
         connectionGeneration = UUID(); sourceTask?.cancel(); sourceTask = nil
         sourceQueue.cancelAll()
         sourceReading = false
@@ -538,7 +606,7 @@ final class SearchStore: ObservableObject {
             sourceReading = false
         } }
         do {
-            if !PersonalSources.isAuthorized(source) {
+            if !sourceAccessCheck(source) {
                 guard allowPrompt else {
                     personalStatus[source] = PersonalSources.permissionFailure(source).localizedDescription
                     sourceHealth[source, default: SourceHealth()].phase = .needsPermission
@@ -552,8 +620,14 @@ final class SearchStore: ObservableObject {
                 try await PersonalSources.authorize(source)
             }
             try Task.checkCancellation()
+            // Once consent is valid, remember the source even if its first data read
+            // fails. Background retry should not require another manual Connect click.
+            var remembered = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
+            remembered.insert(source.rawValue)
+            sourcePreferences.set(remembered.sorted(), forKey: "enabledSources.v1")
             sourceReading = true
             sourceHealth[source, default: SourceHealth()].phase = .loading
+            let observedRevision = sourceHealth[source]?.changeRevision
             if ownsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false; ownsAuthorization = false }
             personalStatus[source] = "正在讀取\(source.rawValue)…"
             let loaded: PersonalLoad
@@ -570,18 +644,20 @@ final class SearchStore: ObservableObject {
                 loaded = PersonalLoad(records: [], status: "已連接 Apple 系統時鐘")
             }
             else {
+                let notesCheckpoint = notesReadState
                 let worker = Task.detached(priority: .utility) { () async throws -> PersonalLoad in
                 switch source {
                 case .contacts: return try await PersonalSources.contacts()
                 case .calendar: return try await PersonalSources.calendar()
                 case .reminders: return try await PersonalSources.reminders()
-                case .notes: return try PersonalSources.notes(cancellation: cancellation) { [weak self] update in
+                case .notes: return try PersonalSources.notes(checkpoint: notesCheckpoint, cancellation: cancellation) { [weak self] update in
                     Task { @MainActor in
                         guard let self, token == self.connectionGeneration, self.sourceReading, self.sourceQueue.active?.source == .notes else { return }
                         if !update.records.isEmpty {
-                            self.personal.removeAll { $0.mode == .notes }; self.personal += update.records
+                            self.mergeNotes(update.records, keepExisting: update.notesCheckpoint != nil)
                             self.sourceHealth[.notes, default: SourceHealth()].partialUpdate = Date()
                         }
+                        self.notesReadState = update.notesCheckpoint
                         self.personalStatus[.notes] = update.status; self.search()
                     }
                 }
@@ -596,11 +672,16 @@ final class SearchStore: ObservableObject {
             }
             try Task.checkCancellation()
             guard token == connectionGeneration else { return }
-            personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
-            sourceHealth[source, default: SourceHealth()].completed(at: Date(), complete: loaded.complete)
-            var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
-            remembered.insert(source.rawValue)
-            UserDefaults.standard.set(remembered.sorted(), forKey: "enabledSources.v1")
+            if source == .notes { mergeNotes(loaded.records, keepExisting: loaded.notesCheckpoint != nil) }
+            else { personal.removeAll { $0.mode == source }; personal += loaded.records }
+            personalStatus[source] = loaded.status
+            if source == .notes { notesReadState = loaded.notesCheckpoint }
+            if loaded.notesCheckpoint?.hasMore == true {
+                sourceHealth[source, default: SourceHealth()].phase = .loading
+                if !loaded.records.isEmpty { sourceHealth[source]?.partialUpdate = Date() }
+            } else {
+                sourceHealth[source, default: SourceHealth()].completed(at: Date(), complete: loaded.complete, observedRevision: observedRevision)
+            }
         } catch is CancellationError { return }
         catch {
             guard token == connectionGeneration else { return }
@@ -621,10 +702,17 @@ final class SearchStore: ObservableObject {
         if token == connectionGeneration { search() }
     }
 
+    private func mergeNotes(_ records: [PersonalRecord], keepExisting: Bool) {
+        let replaced = Set(records.map(\.id))
+        personal.removeAll { $0.mode == .notes && (!keepExisting || replaced.contains($0.id)) }
+        personal += records
+    }
+
     func disconnect(_ source: SearchMode) {
+        if source == .notes { notesReadState = nil }
         personal.removeAll { $0.mode == source }; personalStatus[source] = nil; sourceHealth[source] = nil
-        let remembered = (UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? []).filter { $0 != source.rawValue }
-        UserDefaults.standard.set(remembered, forKey: "enabledSources.v1"); search()
+        let remembered = (sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? []).filter { $0 != source.rawValue }
+        sourcePreferences.set(remembered, forKey: "enabledSources.v1"); search()
     }
     private func updateClipboard() { if clipboardEnabled { clipboard.start() } else { clipboard.stop(); clips = [] }; search() }
     func clearClipboard() { clips = []; search() }

@@ -8,6 +8,7 @@ struct PersonalLoad: Sendable {
     let records: [PersonalRecord]
     let status: String
     var complete: Bool = true
+    var notesCheckpoint: NotesReadState? = nil
 }
 
 enum PersonalSources {
@@ -157,65 +158,13 @@ enum PersonalSources {
     private struct RawItem: Decodable { let id: String; let title: String; let text: String; let detail: String }
     private struct RawLoad: Decodable { let items: [RawItem]; let skipped: Int; let capped: Bool }
 
-    private struct NoteEvent: Decodable {
-        let kind: String
-        let total: Int?
-        let capped: Bool?
-        let item: RawItem?
-        let truncated: Bool?
-    }
-
-    static func notes(cancellation: ProcessCancellation, progress: @escaping @Sendable (PersonalLoad) -> Void) throws -> PersonalLoad {
-        // These are read-only Apple events. Password-protected notes are deliberately skipped.
-        let script = #"""
-        function run() {
-            ObjC.import('Foundation');
-            function emit(value) {
-                $.NSFileHandle.fileHandleWithStandardOutput.writeData($(JSON.stringify(value)+'\n').dataUsingEncoding($.NSUTF8StringEncoding));
-            }
-            const app = Application('Notes'), all = app.notes();
-            let bytes = 0, capped = all.length > 2000;
-            emit({kind:'start', total:Math.min(all.length,2000), capped:capped});
-            for (let i = 0; i < Math.min(all.length, 2000); i++) {
-                try {
-                    const n = all[i];
-                    if (n.passwordProtected()) { emit({kind:'skip'}); continue; }
-                    const title = n.name(), id = n.id();
-                    let text = n.plaintext();
-                    const truncated = text.length > 100000 || bytes + text.length > 16000000;
-                    if (truncated) { text = ''; }
-                    bytes += text.length;
-                    emit({kind:'note', item:{id:id, title:title, text:text, detail:'備忘錄'}, truncated:truncated});
-                } catch (e) { emit({kind:'skip'}); }
-            }
-            return '';
-        }
-        """#
-        var records: [PersonalRecord] = [], total = 0, processed = 0, skipped = 0, capped = false, receivedHeader = false
-        let decoder = JSONDecoder()
-        do {
-            _ = try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], timeout: 90, cancellation: cancellation) { line in
-                guard let event = try? decoder.decode(NoteEvent.self, from: line) else { return }
-                if event.kind == "start" { total = event.total ?? 0; capped = event.capped ?? false; receivedHeader = true }
-                else {
-                    processed += 1
-                    if let item = event.item {
-                        records.append(PersonalRecord(id: "note:" + item.id, title: item.title, subtitle: String(item.text.replacingOccurrences(of: "\n", with: " ").prefix(100)), text: item.text, symbol: "note.text", mode: .notes, action: .note(item.id)))
-                        if event.truncated == true { skipped += 1 }
-                    } else { skipped += 1 }
-                }
-                if processed <= 1 || processed % 10 == 0 || processed == total {
-                    progress(PersonalLoad(records: records, status: "正在讀取備忘錄 \(processed)/\(total)；已載入 \(records.count) 則，可先搜尋"))
-                }
-            }
-        } catch is CancellationError { throw CancellationError() }
+    static func notes(checkpoint: NotesReadState?, cancellation: ProcessCancellation, progress: @escaping @Sendable (PersonalLoad) -> Void) throws -> PersonalLoad {
+        do { return try NotesReader.read(checkpoint: checkpoint, cancellation: cancellation, progress: progress) }
+        catch is CancellationError { throw CancellationError() }
         catch {
-            guard automationIsAuthorized(.notes) else { throw ProcessFailure.failed("備忘錄尚未授權，請在系統設定 → 隱私權與安全性 → 自動化中檢查 Han 對備忘錄的存取。") }
-            guard !records.isEmpty else { throw ProcessFailure.failed("備忘錄讀取逾時或未完成。備忘錄資料多、iCloud 同步或系統等待授權時可能較久；請稍後重試。") }
-            return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄（部分讀取；可按重新讀取）", complete: false)
+            guard automationIsAuthorized(.notes) else { throw SourceAccessFailure(source: "備忘錄", status: .denied) }
+            throw error
         }
-        guard receivedHeader else { throw ProcessFailure.failed("備忘錄未回傳有效的讀取狀態，請稍後重試。") }
-        return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄" + (skipped > 0 ? "；\(skipped) 則受保護或無法完整讀取" : "") + (capped ? "（2,000 則上限）" : ""), complete: skipped == 0)
     }
 
     static func mail(cancellation: ProcessCancellation) throws -> PersonalLoad {

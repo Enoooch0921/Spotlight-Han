@@ -7,7 +7,7 @@ struct SourceHealthView: View {
     private var label: String {
         guard let health else { return "未連接" }
         switch health.phase {
-        case .queued: return "等待讀取"
+        case .queued: return health.partialUpdate == nil ? "等待讀取" : "等待續讀（已有部分資料）"
         case .authorizing: return "等待授權"
         case .loading: return health.partialUpdate == nil ? "正在讀取" : "正在讀取（已有部分資料）"
         case .ready: return health.isStale(at: now) ? (health.invalidated ? "資料有變動，待更新" : "資料已舊（超過15分鐘）") : "已更新"

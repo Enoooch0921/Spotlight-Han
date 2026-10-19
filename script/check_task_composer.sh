@@ -10,3 +10,8 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_task_composer.swift -o "$BUILD_DIR/HanTaskComposerChecks"
 "$BUILD_DIR/HanTaskComposerChecks"
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_source_refresh.swift -o "$BUILD_DIR/HanSourceRefreshChecks"
+"$BUILD_DIR/HanSourceRefreshChecks"

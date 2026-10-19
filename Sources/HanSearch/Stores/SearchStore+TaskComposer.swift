@@ -73,11 +73,11 @@ extension SearchStore {
             do {
                 let message = try await writeConfirmedTask(draft)
                 let source: SearchMode = draft.kind == .event ? .calendar : .reminders
-                if sourceHealth[source]?.hasSnapshot == true { sourceHealth[source]?.invalidated = true }
+                if sourceHealth[source]?.hasSnapshot == true { sourceHealth[source]?.markChanged() }
                 composerCreated = message; composerDraft = nil; composerReviewing = false
                 composerError = ""; notice = "已建立"
             } catch { composerError = error.localizedDescription }
-            actionInFlight = false; onLayoutChanged?(); startNextSource()
+            actionInFlight = false; onLayoutChanged?(); refreshAuthorizedSources(changedOnly: true); startNextSource()
         }
     }
     private func writeConfirmedTask(_ draft: TaskDraft) async throws -> String {

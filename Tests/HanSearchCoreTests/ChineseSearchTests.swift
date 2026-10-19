@@ -52,9 +52,10 @@ struct CheckRunner {
         tests.testSystemShortcutPreferences()
         tests.testSystemSettingsSearch()
         tests.testSourceFreshness()
+        tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 26 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 27 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -124,10 +125,56 @@ final class ChineseSearchTests {
             XCTAssertFalse(SourceHealth(phase: .ready, permissionStatus: status).offersPrivacySettings)
             XCTAssertFalse(SourceHealth(phase: .loading, permissionStatus: status).offersPrivacySettings)
         }
+        XCTAssertFalse(SourceHealth(phase: .needsPermission, invalidated: true).shouldRefresh(at: now, interval: 300, force: true))
         XCTAssertEqual(partial.lastSuccess, now)
         partial.recordFailure(ProcessFailure.failed("讀取逾時"), at: now)
         XCTAssertEqual(partial.phase, .failed); XCTAssertNil(partial.permissionStatus)
     }
+    func testNotesResumeState() {
+        var scan = NotesReadState(identifiers: ["a", "locked", "b", "slow", "a"])
+        XCTAssertEqual(scan.total, 4)
+        scan.receive(id: "a", title: "簡體筆記", text: "电脑课程", isTruncated: false)
+        scan.receive(id: "a", title: "duplicate", text: "ignored", isTruncated: false)
+        XCTAssertEqual(scan.records.count, 1); XCTAssertEqual(scan.textCount, 4)
+        scan.skip(id: "locked", protected: true)
+        let checkpoint = scan
+        scan.timedOut(id: "b")
+        XCTAssertEqual(scan.pending, ["slow", "b"])
+        scan.receive(id: "slow", title: "Later item", text: "Read after timeout", isTruncated: false)
+        scan.receive(id: "b", title: "Resumed", text: "Second batch", isTruncated: false)
+        XCTAssertEqual(scan.processed, 4); XCTAssertFalse(scan.hasMore); XCTAssertTrue(scan.complete)
+        XCTAssertEqual(scan.protectedCount, 1)
+        XCTAssertEqual(scan.records.map(\.id), ["note:a", "note:b", "note:slow"])
+        XCTAssertTrue(scan.records[0].result(query: "電腦", mode: .notes) != nil)
+        XCTAssertEqual(checkpoint.processed, 2) // earlier checkpoints remain independent
+        var blocked = NotesReadState(identifiers: ["bad", "good"])
+        blocked.timedOut(id: "bad"); blocked.receive(id: "good", title: "Good", text: "OK", isTruncated: false)
+        blocked.timedOut(id: "bad")
+        XCTAssertFalse(blocked.hasMore); XCTAssertFalse(blocked.complete)
+        XCTAssertEqual(blocked.incompleteCount, 1); XCTAssertEqual(blocked.records.count, 1)
+        var huge = NotesReadState(identifiers: ["huge"])
+        huge.receive(id: "huge", title: "Title remains searchable", text: String(repeating: "x", count: 100001), isTruncated: false)
+        XCTAssertEqual(huge.records.count, 1); XCTAssertFalse(huge.complete); XCTAssertEqual(huge.textCount, 0)
+        XCTAssertEqual(NotesReadState(identifiers: (0..<2001).map(String.init)).total, 2000)
+        XCTAssertTrue(NotesReadState(identifiers: (0..<2001).map(String.init)).capped)
+        var health = SourceHealth(phase: .loading)
+        let revision = health.changeRevision
+        health.markChanged()
+        health.completed(at: Date(), complete: true, observedRevision: revision)
+        XCTAssertTrue(health.invalidated) // a change during a read survives completion
+        let current = health.changeRevision
+        health.completed(at: Date(), complete: true, observedRevision: current)
+        XCTAssertFalse(health.invalidated)
+        var queue = SourceConnectionQueue()
+        queue.enqueue(.mail, allowPrompt: true)
+        queue.enqueue(.notes, allowPrompt: false, priority: true)
+        XCTAssertEqual(queue.next()?.source, .notes)
+        queue.enqueue(.calendar, allowPrompt: false, priority: true)
+        XCTAssertNil(queue.next()) // priority never preempts active work
+        queue.finish(); XCTAssertEqual(queue.next()?.source, .calendar)
+        queue.finish(); XCTAssertEqual(queue.next()?.allowPrompt, true)
+    }
+
     func testCalendarChronologicalSort() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         func event(_ id: String, _ offset: Double?, end: Double? = nil) -> PersonalRecord {

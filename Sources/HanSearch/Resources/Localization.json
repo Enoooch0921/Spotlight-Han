@@ -366,5 +366,11 @@
   "全部重新讀取": "Refresh All Connected Sources",
   "已完成 %@/%@ 個來源；%@ 個需注意（其中 %@ 個部分讀取），詳見下方狀態。": "Updated %@/%@ sources; %@ need attention (%@ partially read). See each source below.",
   "按「全部重新讀取」即可一次更新所有已連接來源，不會彈出授權視窗。首次使用可按「一次設定所有資料來源」，缺少的系統授權會依序詢問。更新顯示各來源進度，可隨時停止。": "Refresh all connected sources with one click, without permission dialogs. For first-time connections, use Set Up All Sources to request missing permissions in sequence. Each source shows progress, and you can stop at any time.",
-  "正在處理 %@（%@/%@）；可隨時停止": "Processing %@ (%@/%@); you can stop at any time"
+  "正在處理 %@（%@/%@）；可隨時停止": "Processing %@ (%@/%@); you can stop at any time",
+  "等待續讀（已有部分資料）": "Waiting to continue (partial data available)",
+  "正在背景更新%@…": "Updating %@ in the background…",
+  "備忘錄會分批續讀，已載入內容可先搜尋；行事曆與提醒事項獨立在背景更新，不必等待備忘錄。": "Notes continue in small batches, with loaded content searchable immediately. Calendar and Reminders refresh independently in the background.",
+  "已連接 %@ 則備忘錄（%@ 則已檢查；%@ 則受保護略過；%@ 則無法完整讀取）": "Connected %@ notes (%@ checked; %@ locked notes excluded; %@ could not be fully read)",
+  "已連接 %@ 則備忘錄（%@ 則已檢查；%@ 則受保護略過；%@ 則無法完整讀取）（2,000 則上限）": "Connected %@ notes (%@ checked; %@ locked notes excluded; %@ could not be fully read; 2,000-note limit)",
+  "備忘錄本批未能繼續讀取；已保留先前進度，稍後可重新讀取。": "This Notes batch made no progress. The previous checkpoint is preserved for the next attempt."
 }

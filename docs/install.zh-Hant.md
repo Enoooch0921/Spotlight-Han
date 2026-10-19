@@ -1,10 +1,10 @@
 # Spotlight Han · 開發預覽版安裝說明
 
-目前打包版本為 **0.7.1 開發預覽**，供願意協助回報問題的使用者試用。公開狀態以 Releases 列表為準；它尚未達到 Spotlight 的完整功能對等。
+目前打包版本為 **0.7.2 開發預覽**，供願意協助回報問題的使用者試用。公開狀態以 Releases 列表為準；它尚未達到 Spotlight 的完整功能對等。
 
 ## 下載哪個檔案？
 
-到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v0.7.1 版本下載 `Spotlight-Han-0.7.1-macOS-arm64.dmg`（拖曳安裝），或 `Spotlight-Han-0.7.1-macOS-arm64.zip`（壓縮包）。若列表還沒有這個版本，代表尚未公開。
+到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v0.7.2 版本下載 `Spotlight-Han-0.7.2-macOS-arm64.dmg`（拖曳安裝），或 `Spotlight-Han-0.7.2-macOS-arm64.zip`（壓縮包）。若列表還沒有這個版本，代表尚未公開。
 
 - `arm64` 適用於 Apple Silicon（M 系列）Mac。目前未提供 Intel 版或 Universal 版安裝包。
 - 目前已驗證 Apple Silicon、macOS 26.6.1。程式宣告最低 macOS 14，macOS 14／15 尚待真機驗證。
