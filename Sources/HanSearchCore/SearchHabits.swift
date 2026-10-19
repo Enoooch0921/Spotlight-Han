@@ -68,7 +68,7 @@ public struct SearchHabitHistory: Codable, Sendable {
         func score(_ item: HabitCandidate) -> Double {
             let name = ChineseSearch.normalized(item.title)
             let compact = ChineseSearch.applicationKey(name), compactNeedle = ChineseSearch.applicationKey(needle)
-            let alias = item.kind == .app && ApplicationAliases.matches(query, aliases: item.aliases)
+            let alias = ApplicationAliases.matches(query, aliases: item.aliases.map(ChineseSearch.normalized))
             let relevance: Double = name == needle || (item.kind == .app && compact == compactNeedle) ? 300 : alias ? 260 : name.hasPrefix(needle) || (item.kind == .app && compact.hasPrefix(compactNeedle)) ? 220 : name.contains(needle) ? 140 : 60
             let target = digest("t:" + item.identity)
             let count = queryCounts[target, default: 0]

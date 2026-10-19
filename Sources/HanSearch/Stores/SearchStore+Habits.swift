@@ -3,12 +3,13 @@ import HanSearchCore
 
 extension SearchStore {
     func habitCandidate(_ item: SearchItem) -> HabitCandidate {
-        HabitCandidate(id: item.id, identity: item.isApplication ? "app:" + (item.applicationIdentifier ?? item.url.path) : "file:" + item.id, title: item.name, kind: item.isApplication ? .app : .file, aliases: item.isApplication ? ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier) : [])
+        let identity = item.isApplication ? "app:" + (item.applicationIdentifier ?? item.url.path) : "file:" + item.id
+        return HabitCandidate(id: item.id, identity: identity, title: item.name, kind: item.isApplication ? .app : .file, aliases: (item.isApplication ? ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier) : []) + aliases.aliases(for: identity))
     }
     func habitCandidate(_ item: QuickResult) -> HabitCandidate? {
         let kinds: [(String, SearchResultKind)] = [("note:", .note), ("contact:", .contact), ("event:", .calendar), ("reminder:", .reminder), ("mail:", .mail), ("shortcut:", .shortcut)]
         guard let kind = kinds.first(where: { item.id.hasPrefix("quick:" + $0.0) })?.1 else { return nil }
-        return HabitCandidate(id: item.id, identity: item.id, title: item.title, kind: kind)
+        return HabitCandidate(id: item.id, identity: item.id, title: item.title, kind: kind, aliases: aliases.aliases(for: item.id))
     }
     var orderedSearchIDs: [String] {
         let original = allQuickResults.map(\.id) + results.map(\.id)

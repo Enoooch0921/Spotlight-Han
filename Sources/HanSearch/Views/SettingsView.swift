@@ -32,6 +32,9 @@ struct SettingsView: View {
             Section(L.text("快速檔名搜尋")) {
                 TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[.names], now: context.date) }
                 Text(L.text(store.catalogStatus)).font(.caption)
+                if store.unavailableFolderCount > 0 {
+                    Label(L.format("有 %@ 個資料夾尚無法恢復存取；已保留原有選擇，請重新選擇相同資料夾。", String(store.unavailableFolderCount)), systemImage: "folder.badge.questionmark").font(.caption).foregroundStyle(.orange)
+                }
                 ForEach(store.catalogRoots, id: \.path) { root in
                     HStack {
                         Text(root.path).font(.caption).lineLimit(1).truncationMode(.middle)
@@ -42,7 +45,7 @@ struct SettingsView: View {
                 HStack {
                     Button(L.text("選擇搜尋資料夾…")) { store.chooseCatalogFolder() }.disabled(store.catalogRefreshing)
                     Button(L.text("更新檔名清單")) { store.refreshCatalog() }.disabled(store.catalogRefreshing || store.indexing || store.catalogRoots.isEmpty)
-                    Button(L.text("忘記資料夾")) { store.forgetFolders() }.disabled(store.catalogRefreshing || store.indexing || store.catalogRoots.isEmpty)
+                    Button(L.text("忘記資料夾")) { store.forgetFolders() }.disabled(store.catalogRefreshing || store.indexing || store.catalogRoots.isEmpty && store.unavailableFolderCount == 0)
                 }
                 Text(L.text("開發測試版在重新編譯或重新簽章後，macOS 仍可能要求重新授權；正式發行需要固定的開發者簽章。"))
                     .font(.caption).foregroundStyle(.secondary)
@@ -140,6 +143,12 @@ struct SettingsView: View {
                 }
             }
             Section(L.text("搜尋習慣")) { SearchHabitSettingsView(habits: store.habits) }
+            Section(L.text("拼音、注音與搜尋縮寫")) {
+                Text(L.text("中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。"))
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section(L.text("軟體更新")) { AppUpdateSettingsView(updater: store.appUpdater) }
             Section(L.text("關於")) {
                 HStack {

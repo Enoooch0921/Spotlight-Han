@@ -175,6 +175,7 @@ struct ContentView: View {
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
             .onTapGesture { store.selection = item.id }
             .contextMenu {
+                Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: store.habitCandidate(item).identity, title: item.name) }
                 Button(L.text("開啟")) { store.selection = item.id; store.openSelection() }
                 Button(L.text("在 Finder 顯示")) { store.selection = item.id; store.revealSelection() }
             }
@@ -231,6 +232,11 @@ struct ContentView: View {
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
             .onTapGesture { store.selection = item.id }
+            .contextMenu {
+                if let candidate = store.habitCandidate(item) {
+                    Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: candidate.identity, title: item.title) }
+                }
+            }
     }
     private func quickTitle(_ item: QuickResult) -> String {
         // Personal names, clipboard text and actual translations are content, not UI labels.

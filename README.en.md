@@ -65,3 +65,5 @@ Create your own sidebar categories and drag app icons or list rows into them. Dr
 Han checks public GitHub releases at most once daily and offers a DMG download when a compatible newer version is available. Manual checks, preview-release preferences and an auto-check switch are included. Installation remains under your control.
 
 App searches such as `logicpro` now match **Logic Pro**; `fcp` / `fcpx` match **Final Cut Pro**. Curated aliases also include `ps`, `ai`, `ae`, `pr`, `vscode` and `ppt`. Local learning prioritizes repeated choices for the same query and gently adapts to preferred result types across apps, Notes and files. Raw queries and contents are not saved or uploaded; learning can be disabled or cleared.
+
+Chinese titles also support Pinyin, initials and Zhuyin (`hgdj` / `ㄏㄍㄉㄐ`). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Phonetic matching covers names and titles, not full document bodies.

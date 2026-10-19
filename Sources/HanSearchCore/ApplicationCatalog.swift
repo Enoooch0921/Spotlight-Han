@@ -60,17 +60,22 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
     private let folded: [String]
     private let compact: [String]
     public let aliases: [String]
+    private let phonetics: [PhoneticSearch]
     public init(url: URL, name: String, bundleID: String? = nil, declaredCategory: String? = nil) {
         self.url = url; self.name = name; self.bundleID = bundleID; self.declaredCategory = declaredCategory
-        folded = [name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""].map(ChineseSearch.normalized)
+        let translatedNames = ApplicationAliases.localizedNames(bundleID: bundleID)
+        folded = ([name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""] + translatedNames).map(ChineseSearch.normalized)
         compact = folded.map(ChineseSearch.applicationKey)
         aliases = ApplicationAliases.aliases(name: name, bundleID: bundleID)
+        phonetics = ([name] + translatedNames).map(PhoneticSearch.init)
     }
     public func matches(_ query: String) -> Bool {
         matches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
     }
     public func matches(terms: [String]) -> Bool {
-        terms.allSatisfy { term in
+        let phoneticQuery = PhoneticSearch.Query(terms.joined(separator: " "))
+        if !terms.isEmpty && phonetics.contains(where: { $0.matches(phoneticQuery) }) { return true }
+        return terms.allSatisfy { term in
             if ApplicationAliases.matches(term, aliases: aliases) { return true }
             if folded.contains(where: { $0.contains(term) }) { return true }
             let value = ChineseSearch.applicationKey(term)

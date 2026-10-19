@@ -44,6 +44,7 @@
 "下載 DMG" = "Download DMG";
 "下載新版本 %@" = "Download update %@";
 "不另設通知" = "No event notification";
+"中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。" = "Search Chinese app names, filenames and connected record titles using Pinyin or Zhuyin, such as hongguo / hg or ㄏㄨㄥˊ ㄍㄨㄛˇ / ㄏㄍ. System transliteration may choose a different pronunciation for polyphonic characters; custom aliases can add alternatives.";
 "也可以輸入「下下週一上午10點開會30分鐘」。只填日期會建立全天行程。" = "Try “tomorrow at 10am meeting for 30 minutes”. A date without a time creates an all-day event.";
 "也可以輸入「明天上午9點交報告」。只填日期會建立不指定時間的提醒事項。" = "Try “tomorrow at 9am submit report”. A date without a time creates a date-only reminder.";
 "也可用國名：3000NT=馬來西亞、3000NT 馬來、3000NT=Malaysia；New Zealand、South Korea 等英文國名也支援。" = "Country names work too: 3000NT=Malaysia, 3000NT=New Zealand or 3000NT=South Korea. Traditional and Simplified Chinese names and common aliases are supported.";
@@ -113,6 +114,7 @@
 "只設定日期（不指定通知時間）" = "Date only (no specific notification time)";
 "可調整預覽欄位；修改上方文字會重新解析。" = "Adjust these fields, or edit the text above to parse it again.";
 "右鍵 App 即可釘選常用項目" = "Right-click an app to pin it here";
+"右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。" = "Right-click an app, file or personal result and choose Custom Search Aliases. Aliases and item identifiers stay on this Mac. Save an empty field to remove them. Calculator and task commands keep priority.";
 "啟用剪貼板記錄" = "Enable clipboard history";
 "喚出搜尋" = "Show search";
 "回報問題" = "Report an issue";
@@ -123,6 +125,7 @@
 "執行" = "Run";
 "執行捷徑「%@」？" = "Run shortcut “%@”?";
 "外觀" = "Appearance";
+"多個縮寫以逗號分隔，每個最多32字、最多8個。留空可移除。只保存在本機；縮寫只會找出已連接、已載入的結果。" = "Separate up to 8 aliases with commas, up to 32 characters each. Leave empty to remove. Saved locally; only connected, loaded items can be found.";
 "存取已被拒絕" = "Access denied";
 "學習我的搜尋開啟習慣" = "Learn from the results I open";
 "完成" = "Done";
@@ -196,6 +199,7 @@
 "找到多個時間，請一次新增一件事項。" = "Multiple times were found. Please add one item at a time.";
 "把 App 拖到左側此分類，即可加入" = "Drag an app onto this category in the sidebar to add it.";
 "拖動 App 到左側分類；分類可拖動排序，自訂分類可右鍵編輯。" = "Drag apps to sidebar categories. Drag any category to reorder; right-click custom categories to edit.";
+"拼音、注音與搜尋縮寫" = "Pinyin, Zhuyin and Search Aliases";
 "按 Return 進入確認預覽，可調整日期與內容。" = "Press Return to review and adjust the date and content.";
 "按 Tab 新增提醒事項" = "Press Tab to create a reminder";
 "按 Tab 新增行事曆行程" = "Press Tab to create a calendar event";
@@ -219,6 +223,7 @@
 "搜尋%@" = "Search %@";
 "搜尋應用程式…" = "Search apps…";
 "搜尋網頁「%@」" = "Search the web for “%@”";
+"搜尋縮寫已儲存" = "Search aliases saved";
 "搜尋習慣" = "Search habits";
 "搜尋需要完整存取" = "Search requires full access";
 "文件內容" = "Document content";
@@ -241,6 +246,7 @@
 "更新 App 清單" = "Refresh App List";
 "更新檔名清單" = "Refresh file index";
 "最近開啟" = "Recently Opened";
+"有 %@ 個資料夾尚無法恢復存取；已保留原有選擇，請重新選擇相同資料夾。" = "Access to %@ folders could not be restored. Previous selections were kept; select the same folders again.";
 "有新版本可下載" = "An update is available";
 "未完成提醒事項，最多 10,000 筆；亦可依輸入指令新增" = "Incomplete reminders, up to 10,000. Chinese commands can create new reminders.";
 "未指定資料夾：文件內容模式使用 Spotlight 索引" = "No folder selected: content search uses Spotlight";
@@ -349,6 +355,7 @@
 "網路" = "Network";
 "網路或匯率服務暫不可用，稍後再試。" = "Network or rate service unavailable. Try again later.";
 "編輯分類名稱與圖示" = "Edit category name and icon";
+"縮寫未儲存：每項最多32字、最多8項，總共最多2,000個項目。" = "Aliases were not saved: up to 8 aliases of 32 characters each, for at most 2,000 items.";
 "缺少時間解析元件，請重新安裝 Han。" = "The date parser is missing. Please reinstall Han.";
 "翻譯與貨幣換算" = "Translation and currencies";
 "翻譯選單列出系統支援的語言；實際翻譯仍需下載所選語言模型。" = "Languages supported by macOS. Download the selected models before translating.";
@@ -358,6 +365,8 @@
 "背景自動更新已連接來源" = "Refresh connected sources in the background";
 "自動偵測" = "Detect automatically";
 "自動檢查新版本" = "Automatically check for updates";
+"自訂搜尋縮寫" = "Custom Search Aliases";
+"自訂搜尋縮寫…" = "Custom Search Aliases…";
 "自訂：%@" = "Custom: %@";
 "藍牙" = "Bluetooth";
 "行事曆" = "Calendar";

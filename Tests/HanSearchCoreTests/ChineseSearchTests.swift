@@ -29,6 +29,7 @@ struct CheckRunner {
             return
         }
         try tests.testApplicationCatalog()
+        try tests.testPhoneticTitles()
         tests.testAppAndFilenameAcrossScripts()
         tests.testNormalizationAvoidsOneSimplifiedToManyTraditionalMisses()
         tests.testMetadataPredicateTreatsInputAsData()
@@ -56,11 +57,33 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 28 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 29 check groups — phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
 final class ChineseSearchTests {
+    func testPhoneticTitles() throws {
+        let keys = PhoneticSearch("紅果短劇")
+        for query in ["hongguo", "hóng guǒ", "hong2 guo3", "hgdj", "HGDJ", "ㄏㄨㄥˊ ㄍㄨㄛˇ", "ㄏㄨㄥㄍㄨㄛ", "ㄏㄍㄉㄐ"] { XCTAssertTrue(keys.matches(query)) }
+        for query in ["h", "xyz", "ㄏabc", "***", "紅果"] { XCTAssertFalse(keys.matches(query)) }
+        XCTAssertFalse(PhoneticSearch("Hello").matches("hl"))
+        for query in ["lüyou", "lvyou", "lu:you"] { XCTAssertTrue(PhoneticSearch("旅遊").matches(query)) }
+        let terminal = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Terminal.app"), name: "Terminal", bundleID: "com.apple.Terminal")
+        for query in ["zdj", "zhongduanji", "ㄓㄉㄐ", "终端机"] { XCTAssertTrue(terminal.matches(query)) }
+        let file = CatalogEntry(url: URL(fileURLWithPath: "/fixture/紅果短劇.mp4"))
+        for query in ["hongguo", "hgdj", "ㄏㄍㄉㄐ"] { XCTAssertEqual(FileCatalog.search([file], query: query, mode: .videos).first?.id, file.path) }
+        XCTAssertTrue(FileCatalog.search([file], query: "other", mode: .videos, aliasPaths: [file.path]).count == 1)
+        XCTAssertTrue(FileCatalog.search([file], query: "other", mode: .videos, folder: URL(fileURLWithPath: "/elsewhere"), aliasPaths: [file.path]).isEmpty)
+        let record = PersonalRecord(id: "note:fixture", title: "鼎達叔叔", subtitle: "", text: "測試全文", symbol: "note", mode: .notes, action: .details("fixture"))
+        for query in ["dingda", "ddss", "ㄉㄧㄥˇ ㄉㄚˊ", "ㄉㄉㄕㄕ"] { XCTAssertNotNil(record.result(query: query, mode: .notes)) }
+        XCTAssertNil(record.result(query: "ceshi", mode: .notes)) // Only titles are transliterated.
+        XCTAssertNotNil(record.result(query: "nickname", mode: .notes, aliasMatch: true))
+        XCTAssertNil(record.result(query: "nickname", mode: .contacts, aliasMatch: true))
+        var old = try JSONSerialization.jsonObject(with: JSONEncoder().encode(file)) as! [String: Any]
+        old.removeValue(forKey: "phonetics")
+        let migrated = try JSONDecoder().decode(CatalogEntry.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertTrue(migrated.phonetics.matches("hgdj"))
+    }
     func testApplicationCatalog() throws {
         XCTAssertEqual(ApplicationGroup.declared("public.app-category.productivity"), .work)
         XCTAssertEqual(ApplicationGroup.declared("public.app-category.graphics-design"), .creative)

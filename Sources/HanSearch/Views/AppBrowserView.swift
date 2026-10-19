@@ -224,6 +224,7 @@ struct AppBrowserView: View {
             if library.open(app, query: store.query) { store.hideLauncher?() }
         }
         .contextMenu {
+            Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: "app:" + app.preferenceID, title: app.name) }
             Button(L.text(library.isPinned(app) ? "取消釘選" : "釘選 App")) { library.togglePin(app) }
             Menu(L.text("更改分類")) {
                 ForEach(ApplicationGroup.assignable) { group in

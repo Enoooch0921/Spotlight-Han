@@ -28,6 +28,9 @@ struct AppLibraryChecks {
         aliasLibrary.refresh(); try await waitForLoad(aliasLibrary)
         precondition(aliasLibrary.items(query: "FCP").map(\.id) == [exactFCP.id, fcp.id])
         precondition(aliasLibrary.items(query: "fcpx").map(\.id) == [fcp.id])
+        aliasLibrary.customAliases = { $0.id == fcp.id ? ["剪片神器"] : [] }
+        precondition(aliasLibrary.items(query: "剪片神器").map(\.id) == [fcp.id])
+        precondition(aliasLibrary.items(query: "不存在的縮寫").isEmpty)
         precondition(library.applications.count == 25 && library.group == .all)
         precondition(library.items(query: "红果短剧").map(\.id) == [apps[1].id])
         precondition(library.items(query: "", group: .recent).isEmpty)

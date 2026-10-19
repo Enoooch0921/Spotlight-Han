@@ -26,6 +26,7 @@ public struct PersonalRecord: Sendable {
     public let subtitle: String
     public let text: String
     public let folded: String
+    private let phonetics: PhoneticSearch
     public let symbol: String
     public let mode: SearchMode
     public let action: QuickAction
@@ -34,13 +35,14 @@ public struct PersonalRecord: Sendable {
     public init(id: String, title: String, subtitle: String, text: String, symbol: String, mode: SearchMode, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil) {
         self.id = id; self.title = title; self.subtitle = subtitle; self.text = text
         self.folded = ChineseSearch.normalized(title + " " + subtitle + " " + text)
+        self.phonetics = PhoneticSearch(title)
         self.symbol = symbol; self.mode = mode; self.action = action
         self.startDate = startDate; self.endDate = endDate
     }
-    public func result(query: String, mode: SearchMode) -> QuickResult? {
+    public func result(query: String, mode: SearchMode, aliasMatch: Bool = false) -> QuickResult? {
         guard mode == .all || mode == self.mode else { return nil }
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
-        guard !terms.isEmpty, terms.allSatisfy({ folded.contains($0) }) else { return nil }
+        guard !terms.isEmpty, terms.allSatisfy({ folded.contains($0) }) || phonetics.matches(query) || aliasMatch else { return nil }
         let preview: String
         if self.mode == .notes {
             preview = SearchHighlight.excerpt(in: text, query: query)

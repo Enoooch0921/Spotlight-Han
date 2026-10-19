@@ -85,6 +85,16 @@ actor NoteFixture {
         store.mode = .calendar
         precondition(store.allIDs == store.allQuickResults.map(\.id) + store.results.map(\.id))
         store.habits.clear(); precondition(store.habits.history.entries.isEmpty)
+        let aliases = SearchAliasStore(defaults: defaults)
+        precondition(SearchAliasStore.parse("hgdj，短劇、HGdj") == ["hgdj", "短劇"])
+        precondition(SearchAliasStore.parse(String(repeating: "x", count: 33)) == nil)
+        precondition(SearchAliasStore.parse((0..<9).map(String.init).joined(separator: ",")) == nil)
+        precondition(aliases.set(["MyAlias", "短劇"], for: "app:fixture"))
+        let aliasReload = SearchAliasStore(defaults: defaults)
+        precondition(aliasReload.matchingTargets("myalias") == ["app:fixture"])
+        precondition(aliasReload.matchingTargets("短剧") == ["app:fixture"])
+        precondition(aliasReload.matchingTargets("myali").isEmpty)
+        precondition(aliasReload.set([], for: "app:fixture") && aliasReload.matchingTargets("myalias").isEmpty)
         print("PASS: per-query choices, general type preferences, cross-type keyboard/display order, exact-match protection, salted persistence without raw text, disable/clear, stale/bounded history, successful-only file/Note opening and original-query capture; fake openers only")
     }
 }

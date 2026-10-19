@@ -462,5 +462,14 @@
   "無法儲存搜尋習慣；本次仍可使用。": "Could not save search habits; available for this session.",
   "依相關性與開啟習慣排列": "Sorted by relevance and opening habits",
   "依相關性排列": "Sorted by relevance",
-  "無法開啟項目": "Could not open the item"
+  "無法開啟項目": "Could not open the item",
+  "自訂搜尋縮寫…": "Custom Search Aliases…",
+  "自訂搜尋縮寫": "Custom Search Aliases",
+  "多個縮寫以逗號分隔，每個最多32字、最多8個。留空可移除。只保存在本機；縮寫只會找出已連接、已載入的結果。": "Separate up to 8 aliases with commas, up to 32 characters each. Leave empty to remove. Saved locally; only connected, loaded items can be found.",
+  "縮寫未儲存：每項最多32字、最多8項，總共最多2,000個項目。": "Aliases were not saved: up to 8 aliases of 32 characters each, for at most 2,000 items.",
+  "搜尋縮寫已儲存": "Search aliases saved",
+  "拼音、注音與搜尋縮寫": "Pinyin, Zhuyin and Search Aliases",
+  "中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。": "Search Chinese app names, filenames and connected record titles using Pinyin or Zhuyin, such as hongguo / hg or ㄏㄨㄥˊ ㄍㄨㄛˇ / ㄏㄍ. System transliteration may choose a different pronunciation for polyphonic characters; custom aliases can add alternatives.",
+  "右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。": "Right-click an app, file or personal result and choose Custom Search Aliases. Aliases and item identifiers stay on this Mac. Save an empty field to remove them. Calculator and task commands keep priority.",
+  "有 %@ 個資料夾尚無法恢復存取；已保留原有選擇，請重新選擇相同資料夾。": "Access to %@ folders could not be restored. Previous selections were kept; select the same folders again."
 }

@@ -6,6 +6,7 @@ public struct CatalogEntry: Codable, Sendable {
     public let foldedName: String
     public let ext: String
     public let directory: Bool
+    public let phonetics: PhoneticSearch
 
     public init(url: URL, directory: Bool = false) {
         path = url.path
@@ -13,6 +14,21 @@ public struct CatalogEntry: Codable, Sendable {
         foldedName = ChineseSearch.normalized(name)
         ext = url.pathExtension.lowercased()
         self.directory = directory
+        phonetics = PhoneticSearch(name)
+    }
+    private enum CodingKeys: String, CodingKey { case path, name, foldedName, ext, directory, phonetics }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        path = try c.decode(String.self, forKey: .path); name = try c.decode(String.self, forKey: .name)
+        foldedName = try c.decode(String.self, forKey: .foldedName); ext = try c.decode(String.self, forKey: .ext)
+        directory = try c.decode(Bool.self, forKey: .directory)
+        phonetics = try c.decodeIfPresent(PhoneticSearch.self, forKey: .phonetics) ?? PhoneticSearch(name)
+    }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(path, forKey: .path); try c.encode(name, forKey: .name); try c.encode(foldedName, forKey: .foldedName)
+        try c.encode(ext, forKey: .ext); try c.encode(directory, forKey: .directory)
+        if !phonetics.pinyin.isEmpty { try c.encode(phonetics, forKey: .phonetics) }
     }
 }
 
@@ -72,15 +88,16 @@ public enum FileCatalog {
         return CatalogSnapshot(roots: roots.map(\.path), entries: entries, updated: Date(), unreadable: failures, capped: capped)
     }
 
-    public static func search(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL? = nil) -> [SearchItem] {
+    public static func search(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL? = nil, aliasPaths: Set<String> = []) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return [] }
         let prefix = folder.map { $0.path + "/" }
         let needle = ChineseSearch.normalized(query)
+        let phoneticQuery = PhoneticSearch.Query(query)
         let hits = entries.filter { entry in
             if let prefix, !entry.path.hasPrefix(prefix) { return false }
             if mode == .videos && (entry.directory || !videoExtensions.contains(entry.ext)) { return false }
-            return terms.allSatisfy { entry.foldedName.contains($0) }
+            return terms.allSatisfy { entry.foldedName.contains($0) } || entry.phonetics.matches(phoneticQuery) || aliasPaths.contains(entry.path)
         }
         func score(_ entry: CatalogEntry) -> Int {
             (entry.foldedName == needle ? 100 : 0) + (entry.foldedName.hasPrefix(needle) ? 20 : 0)

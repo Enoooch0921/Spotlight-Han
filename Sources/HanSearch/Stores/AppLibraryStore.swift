@@ -39,6 +39,7 @@ final class AppLibraryStore: ObservableObject {
     private let loader: @Sendable () -> [InstalledApplication]
     var onOpened: ((InstalledApplication, String) -> Void)?
     var rankSearch: (([InstalledApplication], String) -> [InstalledApplication])?
+    var customAliases: ((InstalledApplication) -> [String])?
     private let opener: (URL) -> Bool
     private var updated: Date?
     init(defaults: UserDefaults = .standard, loader: @escaping @Sendable () -> [InstalledApplication] = { ApplicationCatalog.scan() }, opener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
@@ -78,8 +79,9 @@ final class AppLibraryStore: ObservableObject {
         let scope = requested ?? group
         let customID = custom ?? (requested == nil ? selectedCustomGroupID : nil)
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
+        let aliasesForApp = customAliases
         let matches = applications.filter { app in
-            guard app.matches(terms: terms) else { return false }
+            guard app.matches(terms: terms) || ApplicationAliases.matches(query, aliases: (aliasesForApp?(app) ?? []).map(ChineseSearch.normalized)) else { return false }
             if let customID { return categoryID(app) == customID }
             switch scope {
             case .all: return true
@@ -97,7 +99,7 @@ final class AppLibraryStore: ObservableObject {
             if !terms.isEmpty, customID != nil || scope != .recent {
                 func relevance(_ app: InstalledApplication) -> Int {
                     let name = ChineseSearch.applicationKey(app.name), needle = ChineseSearch.applicationKey(query)
-                    return name == needle ? 4 : ApplicationAliases.matches(query, aliases: app.aliases) ? 3 : name.hasPrefix(needle) ? 2 : name.contains(needle) ? 1 : 0
+                    return name == needle ? 4 : ApplicationAliases.matches(query, aliases: app.aliases + (aliasesForApp?(app) ?? []).map(ChineseSearch.normalized)) ? 3 : name.hasPrefix(needle) ? 2 : name.contains(needle) ? 1 : 0
                 }
                 let x = relevance(a), y = relevance(b)
                 if x != y { return x > y }

@@ -41,10 +41,10 @@ public enum SearchService {
 
     private static let applicationCatalog = ApplicationCatalog.scan()
     public static let installedApplications = applicationCatalog.map(\.searchItem)
-    public static func searchApplications(query: String) -> [SearchItem] {
+    public static func searchApplications(query: String, aliasTargets: Set<String> = []) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return [] }
-        return applicationCatalog.filter { $0.matches(terms: terms) }.map(\.searchItem)
+        return applicationCatalog.filter { $0.matches(terms: terms) || aliasTargets.contains("app:" + $0.preferenceID) }.map(\.searchItem)
     }
 
     public static func index(folder: URL) -> FolderIndex {

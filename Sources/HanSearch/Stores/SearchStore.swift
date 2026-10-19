@@ -36,7 +36,9 @@ final class SearchStore: ObservableObject {
     let loginItem = LoginItemService()
     let appLibrary = AppLibraryStore()
     let habits: SearchHabitStore
+    let aliases: SearchAliasStore
     private var habitsObservation: AnyCancellable?
+    private var aliasesObservation: AnyCancellable?
     let appUpdater = AppUpdateService()
     @Published var interfaceLanguage = L.language {
         didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
@@ -56,6 +58,8 @@ final class SearchStore: ObservableObject {
     @Published var catalogRefreshing = false
     @Published var catalogCount = 0
     @Published var catalogRoots: [URL] = []
+    @Published private(set) var unavailableCatalogRoots: [URL] = []
+    var unavailableFolderCount: Int { Set(unavailableCatalogRoots.map(\.path) + fileAccess.unavailablePaths).count }
     @Published var milliseconds: Double = 0
     @Published var personalStatus: [SearchMode: String] = [:]
     @Published var sourceHealth: [SearchMode: SourceHealth] = [:]
@@ -145,6 +149,7 @@ final class SearchStore: ObservableObject {
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.habits = SearchHabitStore(defaults: taskPreferences)
+        self.aliases = SearchAliasStore(defaults: taskPreferences)
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
         self.taskWriter = taskWriter
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
@@ -154,15 +159,19 @@ final class SearchStore: ObservableObject {
         appLibrary.onOpened = { [weak self] app, query in
             self?.habits.record(query: query, identity: "app:" + app.preferenceID, kind: .app)
         }
+        appLibrary.customAliases = { [weak self] app in self?.aliases.aliases(for: "app:" + app.preferenceID) ?? [] }
         appLibrary.rankSearch = { [weak self] apps, query in
             guard let self else { return apps }
-            let candidates = apps.map { HabitCandidate(id: $0.id, identity: "app:" + $0.preferenceID, title: $0.name, kind: .app, aliases: $0.aliases) }
+            let candidates = apps.map { HabitCandidate(id: $0.id, identity: "app:" + $0.preferenceID, title: $0.name, kind: .app, aliases: $0.aliases + self.aliases.aliases(for: "app:" + $0.preferenceID)) }
             let order = self.habits.ordered(candidates, query: query)
             let byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             return order.compactMap { byID[$0] }
         }
         habitsObservation = habits.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { self?.objectWillChange.send() }
+        }
+        aliasesObservation = aliases.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.objectWillChange.send(); self?.appLibrary.objectWillChange.send() }
         }
         guard loadSources else { return }
         activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
@@ -187,9 +196,10 @@ final class SearchStore: ObservableObject {
         }
         let allowed = self.fileAccess.urls
         if let saved = UserDefaults.standard.stringArray(forKey: "indexRootPaths.v2") {
-            catalogRoots = saved.map { self.fileAccess.resolvedIndexURL($0) }.filter { root in allowed.contains { root.path == $0.path || root.path.hasPrefix($0.path + "/") } }
+            let restored = self.fileAccess.restoreIndexRoots(saved)
+            catalogRoots = restored.available; unavailableCatalogRoots = restored.unavailable
         } else { catalogRoots = allowed }
-        UserDefaults.standard.set(catalogRoots.map(\.path), forKey: "indexRootPaths.v2")
+        saveCatalogRoots()
         clipboard.changed = { [weak self] value in
             guard let self else { return }
             self.clips.removeAll { $0 == value }
@@ -273,6 +283,8 @@ final class SearchStore: ObservableObject {
             }
         }
         let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort, cachedContents = results
+        let aliasTargets = aliases.matchingTargets(term)
+        let aliasPaths = Set(aliasTargets.filter { $0.hasPrefix("file:") }.map { String($0.dropFirst(5)) })
         let processCancellation = ProcessCancellation()
         searchTask = Task {
             if !silent { do { try await Task.sleep(for: .milliseconds(60)) } catch { return } }
@@ -291,11 +303,11 @@ final class SearchStore: ObservableObject {
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
                     stage("正在比對本機檔名清單…")
-                    files += FileCatalog.search(entries, query: term, mode: mode)
+                    files += FileCatalog.search(entries, query: term, mode: mode, aliasPaths: aliasPaths)
                 }
                 if !utilityOnly && (mode == .all || mode == .apps) {
                     stage("正在搜尋應用程式…")
-                    files += SearchService.searchApplications(query: term)
+                    files += SearchService.searchApplications(query: term, aliasTargets: aliasTargets)
                 }
                 if mode == .contents {
                     stage(folder == nil ? "正在查詢系統文件內容索引…" : "正在比對已載入的文件內容…")
@@ -307,7 +319,7 @@ final class SearchStore: ObservableObject {
                     }
                 }
                 quick += utilities
-                if !utilityOnly { quick += calendarSort.sorted(personal).lazy.compactMap { $0.result(query: term, mode: mode) }.prefix(50) }
+                if !utilityOnly { quick += calendarSort.sorted(personal).lazy.compactMap { $0.result(query: term, mode: mode, aliasMatch: aliasTargets.contains("quick:" + $0.id)) }.prefix(50) }
                 if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {
@@ -423,6 +435,9 @@ final class SearchStore: ObservableObject {
         guard panel.runModal() == .OK else { return }
         do {
             try fileAccess.add(panel.urls)
+            let recovered = fileAccess.restoreIndexRoots(unavailableCatalogRoots.map(\.path))
+            unavailableCatalogRoots = recovered.unavailable
+            for root in recovered.available where !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
             for url in panel.urls {
                 let roots = url.standardizedFileURL == FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL ? FileCatalog.defaultRoots : [url]
                 for root in roots where !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
@@ -430,7 +445,7 @@ final class SearchStore: ObservableObject {
             saveCatalogRoots(); refreshCatalog()
         } catch { catalogStatus = "無法記住資料夾授權：" + error.localizedDescription }
     }
-    private func saveCatalogRoots() { UserDefaults.standard.set(catalogRoots.map(\.path), forKey: "indexRootPaths.v2") }
+    private func saveCatalogRoots() { UserDefaults.standard.set(Array(Set((catalogRoots + unavailableCatalogRoots).map(\.path))).sorted(), forKey: "indexRootPaths.v2") }
     func removeRoot(_ url: URL) {
         guard !catalogRefreshing else { return }
         catalogRoots.removeAll { $0.path == url.path }; saveCatalogRoots()
@@ -440,7 +455,7 @@ final class SearchStore: ObservableObject {
     }
     func forgetFolders() {
         guard !catalogRefreshing, !indexing else { return }
-        fileAccess.clear(); catalogRoots = []; entries = []; documents = []; folder = nil; catalogCount = 0
+        fileAccess.clear(); catalogRoots = []; unavailableCatalogRoots = []; entries = []; documents = []; folder = nil; catalogCount = 0
         sourceHealth[.names] = nil; sourceHealth[.contents] = nil
         saveCatalogRoots(); try? FileManager.default.removeItem(at: FileCatalog.cacheURL)
         catalogStatus = "已忘記資料夾；可重新選擇搜尋範圍"; search()
