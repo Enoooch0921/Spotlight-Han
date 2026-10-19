@@ -65,6 +65,7 @@
 "依名稱排列" = "Sorted by name";
 "依已安裝 App 建議分類" = "Suggestions from installed apps";
 "依用途分類，可右鍵更改或釘選；最近開啟只記錄從 Han 開啟的 App。" = "Grouped by purpose. Right-click to change a category or pin an app. Recents record only apps opened through Han.";
+"依相關性與開啟習慣排列" = "Sorted by relevance and opening habits";
 "依開啟時間排列" = "Most recently opened first";
 "停止連接" = "Stop connecting";
 "備忘錄" = "Notes";
@@ -105,6 +106,7 @@
 "取消釘選" = "Unpin";
 "另有 %@ 個來源需要注意，查看設定" = "%@ more sources need attention; open Settings";
 "只下載公開的 USD 匯率表並在本機換算，金額與搜尋文字不會傳送。" = "Only a public USD rate table is downloaded. Amounts and queries are not sent.";
+"只在本機保存加鹽雜湊識別碼、類型、次數與時間，不保存原始搜尋詞、檔名或內容、不上傳。最多保留 2,000 組，365 天未使用會淘汰；關閉後停止記錄與套用，清除會刪除既有學習紀錄。" = "Stores salted identifiers, types, counts and timestamps locally, without raw queries, filenames or contents. Nothing is uploaded. Limited to 2,000 pairs and 365 days of inactivity. Turning this off stops recording and ranking; clearing removes existing learning.";
 "只整理尚未手動分類的 App；不覆蓋你的安排。音訊外掛本體不屬於可啟動的 App。" = "Only organizes apps without a manual category. Audio plug-in files are not launchable apps.";
 "只設定到期日期，通知行為依系統提醒事項的設定。" = "Only a due date is set. Notifications follow your system Reminders settings.";
 "只設定日期（不指定通知時間）" = "Date only (no specific notification time)";
@@ -121,6 +123,7 @@
 "執行捷徑「%@」？" = "Run shortcut “%@”?";
 "外觀" = "Appearance";
 "存取已被拒絕" = "Access denied";
+"學習我的搜尋開啟習慣" = "Learn from the results I open";
 "完成" = "Done";
 "專注模式" = "Focus";
 "尚未完成授權" = "Permission not yet completed";
@@ -151,6 +154,7 @@
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
 "已移至「%@」" = "Moved to “%@”";
 "已複製" = "Copied";
+"已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
 "已調整分類順序" = "Category order updated";
 "已讀取 %@ 個檔案" = "Read %@ documents";
 "已讀取 %@ 個檔案 · %@ 份內容未完整讀取" = "Read %@ documents · %@ contents incomplete";
@@ -184,6 +188,7 @@
 "恢復預設" = "Restore default";
 "應用程式" = "Applications";
 "應用程式 ⌘1" = "Applications ⌘1";
+"成功開啟後才學習。同一搜尋詞反覆開啟的結果會優先；常用 App／備忘錄／檔案等類型只小幅加分。空白的 App 分類仍按名稱或最近開啟排列，行事曆仍保留日期排序。" = "Learns only after a successful opening. Repeated choices for the same query take priority; usual result types receive a small boost. Browsing keeps its name/recent order and calendars retain date sorting.";
 "所有連接依序處理，避免同時跳出多個授權視窗。備忘錄分批載入並顯示進度；可按停止，已載入內容仍可搜尋。成功後會記住，之後自動讀取已授權的來源。" = "Sources connect one at a time. Notes load in batches with progress; loaded content remains searchable if you stop. Enabled sources are remembered and refreshed after launch.";
 "所選語言已安裝，可以開始翻譯。" = "Selected languages are installed and ready to use.";
 "找不到符合的項目" = "No matching results";
@@ -213,6 +218,7 @@
 "搜尋%@" = "Search %@";
 "搜尋應用程式…" = "Search apps…";
 "搜尋網頁「%@」" = "Search the web for “%@”";
+"搜尋習慣" = "Search habits";
 "搜尋需要完整存取" = "Search requires full access";
 "文件內容" = "Document content";
 "新增分類" = "New category";
@@ -287,6 +293,7 @@
 "每天最多自動檢查一次 GitHub 公開版本；只讀取版本資訊，不傳送搜尋內容或 App 清單。更新由你下載與安裝。" = "Automatically checks public GitHub releases at most once a day. Search text and installed apps are not sent. You download and install updates.";
 "沒有符合的 App" = "No matching apps";
 "清單" = "List";
+"清除學習紀錄" = "Clear learned choices";
 "清除搜尋，瀏覽全部" = "Clear Search and Browse All";
 "清除記錄" = "Clear history";
 "準備所選翻譯語言…" = "Prepare selected languages…";
@@ -296,11 +303,13 @@
 "瀏覽器" = "Browsers";
 "無法使用 %@，可能已被系統或其他 App 占用。原快捷鍵仍可使用；⌘Space 請先關閉 Spotlight 的同名快捷鍵。" = "Cannot use %@; macOS or another app may own it. Your previous shortcut still works. Disable Spotlight before using ⌘Space.";
 "無法保存文件資料夾授權：%@" = "Could not save document folder access: %@";
+"無法儲存搜尋習慣；本次仍可使用。" = "Could not save search habits; available for this session.";
 "無法檢查更新，請稍後再試" = "Could not check for updates. Try again later.";
 "無法記住資料夾授權：%@" = "Could not save folder access: %@";
 "無法開啟 App；可能已移動或刪除，請更新清單。" = "Could not open the app. It may have moved or been deleted; refresh the list.";
 "無法開啟備忘錄，請檢查自動化授權。" = "Cannot open Notes. Check Automation permission.";
 "無法開啟檔案" = "Cannot open file";
+"無法開啟項目" = "Could not open the item";
 "登入 Mac 時自動啟動" = "Launch at login";
 "登入項目與延伸功能" = "Login Items & Extensions";
 "目前不會在登入時自動開啟。" = "Launch at login is off.";

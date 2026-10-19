@@ -139,6 +139,7 @@ struct SettingsView: View {
                     Button(L.text("開啟時鐘")) { SystemClockService.openClock() }
                 }
             }
+            Section(L.text("搜尋習慣")) { SearchHabitSettingsView(habits: store.habits) }
             Section(L.text("軟體更新")) { AppUpdateSettingsView(updater: store.appUpdater) }
             Section(L.text("關於")) {
                 HStack {

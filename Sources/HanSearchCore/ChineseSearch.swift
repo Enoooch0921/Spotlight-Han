@@ -26,6 +26,11 @@ public enum ChineseSearch {
         return candidates.filter { seen.insert($0).inserted }
     }
 
+    /// App names commonly omit word separators when typed into a launcher.
+    public static func applicationKey(_ text: String) -> String {
+        normalized(text).filter { !$0.isWhitespace && !"-_.".contains($0) }
+    }
+
     public static func terms(_ text: String) -> [String] {
         text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
     }

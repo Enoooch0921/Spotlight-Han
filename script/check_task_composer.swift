@@ -10,10 +10,10 @@ struct TaskComposerChecks {
         var plans: [TaskPlan] = []
         var finishWrite: CheckedContinuation<String, Never>?
         let calendars = [TaskCalendarChoice(id: "thumb", title: "大拇指", source: "測試"), TaskCalendarChoice(id: "toe", title: "大腳趾", source: "測試")]
-        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }) { plan in
+        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }, taskWriter: { plan in
             plans.append(plan)
             return await withCheckedContinuation { finishWrite = $0 }
-        }
+        })
         func waitForPreview() async throws {
             for _ in 0..<150 {
                 if !store.composerParsing { return }

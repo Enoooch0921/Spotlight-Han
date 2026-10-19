@@ -39,17 +39,12 @@ public enum SearchService {
         return SearchResponse(items: items, warning: warning, truncated: truncated)
     }
 
-    public static let installedApplications: [SearchItem] = loadApplications()
-    private static let foldedApplications = installedApplications.map { ($0, ChineseSearch.normalized($0.name + " " + $0.url.lastPathComponent)) }
-
+    private static let applicationCatalog = ApplicationCatalog.scan()
+    public static let installedApplications = applicationCatalog.map(\.searchItem)
     public static func searchApplications(query: String) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return [] }
-        return foldedApplications.filter { entry in terms.allSatisfy { entry.1.contains($0) } }.map { $0.0 }
-    }
-
-    private static func loadApplications() -> [SearchItem] {
-        ApplicationCatalog.scan().map(\.searchItem)
+        return applicationCatalog.filter { $0.matches(terms: terms) }.map(\.searchItem)
     }
 
     public static func index(folder: URL) -> FolderIndex {
@@ -104,12 +99,14 @@ public enum SearchService {
         var byPath: [String: SearchItem] = [:]
         for item in items {
             // Keep the informative local preview when Spotlight returns the same file.
-            if byPath[item.id] == nil || !item.excerpt.isEmpty { byPath[item.id] = item }
+            if byPath[item.id] == nil || !item.excerpt.isEmpty || (item.applicationIdentifier != nil && byPath[item.id]?.applicationIdentifier == nil) { byPath[item.id] = item }
         }
         let needle = ChineseSearch.normalized(query)
         func score(_ item: SearchItem) -> Int {
             let name = ChineseSearch.normalized(item.name)
-            return (name == needle ? 100 : 0) + (name.hasPrefix(needle) ? 30 : 0) + (name.contains(needle) ? 10 : 0) + (item.isApplication ? 5 : 0)
+            let compactName = item.isApplication ? ChineseSearch.applicationKey(item.name) : name
+            let compactNeedle = item.isApplication ? ChineseSearch.applicationKey(query) : needle
+            return (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (item.isApplication ? 5 : 0)
         }
         return Array(byPath.values.sorted { a, b in
             let x = score(a), y = score(b)

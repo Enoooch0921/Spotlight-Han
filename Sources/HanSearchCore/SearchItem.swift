@@ -6,13 +6,15 @@ public struct SearchItem: Identifiable, Hashable, Sendable {
     public let name: String
     public let source: String
     public let excerpt: String
+    public let applicationIdentifier: String?
     public var isApplication: Bool { url.pathExtension.lowercased() == "app" }
 
-    public init(url: URL, name: String? = nil, source: String, excerpt: String = "") {
+    public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil) {
         self.url = url
         self.name = name ?? url.lastPathComponent
         self.source = source
         self.excerpt = excerpt
+        self.applicationIdentifier = applicationIdentifier
     }
 }
 

@@ -144,18 +144,9 @@ struct ContentView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 3) {
-                            ForEach(store.allQuickResults) { item in quickRow(item).id(item.id) }
-                            ForEach(store.results) { item in
-                                ResultRow(item: item, query: store.query)
-                                    .padding(.horizontal, 12).padding(.vertical, 4)
-                                    .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
-                                    .onTapGesture { store.selection = item.id }
-                                    .contextMenu {
-                                        Button(L.text("開啟")) { store.selection = item.id; store.openSelection() }
-                                        Button(L.text("在 Finder 顯示")) { store.selection = item.id; store.revealSelection() }
-                                    }.id(item.id)
+                            ForEach(store.allIDs, id: \.self) { id in
+                                if let item = store.allQuickResults.first(where: { $0.id == id }) { quickRow(item).id(id) }
+                                else if let item = store.results.first(where: { $0.id == id }) { fileRow(item).id(id) }
                             }
                         }.padding(10)
                     }
@@ -176,8 +167,20 @@ struct ContentView: View {
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
     }
+    private func fileRow(_ item: SearchItem) -> some View {
+        ResultRow(item: item, query: store.query)
+            .padding(.horizontal, 12).padding(.vertical, 4)
+            .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
+            .onTapGesture { store.selection = item.id }
+            .contextMenu {
+                Button(L.text("開啟")) { store.selection = item.id; store.openSelection() }
+                Button(L.text("在 Finder 顯示")) { store.selection = item.id; store.revealSelection() }
+            }
+    }
     private func openApp() {
-        if let app = store.appLibrary.selected(query: store.query), store.appLibrary.open(app) { store.hideLauncher?() }
+        if let app = store.appLibrary.selected(query: store.query), store.appLibrary.open(app, query: store.query) { store.hideLauncher?() }
     }
     private func vertical(_ direction: Int) -> KeyPress.Result {
         guard !store.appLibrary.isEditingCategory, !store.appLibrary.isPreviewingSuggestions else { return .ignored }

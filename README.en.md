@@ -6,7 +6,7 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.0/Spotlight-Han-0.8.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.1/Spotlight-Han-0.8.1-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
@@ -30,7 +30,7 @@ Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) 
 
 ## Install and try
 
-**v0.8.0 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v0.8.1 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 
@@ -63,3 +63,5 @@ Press **⌘1** for a grid or list of local apps. All Apps uses a stable name ord
 Create your own sidebar categories and drag app icons or list rows into them. Drag any category to reorder. Custom categories offer 22 system icons and can be renamed or deleted. Local suggestions cover Waves, iZotope, audio/video production, Office and common workflows, while preserving manual assignments. Organization stays on this Mac and never moves or deletes installed apps.
 
 Han checks public GitHub releases at most once daily and offers a DMG download when a compatible newer version is available. Manual checks, preview-release preferences and an auto-check switch are included. Installation remains under your control.
+
+App searches such as `logicpro` now match **Logic Pro**. Local learning prioritizes repeated choices for the same query and gently adapts to preferred result types across apps, Notes and files. Raw queries and contents are not saved or uploaded; learning can be disabled or cleared.

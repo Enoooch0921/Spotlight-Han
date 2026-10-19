@@ -175,7 +175,7 @@ struct AppBrowserView: View {
                 Text(library.selectedTitle).font(.system(size: 12, weight: .semibold))
                 Text(String(apps.count)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 Spacer()
-                Text(L.text(library.selectedCustomGroupID == nil && library.group == .recent ? "依開啟時間排列" : "依名稱排列")).font(.system(size: 10)).foregroundStyle(.secondary)
+                Text(L.text(library.selectedCustomGroupID == nil && library.group == .recent ? "依開啟時間排列" : !store.query.isEmpty && store.habits.enabled && !store.habits.history.entries.isEmpty ? "依相關性與開啟習慣排列" : "依名稱排列")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 16).padding(.top, 14)
             }
             if library.isEditingCategory { categoryEditor }
@@ -221,7 +221,7 @@ struct AppBrowserView: View {
     private func tile(_ app: InstalledApplication, list: Bool) -> some View {
         AppLibraryTile(app: app, pinned: library.isPinned(app), selected: gridFocused && library.selection == app.id, list: list, query: store.query) {
             library.selection = app.id
-            if library.open(app) { store.hideLauncher?() }
+            if library.open(app, query: store.query) { store.hideLauncher?() }
         }
         .contextMenu {
             Button(L.text(library.isPinned(app) ? "取消釘選" : "釘選 App")) { library.togglePin(app) }

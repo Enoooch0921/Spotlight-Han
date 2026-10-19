@@ -2,7 +2,7 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：0.8.0，開發預覽。
+目前版本：0.8.1，開發預覽。
 
 ## 功能
 
@@ -69,6 +69,18 @@
 分類參考：[Apple 常見 App 分類](https://developer.apple.com/app-store/categories/)、[Waves 產品用途](https://www.waves.com/products)、[iZotope 音訊修復](https://www.izotope.com/collections/audio-repair)、[Smaart 音訊測量](https://www.rationalacoustics.com/pages/about-smaart)、[Microsoft 365 App](https://www.microsoft.com/EN/microsoft-365/products-apps-services)。
 
 參考：[Apple 的 App 瀏覽操作](https://support.apple.com/en-ie/guide/mac-help/mh35840/27/mac/27)、[App 宣告用途的官方欄位](https://developer.apple.com/documentation/bundleresources/information-property-list/lsapplicationcategorytype)。
+
+## 省略空格的 App 搜尋與開啟習慣
+
+App 名稱可省略空格或以連字號／底線分隔，例如 `logicpro`、`Logic Pro`、`logic-pro` 都能找到 Logic Pro；`finalcutpro` 也能比對 Final Cut Pro。這個規則只用於 App 名稱與中繼資料，沒有將備忘錄或文件全文的空格任意合併。
+
+「搜尋習慣」預設開啟。成功開啟 App／檔案、成功切到備忘錄、顯示聯絡人／行程／提醒詳情、開啟郵件或成功執行已確認的捷徑後，才記錄該搜尋詞的選擇；僅選取、滑過、開啟失敗、計算器／翻譯／剪貼板等不學習。相同搜尋詞的重複選擇優先；不同詞也會小幅參考常用結果與類型。單次誤開不會直接蓋掉明確的完整名稱符合。分數隨未使用時間減弱（90天半衰期），365天未用移除，最多2,000組。
+
+這項學習從 0.8.1 更新後開始累積；舊版只有最近開啟 App 清單，無法回溯更新前搜尋各個詞的開啟選擇。
+
+App、備忘錄與檔案結果採共同的顯示與鍵盤順序，學到的 App 或檔案能排到備忘錄前面。計算器、匯率、翻譯與指令仍保持獨立的優先位置。行事曆專屬頁仍保留日期排序，全部結果中的行程相對日期順序也不打亂。空白查詢的 App 分類不因習慣重新洗牌。
+
+只保存每台安裝的加鹽 SHA256 識別碼、類型、次數與時間；不保存原始搜尋文字、檔案路徑、標題或內容、不上傳。設定可停止記錄與套用，亦可清除既有紀錄與更換雜湊鹽值。重新啟動後沿用本機學習；App 優先依 bundle ID 識別，檔案依路徑、個人資料依來源識別碼，因此檔案搬移或來源識別碼改變後可能需重新學習。
 
 ## 更新提醒與測試版 DMG
 
@@ -163,7 +175,7 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
-公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.8.0 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.8.1 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
 
 ```sh
 ./script/package_release.sh

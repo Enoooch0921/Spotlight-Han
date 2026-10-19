@@ -35,6 +35,8 @@ final class SearchStore: ObservableObject {
     @Published var hotkeyError = "" { didSet { onLayoutChanged?() } }
     let loginItem = LoginItemService()
     let appLibrary = AppLibraryStore()
+    let habits: SearchHabitStore
+    private var habitsObservation: AnyCancellable?
     let appUpdater = AppUpdateService()
     @Published var interfaceLanguage = L.language {
         didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
@@ -111,6 +113,8 @@ final class SearchStore: ObservableObject {
     private var notesReadState: NotesReadState?
     private var eventWorkers: [SearchMode: Task<Void, Never>] = [:]
     private var eventWorkerTokens: [SearchMode: UUID] = [:]
+    private let resultOpener: (URL) -> Bool
+    private let noteOpener: @Sendable (String) async throws -> Void
     private let sourcePreferences: UserDefaults
     private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
     private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
@@ -136,13 +140,30 @@ final class SearchStore: ObservableObject {
              source == .calendar ? try await PersonalSources.calendar() : try await PersonalSources.reminders()
          },
          eventCalendarLoader: @escaping @MainActor () -> [TaskCalendarChoice] = { TaskService.eventCalendars() },
+         resultOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+         noteOpener: @escaping @Sendable (String) async throws -> Void = { id in try await Task.detached { try PersonalSources.openNote(id) }.value },
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
+        self.resultOpener = resultOpener; self.noteOpener = noteOpener
+        self.habits = SearchHabitStore(defaults: taskPreferences)
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
         self.taskWriter = taskWriter
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
+        appLibrary.onOpened = { [weak self] app, query in
+            self?.habits.record(query: query, identity: "app:" + app.preferenceID, kind: .app)
+        }
+        appLibrary.rankSearch = { [weak self] apps, query in
+            guard let self else { return apps }
+            let candidates = apps.map { HabitCandidate(id: $0.id, identity: "app:" + $0.preferenceID, title: $0.name, kind: .app) }
+            let order = self.habits.ordered(candidates, query: query)
+            let byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return order.compactMap { byID[$0] }
+        }
+        habitsObservation = habits.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.objectWillChange.send() }
+        }
         guard loadSources else { return }
         activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
             Task { @MainActor in self?.reconcileSourcePermissions() }
@@ -191,7 +212,7 @@ final class SearchStore: ObservableObject {
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         return completedMode == .apps && completedQuery == term ? quickResults : []
     }
-    var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
+    var allIDs: [String] { orderedSearchIDs }
     var activityDescription: String? {
         if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
         if indexing { return indexNotice.isEmpty ? "正在讀取文件內容…" : indexNotice }
@@ -303,7 +324,7 @@ final class SearchStore: ObservableObject {
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
             if !silent || !self.allIDs.contains(self.selection ?? "") {
-                self.selection = self.currencyResults.first?.id ?? self.quickResults.first(where: { $0.id != "quick:web" })?.id ?? self.results.first?.id ?? self.quickResults.first?.id ?? self.translationResult?.id
+                self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first
             }
             if !silent {
                 self.milliseconds = elapsed; self.searching = false
@@ -771,11 +792,14 @@ final class SearchStore: ObservableObject {
     func openSelection() {
         if composerMode != nil { reviewComposer(); return }
         if let quick = allQuickResults.first(where: { $0.id == selection }) {
+            let chosenQuery = query, candidate = habitCandidate(quick)
             switch quick.action {
             case .copy(let value):
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string); notice = "已複製"
-            case .open(let url): NSWorkspace.shared.open(url)
-            case .details(let text): details = text
+            case .open(let url):
+                if resultOpener(url) { recordHabit(candidate, query: chosenQuery) }
+                else { notice = "無法開啟項目" }
+            case .details(let text): details = text; recordHabit(candidate, query: chosenQuery)
             case .prepareTranslation(let source): prepareTranslation?(source)
             case .createTask(let plan):
                 if plan.kind != .alarm { previewTask(plan); return }
@@ -804,7 +828,7 @@ final class SearchStore: ObservableObject {
                 }
             case .note(let identifier):
                 Task {
-                    do { try await Task.detached { try PersonalSources.openNote(identifier) }.value }
+                    do { try await noteOpener(identifier); recordHabit(candidate, query: chosenQuery) }
                     catch { notice = "無法開啟備忘錄，請檢查自動化授權。" }
                 }
             case .shortcut(let name):
@@ -814,15 +838,18 @@ final class SearchStore: ObservableObject {
                 guard alert.runModal() == .alertFirstButtonReturn else { return }
                 Task {
                     do {
-                        _ = try await Task.detached { try ProcessRunner.run("/usr/bin/shortcuts", ["run", name], timeout: 60) }.value; notice = "捷徑已執行"
+                        _ = try await Task.detached { try ProcessRunner.run("/usr/bin/shortcuts", ["run", name], timeout: 60) }.value; notice = "捷徑已執行"; recordHabit(candidate, query: chosenQuery)
                     } catch { notice = "捷徑未完成：" + error.localizedDescription }
                 }
             }; return
         }
         guard let item = results.first(where: { $0.id == selection }) else { return }
         guard FileManager.default.fileExists(atPath: item.url.path) else { notice = "檔案已移動或刪除，請更新檔名清單"; return }
-        if !NSWorkspace.shared.open(item.url) { notice = "無法開啟檔案" }
-        else if item.isApplication { appLibrary.recordOpened(InstalledApplication(url: item.url, name: item.name, bundleID: Bundle(url: item.url)?.bundleIdentifier)) }
+        if !resultOpener(item.url) { notice = "無法開啟檔案" }
+        else {
+            recordHabit(habitCandidate(item), query: query)
+            if item.isApplication { appLibrary.recordOpened(InstalledApplication(url: item.url, name: item.name, bundleID: Bundle(url: item.url)?.bundleIdentifier)) }
+        }
     }
     func revealSelection() {
         if isAppBrowser, let app = appLibrary.selected(query: query) { NSWorkspace.shared.activateFileViewerSelecting([app.url]); return }

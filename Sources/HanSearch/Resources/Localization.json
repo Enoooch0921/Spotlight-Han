@@ -452,5 +452,14 @@
   "無法檢查更新，請稍後再試": "Could not check for updates. Try again later.",
   "稍後": "Later",
   "GitHub 專案與原始碼": "GitHub project and source",
-  "回報問題": "Report an issue"
+  "回報問題": "Report an issue",
+  "搜尋習慣": "Search habits",
+  "學習我的搜尋開啟習慣": "Learn from the results I open",
+  "成功開啟後才學習。同一搜尋詞反覆開啟的結果會優先；常用 App／備忘錄／檔案等類型只小幅加分。空白的 App 分類仍按名稱或最近開啟排列，行事曆仍保留日期排序。": "Learns only after a successful opening. Repeated choices for the same query take priority; usual result types receive a small boost. Browsing keeps its name/recent order and calendars retain date sorting.",
+  "只在本機保存加鹽雜湊識別碼、類型、次數與時間，不保存原始搜尋詞、檔名或內容、不上傳。最多保留 2,000 組，365 天未使用會淘汰；關閉後停止記錄與套用，清除會刪除既有學習紀錄。": "Stores salted identifiers, types, counts and timestamps locally, without raw queries, filenames or contents. Nothing is uploaded. Limited to 2,000 pairs and 365 days of inactivity. Turning this off stops recording and ranking; clearing removes existing learning.",
+  "已記住 %@ 組開啟選擇": "Remembered %@ opening choices",
+  "清除學習紀錄": "Clear learned choices",
+  "無法儲存搜尋習慣；本次仍可使用。": "Could not save search habits; available for this session.",
+  "依相關性與開啟習慣排列": "Sorted by relevance and opening habits",
+  "無法開啟項目": "Could not open the item"
 }

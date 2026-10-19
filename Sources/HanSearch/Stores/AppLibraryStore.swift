@@ -37,6 +37,8 @@ final class AppLibraryStore: ObservableObject {
     @Published private(set) var overrides: [String: String]
     private let defaults: UserDefaults
     private let loader: @Sendable () -> [InstalledApplication]
+    var onOpened: ((InstalledApplication, String) -> Void)?
+    var rankSearch: (([InstalledApplication], String) -> [InstalledApplication])?
     private let opener: (URL) -> Bool
     private var updated: Date?
     init(defaults: UserDefaults = .standard, loader: @escaping @Sendable () -> [InstalledApplication] = { ApplicationCatalog.scan() }, opener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
@@ -87,7 +89,7 @@ final class AppLibraryStore: ObservableObject {
             default: return categoryID(app) == scope.rawValue
             }
         }
-        return matches.sorted { a, b in
+        let sorted = matches.sorted { a, b in
             if customID == nil && scope == .recent {
                 let x = recent.firstIndex(of: a.preferenceID) ?? Int.max, y = recent.firstIndex(of: b.preferenceID) ?? Int.max
                 if x != y { return x < y }
@@ -95,6 +97,8 @@ final class AppLibraryStore: ObservableObject {
             let order = a.name.localizedStandardCompare(b.name)
             return order == .orderedSame ? a.id < b.id : order == .orderedAscending
         }
+        if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, customID != nil || scope != .recent { return rankSearch?(sorted, query) ?? sorted }
+        return sorted
     }
     func setCategory(_ app: InstalledApplication, group: ApplicationGroup?) {
         if let group, ApplicationGroup.assignable.contains(group) { overrides[app.preferenceID] = group.rawValue }
@@ -200,9 +204,9 @@ final class AppLibraryStore: ObservableObject {
         if !pinned.insert(app.preferenceID).inserted { pinned.remove(app.preferenceID) }
         defaults.set(pinned.sorted(), forKey: "appLibrary.pinned.v1")
     }
-    @discardableResult func open(_ app: InstalledApplication) -> Bool {
+    @discardableResult func open(_ app: InstalledApplication, query: String = "") -> Bool {
         guard opener(app.url) else { error = "無法開啟 App；可能已移動或刪除，請更新清單。"; return false }
-        recordOpened(app)
+        recordOpened(app); onOpened?(app, query)
         return true
     }
     func recordOpened(_ app: InstalledApplication) {

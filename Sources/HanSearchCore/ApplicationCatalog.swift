@@ -57,16 +57,24 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
     public var isSystemApplication: Bool { url.path.hasPrefix("/System/Applications/") || bundleID == "com.apple.Safari" }
     public var preferenceID: String { if let bundleID, !bundleID.isEmpty { return bundleID }; return id }
     public var group: ApplicationGroup { ApplicationGroup.declared(declaredCategory) }
-    private let folded: String
+    private let folded: [String]
+    private let compact: [String]
     public init(url: URL, name: String, bundleID: String? = nil, declaredCategory: String? = nil) {
         self.url = url; self.name = name; self.bundleID = bundleID; self.declaredCategory = declaredCategory
-        folded = ChineseSearch.normalized(name + " " + url.lastPathComponent + " " + (bundleID ?? ""))
+        folded = [name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""].map(ChineseSearch.normalized)
+        compact = folded.map(ChineseSearch.applicationKey)
     }
     public func matches(_ query: String) -> Bool {
         matches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
     }
-    public func matches(terms: [String]) -> Bool { terms.allSatisfy { folded.contains($0) } }
-    public var searchItem: SearchItem { SearchItem(url: url, name: name, source: "App・繁簡比對") }
+    public func matches(terms: [String]) -> Bool {
+        terms.allSatisfy { term in
+            if folded.contains(where: { $0.contains(term) }) { return true }
+            let value = ChineseSearch.applicationKey(term)
+            return !value.isEmpty && compact.contains { $0.contains(value) }
+        }
+    }
+    public var searchItem: SearchItem { SearchItem(url: url, name: name, source: "App・繁簡比對", applicationIdentifier: preferenceID) }
 }
 
 public enum ApplicationCatalog {

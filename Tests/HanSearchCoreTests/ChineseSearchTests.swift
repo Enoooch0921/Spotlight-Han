@@ -91,6 +91,16 @@ final class ChineseSearchTests {
         XCTAssertEqual(drama.name, "紅果短劇"); XCTAssertEqual(drama.group, .creative)
         XCTAssertTrue(drama.matches("红果短剧")); XCTAssertTrue(drama.matches("Drama"))
         XCTAssertFalse(drama.matches("Not installed"))
+        let logic = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Logic Pro.app"), name: "Logic Pro", bundleID: "com.apple.logic10")
+        for query in ["logicpro", "LOGICPRO", "Logic Pro", "logic-pro", "logic_pro"] { XCTAssertTrue(logic.matches(query)) }
+        XCTAssertFalse(logic.matches("procom")) // Do not join separate metadata fields.
+        let fcp = InstalledApplication(url: URL(fileURLWithPath: "/fixture/Final Cut Pro.app"), name: "Final Cut Pro Creator Studio")
+        XCTAssertTrue(fcp.matches("finalcutpro"))
+        let similarlyNamedFile = SearchItem(url: URL(fileURLWithPath: "/fixture/logicpro guide.pdf"), source: "fixture")
+        let spotlightApp = SearchItem(url: logic.url, source: "Spotlight")
+        let merged = SearchService.merge([similarlyNamedFile, spotlightApp, logic.searchItem], query: "logicpro")
+        XCTAssertEqual(merged.first?.id, logic.id)
+        XCTAssertEqual(merged.first?.applicationIdentifier, logic.preferenceID)
         XCTAssertEqual(apps.first { $0.bundleID == "fixture.tool" }?.group, .other)
     }
 
