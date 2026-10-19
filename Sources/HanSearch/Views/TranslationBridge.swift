@@ -48,7 +48,7 @@ struct TranslationBridge: View {
               let language = NLLanguageRecognizer.dominantLanguage(for: query), language != .simplifiedChinese, language != .traditionalChinese else { return }
         do { try await Task.sleep(for: .milliseconds(450)) } catch { return }
         let source = Locale.Language(identifier: language.rawValue)
-        let status = await LanguageAvailability().status(from: source, to: target)
+        let status = await LocalTranslationSupport.availability().status(from: source, to: target)
         guard !Task.isCancelled, currentQuery == query else { return }
         switch status {
         case .unsupported: return
@@ -56,7 +56,7 @@ struct TranslationBridge: View {
         case .installed:
             text = query; sourceID = language.rawValue; token = UUID()
             if #available(macOS 26.0, *) {
-                let session = TranslationSession(installedSource: source, target: target)
+                let session = LocalTranslationSupport.session(source: source, target: target)
                 do {
                     let result = try await session.translate(query)
                     guard !Task.isCancelled, currentQuery == query else { return }
@@ -66,11 +66,28 @@ struct TranslationBridge: View {
                     needsSetup(language.rawValue)
                 }
             } else {
-                var next = TranslationSession.Configuration(source: source, target: target)
+                var next = LocalTranslationSupport.configuration(source: source, target: target)
                 next.invalidate(); configuration = next
             }
         @unknown default: return
         }
+    }
+}
+
+@available(macOS 15.0, *)
+private enum LocalTranslationSupport {
+    static func availability() -> LanguageAvailability {
+        if #available(macOS 26.4, *) { return LanguageAvailability(preferredStrategy: .lowLatency) }
+        return LanguageAvailability()
+    }
+    @available(macOS 26.0, *)
+    static func session(source: Locale.Language, target: Locale.Language) -> TranslationSession {
+        if #available(macOS 26.4, *) { return TranslationSession(installedSource: source, target: target, preferredStrategy: .lowLatency) }
+        return TranslationSession(installedSource: source, target: target)
+    }
+    static func configuration(source: Locale.Language, target: Locale.Language) -> TranslationSession.Configuration {
+        if #available(macOS 26.4, *) { return TranslationSession.Configuration(source: source, target: target, preferredStrategy: .lowLatency) }
+        return TranslationSession.Configuration(source: source, target: target)
     }
 }
 
@@ -80,8 +97,8 @@ struct TranslationSetupView: View {
     let source: String
     let query: String
     let close: () -> Void
-    @State private var status = "請在 Apple 系統視窗下載來源語言與繁體中文。下載後可供其他 App 共用。"
-    @State private var busy = true
+    @State private var status = "正在檢查本機語言…"
+    @State private var busy = false
     @State private var configuration: TranslationSession.Configuration?
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -90,28 +107,45 @@ struct TranslationSetupView: View {
             HStack {
                 if busy { ProgressView().controlSize(.small) }
                 Spacer()
-                Button("開啟系統語言設定") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension?translation")!) }
-                Button("重試") { configure() }.disabled(busy)
+                Button("開啟語言下載設定") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension?translation")!) }
+                Button("檢查狀態") { Task { await check() } }.disabled(busy)
                 Button("完成") { close() }
             }
-        }.padding(24).frame(width: 480, height: 210)
-        .onAppear { configure() }
+        }.padding(24).frame(width: 520, height: 220)
+        .task { await check() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await check() }
+        }
         .translationTask(configuration) { session in
-            do {
-                try await session.prepareTranslation()
-                let response = try await session.translate(query)
-                let result = ChineseSearch.traditional(response.targetText)
-                status = "語言已準備完成：\(result)。之後會在搜尋結果上方自動翻譯。"
-                if store.query.trimmingCharacters(in: .whitespacesAndNewlines) == query, store.translationEnabled {
-                    store.setTranslation(QuickResult(id: "translation", title: result, subtitle: "繁體中文翻譯 · Apple 本機翻譯 · 選取後 ↵ 複製", symbol: "translate", action: .copy(result)))
-                }
-            } catch { status = "語言尚未準備完成：\(error.localizedDescription)。下載若仍在背景進行，完成後按重試即可。" }
+            do { let response = try await session.translate(query); success(response.targetText) }
+            catch { status = "本機翻譯目前無法完成；請檢查語言下載狀態後重試。" }
             busy = false
         }
     }
-    private func configure() {
+    private func success(_ translated: String) {
+        let result = ChineseSearch.traditional(translated)
+        status = "語言已準備完成：\(result)。之後會在搜尋結果上方自動翻譯。"
+        if store.query.trimmingCharacters(in: .whitespacesAndNewlines) == query, store.translationEnabled {
+            store.setTranslation(QuickResult(id: "translation", title: result, subtitle: "繁體中文翻譯 · Apple 本機翻譯 · 選取後 ↵ 複製", symbol: "translate", action: .copy(result)))
+        }
+    }
+    @MainActor private func check() async {
+        guard !busy else { return }
         busy = true
-        var next = configuration ?? TranslationSession.Configuration(source: Locale.Language(identifier: source), target: Locale.Language(identifier: "zh-Hant"))
-        next.invalidate(); configuration = next
+        let from = Locale.Language(identifier: source), to = Locale.Language(identifier: "zh-Hant")
+        let state = await LocalTranslationSupport.availability().status(from: from, to: to)
+        guard state == .installed else {
+            let name = Locale.current.localizedString(forLanguageCode: source) ?? source
+            status = state == .unsupported ? "系統目前不支援這一組翻譯語言。" : "請按「開啟語言下載設定」，下載\(name)與繁體中文。完成後回到此視窗會自動檢查；下載只需一次，可跨 App 共用。"
+            busy = false; return
+        }
+        if #available(macOS 26.0, *) {
+            do { let response = try await LocalTranslationSupport.session(source: from, target: to).translate(query); success(response.targetText) }
+            catch { status = "語言已安裝，但翻譯暫時無法完成。請稍後重試。" }
+            busy = false
+        } else {
+            var next = LocalTranslationSupport.configuration(source: from, target: to)
+            next.invalidate(); configuration = next
+        }
     }
 }

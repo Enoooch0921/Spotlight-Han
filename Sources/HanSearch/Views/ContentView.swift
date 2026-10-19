@@ -112,7 +112,10 @@ struct ContentView: View {
                 if store.catalogRefreshing || store.indexing { ProgressView().controlSize(.mini) }
                 Text(statusText).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 2)
-                Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing).help("更新檔名清單")
+                if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
+                    Button("選擇資料夾…") { store.chooseCatalogFolder() }.controlSize(.small)
+                }
+                Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help("更新檔名清單")
                 SettingsLink { Image(systemName: "gearshape") }.buttonStyle(.plain).help("設定與資料來源")
                 Text("↵ 開啟").font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 18).padding(.vertical, 12)

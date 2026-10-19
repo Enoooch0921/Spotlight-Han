@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if #available(macOS 15.0, *) {
                 self.panel?.orderOut(nil)
                 self.translationWindow?.close()
-                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 210), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 220), styleMask: [.titled, .closable], backing: .buffered, defer: false)
                 window.title = "Spotlight Han · 本機翻譯語言"; window.isReleasedWhenClosed = false
                 window.contentView = NSHostingView(rootView: TranslationSetupView(store: self.store, source: source, query: self.store.query.trimmingCharacters(in: .whitespacesAndNewlines), close: { [weak self, weak window] in window?.close(); self?.showSearch() }))
                 self.translationWindow = window

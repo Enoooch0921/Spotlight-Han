@@ -80,7 +80,7 @@ struct SettingsView: View {
             }
             Section("翻譯與貨幣換算") {
                 Toggle("非中文查詢顯示繁體中文翻譯", isOn: $store.translationEnabled)
-                Text("使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，在搜尋列上方的翻譯結果按 Return 準備。原查詢的檔案與 App 結果仍保留。")
+                Text("使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，選取翻譯結果按 Return 開啟語言視窗，再進入系統語言下載設定。下載後可跨 App 共用。原查詢的檔案與 App 結果仍保留。")
                     .font(.caption).foregroundStyle(.secondary)
                 Text("貨幣可輸入 3000台幣=rmb、nt3000 = rmb、3000nt = rmb。參考匯率每日更新；結果會標示來源、資料時間與過期快取。")
                     .font(.caption).foregroundStyle(.secondary)
