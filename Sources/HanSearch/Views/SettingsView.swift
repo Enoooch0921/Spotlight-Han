@@ -81,7 +81,10 @@ struct SettingsView: View {
                             Text(L.text(source.rawValue)).fontWeight(.medium)
                             Spacer()
                             if store.connecting.contains(source) { ProgressView().controlSize(.small) }
-                            Button(L.text(source == .alarms ? "檢查連接" : (store.personalStatus[source] == nil ? "連接" : "重新讀取"))) { store.connect(source) }.disabled(store.connecting.contains(source) || store.setupRunning)
+                            if store.sourceHealth[source]?.phase == .needsPermission {
+                                Button(L.text("開啟隱私權設定")) { store.openSourcePrivacy(source) }
+                            }
+                            Button(L.text(source == .alarms ? "檢查連接" : (store.personalStatus[source] == nil || store.sourceHealth[source]?.phase == .needsPermission ? "連接" : "重新讀取"))) { store.connect(source) }.disabled(store.connecting.contains(source) || store.setupRunning)
                             if store.personalStatus[source] != nil && !store.connecting.contains(source) {
                                 Button(L.text("移除")) { store.disconnect(source) }
                             }

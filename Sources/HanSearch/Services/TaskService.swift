@@ -11,25 +11,25 @@ struct TaskCalendarChoice: Identifiable, Equatable {
 
 @MainActor
 enum TaskService {
-    private static let store = EKEventStore()
+    private static var store: EKEventStore { EventKitAccess.store }
     static func eventCalendars() -> [TaskCalendarChoice] {
-        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
+        guard EventKitAccess.hasAccess(.event) else { return [] }
         return store.calendars(for: .event).filter(\.allowsContentModifications).map { TaskCalendarChoice(id: $0.calendarIdentifier, title: $0.title, source: $0.source?.title ?? "") }.sorted { $0.label.localizedStandardCompare($1.label) == .orderedAscending }
     }
     static func destinationTitle(for kind: TaskPlan.Kind, calendarID: String? = nil) -> String {
         if kind == .event {
-            guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return L.text("系統預設行事曆（確認後授權）") }
+            guard EventKitAccess.hasAccess(.event) else { return L.text("系統預設行事曆（確認後授權）") }
             if let calendarID { return eventCalendars().first { $0.id == calendarID }?.label ?? L.text("原選行事曆已無法使用，請重新選擇。") }
             return store.defaultCalendarForNewEvents?.title ?? L.text("尚無可寫入的預設行事曆")
         }
-        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { return L.text("系統預設提醒事項清單（確認後授權）") }
+        guard EventKitAccess.hasAccess(.reminder) else { return L.text("系統預設提醒事項清單（確認後授權）") }
         return store.defaultCalendarForNewReminders()?.title ?? L.text("尚無可寫入的預設提醒事項清單")
     }
     static func create(_ plan: TaskPlan) async throws -> String {
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = plan.isAllDay ? .none : .short
         switch plan.kind {
         case .event:
-            guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { throw ProcessFailure.failed("尚未允許行事曆存取。") }
+            try EventKitAccess.require(.event)
             let calendar: EKCalendar
             if let id = plan.calendarID {
                 guard let selected = store.calendars(for: .event).first(where: { $0.calendarIdentifier == id }), selected.allowsContentModifications else { throw ProcessFailure.failed("原選行事曆已無法使用，請重新選擇。") }
@@ -43,7 +43,7 @@ enum TaskService {
             try store.save(event, span: .thisEvent, commit: true)
             return L.format("已新增行程「%@」", plan.title) + "\n" + formatter.string(from: plan.start) + (plan.isAllDay ? " · " + L.text("全天") : " · \(Int(plan.duration / 60)) " + L.text("分鐘")) + "\n" + L.text("行事曆") + "：" + calendar.title
         case .reminder:
-            guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else { throw ProcessFailure.failed("尚未允許提醒事項存取。") }
+            try EventKitAccess.require(.reminder)
             guard let calendar = store.defaultCalendarForNewReminders(), calendar.allowsContentModifications else { throw ProcessFailure.failed("沒有可寫入的預設提醒事項清單，請先在提醒事項 App 建立清單。") }
             let reminder = makeReminder(plan, store: store)
             reminder.calendar = calendar

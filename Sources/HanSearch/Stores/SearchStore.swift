@@ -119,7 +119,7 @@ final class SearchStore: ObservableObject {
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
         guard loadSources else { return }
-        eventChangeStore = EKEventStore()
+        eventChangeStore = EventKitAccess.store
         eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged).receive(on: DispatchQueue.main).sink { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
@@ -381,6 +381,18 @@ final class SearchStore: ObservableObject {
         }
     }
     func resetScope() { guard !indexing else { return }; folder = nil; documents = []; sourceHealth[.contents] = nil; indexNotice = ""; search() }
+    func openSourcePrivacy(_ source: SearchMode) {
+        let anchor: String
+        switch source {
+        case .calendar: anchor = "Privacy_Calendars"
+        case .reminders: anchor = "Privacy_Reminders"
+        case .contacts: anchor = "Privacy_Contacts"
+        case .notes, .mail: anchor = "Privacy_Automation"
+        default: anchor = ""
+        }
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?" + anchor) else { return }
+        NSWorkspace.shared.open(url)
+    }
     func refreshSource(_ source: SearchMode) {
         if source == .names { refreshCatalog() }
         else if source == .contents { rebuildIndex() }
@@ -421,6 +433,7 @@ final class SearchStore: ObservableObject {
             guard health.shouldRefresh(at: now, interval: interval, force: changedOnly) else { continue }
             guard PersonalSources.isAuthorized(source) else {
                 sourceHealth[source]?.phase = .needsPermission
+                sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status
                 personalStatus[source] = "需要重新授權；背景更新已暫停，請主動按連接。"
                 continue
             }
@@ -490,7 +503,8 @@ final class SearchStore: ObservableObject {
             if !PersonalSources.isAuthorized(source) {
                 guard allowPrompt else {
                     personalStatus[source] = "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。"
-                    sourceHealth[source, default: SourceHealth()].phase = .needsPermission; return
+                    sourceHealth[source, default: SourceHealth()].phase = .needsPermission
+                    sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status; return
                 }
                 sourceHealth[source, default: SourceHealth()].phase = .authorizing
                 ownsAuthorization = true; sourceOwnsAuthorization = true
@@ -545,7 +559,7 @@ final class SearchStore: ObservableObject {
             try Task.checkCancellation()
             guard token == connectionGeneration else { return }
             personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
-            sourceHealth[source, default: SourceHealth()].succeeded(at: Date())
+            sourceHealth[source, default: SourceHealth()].completed(at: Date(), complete: loaded.complete)
             var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
             remembered.insert(source.rawValue)
             UserDefaults.standard.set(remembered.sorted(), forKey: "enabledSources.v1")
@@ -561,9 +575,8 @@ final class SearchStore: ObservableObject {
                 setupRunning = false
                 setupStatus = "授權未完成，已停止後續連接，避免繼續疊加系統提示。"
             }
-            sourceHealth[source, default: SourceHealth()].phase = .failed
-            sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
-            personalStatus[source] = "連接失敗：" + error.localizedDescription + " 可檢查系統設定 → 隱私權與安全性。"
+            sourceHealth[source, default: SourceHealth()].recordFailure(error, at: Date())
+            personalStatus[source] = error is SourceAccessFailure ? error.localizedDescription : "連接失敗：" + error.localizedDescription
         }
         if token == connectionGeneration { search() }
     }

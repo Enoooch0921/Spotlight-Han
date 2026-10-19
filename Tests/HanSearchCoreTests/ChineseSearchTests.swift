@@ -52,12 +52,38 @@ struct CheckRunner {
         tests.testSystemShortcutPreferences()
         tests.testSystemSettingsSearch()
         tests.testSourceFreshness()
+        tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 25 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 26 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
 final class ChineseSearchTests {
+    func testEventAccessCallbackState() {
+        var events = EventAccessState()
+        XCTAssertFalse(events.observe(.notDetermined))
+        events.completed(granted: true)
+        XCTAssertTrue(events.observe(.notDetermined)) // exact observed macOS callback/query disagreement
+        XCTAssertTrue(events.observe(.notDetermined))
+        XCTAssertFalse(events.observe(.denied))
+        XCTAssertFalse(events.observe(.notDetermined))
+        events.completed(granted: true)
+        XCTAssertFalse(events.observe(.restricted))
+        events.completed(granted: true)
+        XCTAssertFalse(events.observe(.writeOnly))
+        events.completed(granted: true)
+        XCTAssertFalse(events.observe(nil))
+        XCTAssertTrue(events.observe(.fullAccess))
+        XCTAssertFalse(events.observe(.notDetermined)) // a reset after an observed grant is not stale state
+        events.completed(granted: false)
+        XCTAssertFalse(events.observe(.notDetermined))
+        var reminders = EventAccessState()
+        events.completed(granted: true)
+        XCTAssertFalse(reminders.observe(.notDetermined)) // entity grants never leak to another type
+        reminders.completed(granted: true)
+        XCTAssertTrue(reminders.observe(.notDetermined))
+    }
+
     func testSourceFreshness() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         var health = SourceHealth(phase: .loading)
@@ -85,6 +111,13 @@ final class ChineseSearchTests {
         XCTAssertTrue(partial.hasSnapshot)
         partial.phase = .failed; XCTAssertTrue(partial.needsAttention(at: now))
         partial.succeeded(at: now); XCTAssertNil(partial.partialUpdate)
+        partial.completed(at: now.addingTimeInterval(60), complete: false)
+        XCTAssertEqual(partial.phase, .incomplete); XCTAssertEqual(partial.lastSuccess, now)
+        partial.recordFailure(SourceAccessFailure(source: "行事曆", status: .denied), at: now)
+        XCTAssertEqual(partial.phase, .needsPermission); XCTAssertEqual(partial.permissionStatus, .denied)
+        XCTAssertEqual(partial.lastSuccess, now)
+        partial.recordFailure(ProcessFailure.failed("讀取逾時"), at: now)
+        XCTAssertEqual(partial.phase, .failed); XCTAssertNil(partial.permissionStatus)
     }
     func testCalendarChronologicalSort() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)

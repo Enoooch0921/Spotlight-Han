@@ -14,7 +14,14 @@ struct SourceHealthView: View {
         case .failed: return health.hasSnapshot ? "讀取失敗（仍顯示舊／部分資料）" : "讀取失敗（沒有可用資料）"
         case .incomplete: return "讀取不完整（部分資料）"
         case .stopped: return health.hasSnapshot ? "已停止（仍顯示舊／部分資料）" : "已停止（沒有可用資料）"
-        case .needsPermission: return health.hasSnapshot ? "需要授權（仍顯示舊資料）" : "尚未授權"
+        case .needsPermission:
+            if health.hasSnapshot { return "需要授權（仍顯示舊資料）" }
+            switch health.permissionStatus {
+            case .denied: return "存取已被拒絕"
+            case .restricted: return "系統限制存取"
+            case .writeOnly: return "搜尋需要完整存取"
+            default: return "尚未完成授權"
+            }
         }
     }
     private var color: Color {
@@ -63,7 +70,10 @@ struct SearchSourceHealthBanner: View {
                             Text(L.text(source.rawValue)).font(.caption.weight(.medium)).frame(width: 58, alignment: .leading)
                             SourceHealthView(health: store.sourceHealth[source], now: context.date)
                             Spacer(minLength: 2)
-                            Button(L.text("重新讀取")) { store.refreshSource(source) }.controlSize(.small)
+                            if store.sourceHealth[source]?.phase == .needsPermission {
+                                Button(L.text("開啟隱私權設定")) { store.openSourcePrivacy(source) }.controlSize(.small)
+                            }
+                            Button(L.text(store.sourceHealth[source]?.phase == .needsPermission ? "連接" : "重新讀取")) { store.refreshSource(source) }.controlSize(.small)
                                 .disabled(store.connecting.contains(source) || store.authorizationInFlight || store.actionInFlight || (source == .names && store.catalogRefreshing) || (source == .contents && store.indexing))
                         }
                     }

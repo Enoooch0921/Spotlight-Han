@@ -2,7 +2,7 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：0.7.0，開發預覽。
+目前版本：0.7.1，開發預覽。
 
 ## 功能
 
@@ -58,7 +58,7 @@
 
 啟動自動讀取、單一來源連接與集中設定共用同一個佇列，同一時間只處理一個來源。啟動時若發現權限不足，會提示手動重新連接，避免自動重複跳出授權視窗。聯絡人、行事曆與提醒事項的授權請求在主執行緒發起，資料讀取則在背景處理；等待系統授權最多兩分鐘，逾時會結束等待並顯示原因。
 
-設定視窗開啟期間，Han 以一般前景 App 呈現系統授權，因此 Dock 暫時會有 Han 圖示；關閉設定且沒有授權請求時恢復選單列模式。授權使用的 Contacts／EventKit 物件持續保留，提醒事項讀取也明確保留 EventKit store 到回覆完成。本次聯絡人與提醒事項的授權按鈕均已由使用者確認可點擊。
+設定視窗開啟期間，Han 以一般前景 App 呈現系統授權，因此 Dock 暫時會有 Han 圖示；關閉設定且沒有授權請求時恢復選單列模式。Contacts 授權物件持續保留；EventKit 授權、搜尋、目的地清單與新增共用同一個長存服務。EventKit 物件留在主 actor，純文字搜尋資料在背景處理。針對部分 Mac 在授權成功後仍回傳 notDetermined 的狀況，服務銜接當次成功回呼，不將尚未更新的查詢結果誤判成失敗；這份證據只留在本次執行的記憶體，明確的拒絕、限制、僅寫入或已觀測完整授權後的重設都會使它失效。本次聯絡人與提醒事項的授權按鈕均已由使用者確認可點擊。
 
 備忘錄首次讀取可能需要時間，尤其是資料多、iCloud 正在同步或 Notes 忙碌時。畫面顯示讀取數量，每批載入後即可先搜尋；90 秒內未完成會保留已讀結果並標示部分讀取。可按 **「停止連接」** 清除剩餘佇列並停止備忘錄／郵件的讀取程序，已載入內容仍可搜尋。這個按鈕不能代替使用者選擇或關閉 macOS 的授權對話框。
 
@@ -133,7 +133,7 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
-公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.7.0 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.7.1 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
 
 ```sh
 ./script/package_release.sh

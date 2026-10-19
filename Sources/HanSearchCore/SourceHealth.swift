@@ -7,9 +7,10 @@ public struct SourceHealth: Equatable, Sendable {
     public var partialUpdate: Date?
     public var invalidated: Bool
     public var lastAttempt: Date?
-    public init(phase: Phase = .queued, lastSuccess: Date? = nil, partialUpdate: Date? = nil, invalidated: Bool = false, lastAttempt: Date? = nil) {
+    public var permissionStatus: EventAccessState.Status?
+    public init(phase: Phase = .queued, lastSuccess: Date? = nil, partialUpdate: Date? = nil, invalidated: Bool = false, lastAttempt: Date? = nil, permissionStatus: EventAccessState.Status? = nil) {
         self.phase = phase; self.lastSuccess = lastSuccess; self.partialUpdate = partialUpdate; self.invalidated = invalidated
-        self.lastAttempt = lastAttempt
+        self.lastAttempt = lastAttempt; self.permissionStatus = permissionStatus
     }
     public func isStale(at now: Date, maxAge: TimeInterval = 15 * 60) -> Bool {
         invalidated || (lastSuccess.map { now.timeIntervalSince($0) >= maxAge } ?? false)
@@ -30,5 +31,14 @@ public struct SourceHealth: Equatable, Sendable {
         let delay = [.failed, .incomplete, .stopped].contains(phase) ? max(interval, 900) : interval
         return since.map { now.timeIntervalSince($0) >= delay } ?? true
     }
-    public mutating func succeeded(at date: Date) { phase = .ready; lastSuccess = date; lastAttempt = date; partialUpdate = nil; invalidated = false }
+    public mutating func completed(at date: Date, complete: Bool) {
+        if complete { succeeded(at: date) }
+        else { phase = .incomplete; partialUpdate = date; lastAttempt = date; permissionStatus = nil }
+    }
+    public mutating func recordFailure(_ error: Error, at date: Date) {
+        let permission = error as? SourceAccessFailure
+        phase = permission == nil ? .failed : .needsPermission
+        permissionStatus = permission?.status; lastAttempt = date
+    }
+    public mutating func succeeded(at date: Date) { phase = .ready; lastSuccess = date; lastAttempt = date; partialUpdate = nil; invalidated = false; permissionStatus = nil }
 }

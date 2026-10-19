@@ -353,5 +353,14 @@
   "即將到來": "Upcoming",
   "背景自動更新已連接來源": "Refresh connected sources in the background",
   "授權有效時安靜更新，不會反覆詢問。行事曆／提醒事項每5分鐘及收到變更後更新；其他已連接來源與文件索引每15分鐘更新。權限失效會暫停並顯示狀態，等你主動重新連接。": "Refreshes silently while permission is valid. Calendar and Reminders refresh every 5 minutes and after change notifications; other connected sources and document indexes refresh every 15 minutes. If permission is lost, refresh pauses until you reconnect.",
-  "需要重新授權；背景更新已暫停，請主動按連接。": "Permission is required again. Background refresh is paused; choose Connect to continue."
+  "需要重新授權；背景更新已暫停，請主動按連接。": "Permission is required again. Background refresh is paused; choose Connect to continue.",
+  "存取已被拒絕": "Access denied",
+  "系統限制存取": "Access restricted by the system",
+  "搜尋需要完整存取": "Search requires full access",
+  "尚未完成授權": "Permission not yet completed",
+  "開啟隱私權設定": "Open privacy settings",
+  "%@存取已被拒絕，請到系統隱私權設定允許後重新連接。": "Access to %@ was denied. Allow it in system privacy settings, then reconnect.",
+  "%@存取受到系統限制，請檢查螢幕使用時間或裝置管理設定。": "Access to %@ is restricted. Check Screen Time or device management settings.",
+  "%@目前僅允許新增；搜尋需要完整存取，請到系統隱私權設定更改。": "%@ currently has write-only access. Search requires full access in system privacy settings.",
+  "%@尚未完成授權，請按「連接」並完成系統提示。": "Permission for %@ is not complete. Choose Connect and respond to the system prompt."
 }

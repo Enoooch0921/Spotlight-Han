@@ -10,6 +10,10 @@
 "%@ 筆檔名 · %@" = "%@ filenames · %@";
 "%@　↵ 複製答案" = "%@  ↵ Copy answer";
 "%@　↵ 複製結果" = "%@  ↵ Copy result";
+"%@存取受到系統限制，請檢查螢幕使用時間或裝置管理設定。" = "Access to %@ is restricted. Check Screen Time or device management settings.";
+"%@存取已被拒絕，請到系統隱私權設定允許後重新連接。" = "Access to %@ was denied. Allow it in system privacy settings, then reconnect.";
+"%@尚未完成授權，請按「連接」並完成系統提示。" = "Permission for %@ is not complete. Choose Connect and respond to the system prompt.";
+"%@目前僅允許新增；搜尋需要完整存取，請到系統隱私權設定更改。" = "%@ currently has write-only access. Search requires full access in system privacy settings.";
 "%@翻譯 · Apple 本機翻譯 · 選取後 ↵ 複製" = "%@ translation · Apple on-device translation · Select then ↵ to copy";
 "1 %@ ≈ %@ %@ · 資料 %@ · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Daily update · Reference rate";
 "1 %@ ≈ %@ %@ · 資料 %@ · 過期快取 · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Stale cache · Daily update · Reference rate";
@@ -85,8 +89,10 @@
 "執行" = "Run";
 "執行捷徑「%@」？" = "Run shortcut “%@”?";
 "外觀" = "Appearance";
+"存取已被拒絕" = "Access denied";
 "完成" = "Done";
 "專注模式" = "Focus";
+"尚未完成授權" = "Permission not yet completed";
 "尚未授權" = "Not authorised";
 "尚未辨識到時間，試試「明天下午3點開會」。" = "No time recognised. Try “tomorrow at 3pm meeting”.";
 "尚未連接 · 前往設定啟用" = "Not connected · Enable in Settings";
@@ -154,6 +160,7 @@
 "搜尋" = "Search";
 "搜尋%@" = "Search %@";
 "搜尋網頁「%@」" = "Search the web for “%@”";
+"搜尋需要完整存取" = "Search requires full access";
 "文件內容" = "Document content";
 "新增提醒事項" = "New reminder";
 "新增提醒事項：%@" = "Create reminder: %@";
@@ -245,6 +252,7 @@
 "系統目前無法確認登入項目狀態。" = "Login item status is unavailable.";
 "系統設定" = "System Settings";
 "系統設定 · 按 Return 開啟此頁面" = "System Settings · Press Return to open this pane";
+"系統限制存取" = "Access restricted by the system";
 "系統預設提醒事項清單（確認後授權）" = "System default reminder list (permission after confirmation)";
 "系統預設行事曆（確認後授權）" = "System default calendar (permission after confirmation)";
 "結束" = "End";
@@ -333,6 +341,7 @@
 "開啟 Spotlight 快捷鍵開關" = "Open Spotlight shortcuts";
 "開啟時鐘" = "Open Clock";
 "開啟系統登入項目" = "Open Login Items";
+"開啟隱私權設定" = "Open privacy settings";
 "開啟／收起使用短淡入淡出，結果面板平順展開。系統開啟「減少動態效果」時保留淡化、停止高度動畫。" = "Use brief fades and smooth panel expansion. Reduce Motion disables expansion animations.";
 "開始" = "Start";
 "開始時" = "At start";

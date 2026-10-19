@@ -7,25 +7,39 @@ import HanSearchCore
 struct PersonalLoad: Sendable {
     let records: [PersonalRecord]
     let status: String
+    var complete: Bool = true
 }
 
 enum PersonalSources {
     // A permission dialog may outlive our timeout. Keep its EventKit owner alive until the app exits.
     @MainActor private static let contactAuthorizationStore = CNContactStore()
-    @MainActor private static let calendarAuthorizationStore = EKEventStore()
-    @MainActor private static let reminderAuthorizationStore = EKEventStore()
-    static func isAuthorized(_ source: SearchMode) -> Bool {
+    @MainActor static func isAuthorized(_ source: SearchMode) -> Bool {
         switch source {
         case .contacts:
             let status = CNContactStore.authorizationStatus(for: .contacts)
             return status == .authorized || status.rawValue == 4
-        case .calendar: return EKEventStore.authorizationStatus(for: .event) == .fullAccess
-        case .reminders: return EKEventStore.authorizationStatus(for: .reminder) == .fullAccess
+        case .calendar: return EventKitAccess.hasAccess(.event)
+        case .reminders: return EventKitAccess.hasAccess(.reminder)
         case .notes, .mail:
             let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
             return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
         default: return true
         }
+    }
+
+    @MainActor static func permissionFailure(_ source: SearchMode) -> SourceAccessFailure {
+        if source == .calendar { return EventKitAccess.permissionFailure(.event) }
+        if source == .reminders { return EventKitAccess.permissionFailure(.reminder) }
+        if source == .contacts {
+            let status = CNContactStore.authorizationStatus(for: .contacts)
+            return SourceAccessFailure(source: source.rawValue, status: status == .denied ? .denied : status == .restricted ? .restricted : .notDetermined)
+        }
+        return SourceAccessFailure(source: source.rawValue)
+    }
+
+    private static func automationIsAuthorized(_ source: SearchMode) -> Bool {
+        let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
+        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
     }
 
     @MainActor static func authorize(_ source: SearchMode) async throws {
@@ -40,19 +54,9 @@ enum PersonalSources {
                 }
             }
         case .calendar:
-            let store = calendarAuthorizationStore
-            granted = try await TimedCallback.wait(timeout: 120) { reply in
-                store.requestFullAccessToEvents { allowed, error in
-                    if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
-                }
-            }
+            try await EventKitAccess.authorize(.event); return
         case .reminders:
-            let store = reminderAuthorizationStore
-            granted = try await TimedCallback.wait(timeout: 120) { reply in
-                store.requestFullAccessToReminders { allowed, error in
-                    if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
-                }
-            }
+            try await EventKitAccess.authorize(.reminder); return
         case .notes, .mail:
             let target = source == .notes ? "com.apple.Notes" : "com.apple.mail"
             let cancellation = ProcessCancellation()
@@ -65,11 +69,11 @@ enum PersonalSources {
             granted = isAuthorized(source)
         default: return
         }
-        guard granted else { throw ProcessFailure.failed("\(source.rawValue)未授權，可在系統設定的隱私權中調整。") }
+        guard granted else { throw permissionFailure(source) }
     }
 
     static func contacts() async throws -> PersonalLoad {
-        guard isAuthorized(.contacts) else { throw ProcessFailure.failed("聯絡人尚未授權，請按連接。") }
+        guard await isAuthorized(.contacts) else { throw ProcessFailure.failed("聯絡人尚未授權，請按連接。") }
         let store = CNContactStore()
         let keys: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactEmailAddressesKey as CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
@@ -85,42 +89,58 @@ enum PersonalSources {
         return PersonalLoad(records: records, status: "已連接 \(records.count) 位聯絡人")
     }
 
-    static func calendar() async throws -> PersonalLoad {
-        guard isAuthorized(.calendar) else { throw ProcessFailure.failed("行事曆尚未授權，請按連接。") }
-        let store = EKEventStore()
+    @MainActor static func calendar() async throws -> PersonalLoad {
+        try EventKitAccess.require(.event)
+        let store = EventKitAccess.store
         let calendar = Calendar.current, now = Date()
         let start = calendar.date(byAdding: .year, value: -1, to: now)!
         let end = calendar.date(byAdding: .year, value: 1, to: now)!
         let events = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
-        let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
         let ordered = events.sorted { CalendarResultSort.upcoming.precedes(start: $0.startDate, end: $0.endDate, id: $0.eventIdentifier ?? "", start: $1.startDate, end: $1.endDate, id: $1.eventIdentifier ?? "", now: now) }
-        let records = ordered.prefix(10000).map { event -> PersonalRecord in
-            let title = event.title ?? "未命名行程"
-            let date = formatter.string(from: event.startDate)
-            let timing = event.isAllDay ? event.startDate.formatted(date: .abbreviated, time: .omitted) + " · " + L.text("全天") : date + " – " + formatter.string(from: event.endDate)
-            let subtitle = timing + " · " + event.calendar.title
-            let details = [title, subtitle, event.location ?? "", event.notes ?? ""].filter { !$0.isEmpty }.joined(separator: "\n")
-            return PersonalRecord(id: "event:" + (event.eventIdentifier ?? UUID().uuidString) + date, title: title, subtitle: subtitle, text: details, symbol: "calendar", mode: .calendar, action: .details(details), startDate: event.startDate, endDate: event.endDate)
+        let snapshots = ordered.prefix(10000).map { event in
+            EventSnapshot(id: event.eventIdentifier ?? UUID().uuidString, title: event.title ?? "未命名行程", start: event.startDate, end: event.endDate, allDay: event.isAllDay, calendar: event.calendar.title, location: event.location ?? "", notes: event.notes ?? "")
         }
-        return PersonalLoad(records: records, status: "已連接 \(records.count) 個行程（前後各一年）")
+        // EventKit objects stay with their store; Chinese folding runs off the UI actor.
+        return await Task.detached(priority: .utility) {
+            let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
+            let records = snapshots.map { event -> PersonalRecord in
+                let date = formatter.string(from: event.start)
+                let timing = event.allDay ? event.start.formatted(date: .abbreviated, time: .omitted) + " · " + L.text("全天") : date + " – " + formatter.string(from: event.end)
+                let subtitle = timing + " · " + event.calendar
+                let details = [event.title, subtitle, event.location, event.notes].filter { !$0.isEmpty }.joined(separator: "\n")
+                return PersonalRecord(id: "event:" + event.id + date, title: event.title, subtitle: subtitle, text: details, symbol: "calendar", mode: .calendar, action: .details(details), startDate: event.start, endDate: event.end)
+            }
+            return PersonalLoad(records: records, status: "已連接 \(records.count) 個行程（前後各一年）")
+        }.value
     }
 
-    static func reminders() async throws -> PersonalLoad {
-        guard isAuthorized(.reminders) else { throw ProcessFailure.failed("提醒事項尚未授權，請按連接。") }
-        let store = EKEventStore()
+    @MainActor static func reminders() async throws -> PersonalLoad {
+        try EventKitAccess.require(.reminder)
+        let store = EventKitAccess.store
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: nil)
         let reminders: [EKReminder] = try await TimedCallback.wait(timeout: 45) { reply in
             store.fetchReminders(matching: predicate) { reply(.success($0 ?? [])) }
         }
-        withExtendedLifetime(store) {}
-        let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
-        let records = reminders.prefix(10000).map { reminder -> PersonalRecord in
-            let title = reminder.title ?? "未命名提醒事項"
-            let date = reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) }.map { formatter.string(from: $0) } ?? "未設定時間"
-            let details = [title, date, reminder.calendar.title, reminder.notes ?? ""].joined(separator: "\n")
-            return PersonalRecord(id: "reminder:" + reminder.calendarItemIdentifier, title: title, subtitle: date + " · " + reminder.calendar.title, text: details, symbol: "checklist", mode: .reminders, action: .details(details))
+        try EventKitAccess.require(.reminder)
+        let snapshots = reminders.prefix(10000).map { reminder in
+            ReminderSnapshot(id: reminder.calendarItemIdentifier, title: reminder.title ?? "未命名提醒事項", due: reminder.dueDateComponents.flatMap { Calendar.current.date(from: $0) }, calendar: reminder.calendar.title, notes: reminder.notes ?? "")
         }
-        return PersonalLoad(records: records, status: "已連接 \(records.count) 個未完成提醒事項（10,000 筆上限）")
+        return await Task.detached(priority: .utility) {
+            let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
+            let records = snapshots.map { reminder -> PersonalRecord in
+                let date = reminder.due.map { formatter.string(from: $0) } ?? "未設定時間"
+                let details = [reminder.title, date, reminder.calendar, reminder.notes].joined(separator: "\n")
+                return PersonalRecord(id: "reminder:" + reminder.id, title: reminder.title, subtitle: date + " · " + reminder.calendar, text: details, symbol: "checklist", mode: .reminders, action: .details(details))
+            }
+            return PersonalLoad(records: records, status: "已連接 \(records.count) 個未完成提醒事項（10,000 筆上限）")
+        }.value
+    }
+
+    private struct EventSnapshot: Sendable {
+        let id: String; let title: String; let start: Date; let end: Date; let allDay: Bool; let calendar: String; let location: String; let notes: String
+    }
+    private struct ReminderSnapshot: Sendable {
+        let id: String; let title: String; let due: Date?; let calendar: String; let notes: String
     }
 
     private struct RawItem: Decodable { let id: String; let title: String; let text: String; let detail: String }
@@ -179,12 +199,12 @@ enum PersonalSources {
             }
         } catch is CancellationError { throw CancellationError() }
         catch {
-            guard isAuthorized(.notes) else { throw ProcessFailure.failed("備忘錄尚未授權，請在系統設定 → 隱私權與安全性 → 自動化中檢查 Han 對備忘錄的存取。") }
+            guard automationIsAuthorized(.notes) else { throw ProcessFailure.failed("備忘錄尚未授權，請在系統設定 → 隱私權與安全性 → 自動化中檢查 Han 對備忘錄的存取。") }
             guard !records.isEmpty else { throw ProcessFailure.failed("備忘錄讀取逾時或未完成。備忘錄資料多、iCloud 同步或系統等待授權時可能較久；請稍後重試。") }
-            return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄（部分讀取；可按重新讀取）")
+            return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄（部分讀取；可按重新讀取）", complete: false)
         }
         guard receivedHeader else { throw ProcessFailure.failed("備忘錄未回傳有效的讀取狀態，請稍後重試。") }
-        return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄" + (skipped > 0 ? "；\(skipped) 則受保護或無法完整讀取" : "") + (capped ? "（2,000 則上限）" : ""))
+        return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄" + (skipped > 0 ? "；\(skipped) 則受保護或無法完整讀取" : "") + (capped ? "（2,000 則上限）" : ""), complete: skipped == 0)
     }
 
     static func mail(cancellation: ProcessCancellation) throws -> PersonalLoad {
@@ -208,7 +228,7 @@ enum PersonalSources {
             let encoded = id.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
             return PersonalRecord(id: "mail:" + item.id, title: item.title, subtitle: item.detail, text: item.text, symbol: "envelope", mode: .mail, action: .open(URL(string: "message://" + encoded)!))
         }
-        return PersonalLoad(records: records, status: "已連接 Mail 收件匣 \(records.count) 封（前 200 封，內文前 16,000 字）" + (load.skipped > 0 ? "；\(load.skipped) 封無法讀取" : ""))
+        return PersonalLoad(records: records, status: "已連接 Mail 收件匣 \(records.count) 封（前 200 封，內文前 16,000 字）" + (load.skipped > 0 ? "；\(load.skipped) 封無法讀取" : ""), complete: load.skipped == 0)
     }
 
     static func shortcuts() throws -> PersonalLoad {
