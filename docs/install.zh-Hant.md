@@ -1,10 +1,10 @@
 # Spotlight Han · 開發預覽版安裝說明
 
-目前打包版本為 **0.6.1 開發預覽**，供願意協助回報問題的使用者試用。公開狀態以 Releases 列表為準；它尚未達到 Spotlight 的完整功能對等。
+目前打包版本為 **0.7.0 開發預覽**，供願意協助回報問題的使用者試用。公開狀態以 Releases 列表為準；它尚未達到 Spotlight 的完整功能對等。
 
 ## 下載哪個檔案？
 
-到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v0.6.1 版本下載 `Spotlight-Han-0.6.1-macOS-arm64.zip`。若列表還沒有這個版本，代表尚未公開。
+到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v0.7.0 版本下載 `Spotlight-Han-0.7.0-macOS-arm64.dmg`（拖曳安裝），或 `Spotlight-Han-0.7.0-macOS-arm64.zip`（壓縮包）。若列表還沒有這個版本，代表尚未公開。
 
 - `arm64` 適用於 Apple Silicon（M 系列）Mac。目前未提供 Intel 版或 Universal 版安裝包。
 - 目前已驗證 Apple Silicon、macOS 26.6.1。程式宣告最低 macOS 14，macOS 14／15 尚待真機驗證。
@@ -13,7 +13,7 @@
 
 ## 重要：目前的簽章狀態
 
-這個開發預覽包採用 **ad hoc 簽章**，尚無 Developer ID 簽章及 Apple 公證。從網路下載後，macOS Gatekeeper 可能阻擋開啟；本機開發環境能執行不代表其他 Mac 能直接安裝。
+這個開發預覽包採用 **ad hoc 簽章**，尚無 Developer ID 簽章及 Apple 公證。DMG 與 ZIP 都是封裝格式，DMG 並不代表已完成 Apple 公證。從網路下載後，macOS Gatekeeper 可能阻擋開啟；本機開發環境能執行不代表其他 Mac 能直接安裝。
 
 若被系統阻擋，請保留系統安全保護，等候後續完成 Developer ID 簽章與公證的版本。此預覽不適合作為所有一般使用者都能順利安裝的正式發行版。
 
@@ -21,7 +21,7 @@
 
 ## 首次使用
 
-1. 解壓縮 ZIP，將 `Spotlight Han.app` 放到「應用程式」。
+1. 開啟 DMG，將 `Spotlight Han.app` 拖到同一視窗的 `Applications`；或解壓縮 ZIP 後放到「應用程式」。
 2. 系統允許開啟後，以 `Control + Option + Space` 叫出或收起搜尋。
 3. 按「選擇搜尋資料夾…」，加入實際想搜尋的位置，等待首次掃描完成。
 4. 輸入繁體或簡體關鍵字。`↑ / ↓` 選擇，`Return` 開啟，`Escape` 收起。

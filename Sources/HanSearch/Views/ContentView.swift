@@ -27,7 +27,7 @@ struct ContentView: View {
         }
         .onKeyPress(.downArrow) { store.moveSelection(1); return .handled }
         .onKeyPress(.upArrow) { store.moveSelection(-1); return .handled }
-        .onExitCommand { store.hideLauncher?() }
+        .onExitCommand { if store.composerMode != nil { store.cancelComposer() } else { store.hideLauncher?() } }
         .environment(\.locale, store.interfaceLanguage.locale)
         .id(store.interfaceLanguage.rawValue)
 
@@ -36,19 +36,36 @@ struct ContentView: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 13) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
-                    TextField(L.text("Spotlight Han 搜尋"), text: $store.query)
+                    Image(systemName: store.composerMode == .event ? "calendar.badge.plus" : store.composerMode == .reminder ? "checklist" : "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
+                    TextField(L.text(store.composerMode == nil ? "Spotlight Han 搜尋" : "輸入時間和事項…"), text: $store.query)
                         .font(.system(size: 25, weight: .regular)).textFieldStyle(.plain)
                         .focused($focused).onSubmit { store.openSelection() }
-                        .accessibilityLabel(L.text("Spotlight Han 繁簡搜尋"))
-                    if store.searching || store.actionInFlight { ProgressView().controlSize(.small) }
+                        .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
+                        .disabled(store.actionInFlight || store.composerCreated != nil)
+                        .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
+                    if store.searching || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
+                    if store.composerMode != nil {
+                        Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
+                            .buttonStyle(.plain).disabled(store.actionInFlight).help(L.text("返回搜尋"))
+                    }
                 }.padding(.horizontal, 20).frame(height: 60).spotlightGlass(Capsule())
-                category(.apps, symbol: "square.grid.2x2", hint: "應用程式 ⌘1")
-                category(.names, symbol: "folder", hint: "檔案 ⌘2")
-                category(.shortcuts, symbol: "square.stack.3d.up", hint: "捷徑 ⌘3")
-                category(.clipboard, symbol: "doc.on.clipboard", hint: "剪貼板 ⌘4")
+                if store.composerMode == nil {
+                    category(.apps, symbol: "square.grid.2x2", hint: "應用程式 ⌘1")
+                    category(.names, symbol: "folder", hint: "檔案 ⌘2")
+                    category(.shortcuts, symbol: "square.stack.3d.up", hint: "捷徑 ⌘3")
+                    category(.clipboard, symbol: "doc.on.clipboard", hint: "剪貼板 ⌘4")
+                }
             }
-            if store.hasBody { resultPanel.transition(.opacity) }
+            if store.composerMode == nil, let command = TaskComposerMode.command(store.query) {
+                Button { store.enterComposer() } label: {
+                    HStack {
+                        Label(L.text(command == .event ? "按 Tab 新增行事曆行程" : "按 Tab 新增提醒事項"), systemImage: command == .event ? "calendar.badge.plus" : "checklist")
+                        Spacer(); Text("Tab ⇥").font(.caption.monospaced())
+                    }.padding(.horizontal, 20).padding(.vertical, 10).contentShape(Rectangle())
+                }.buttonStyle(.plain).spotlightGlass(Capsule())
+            }
+            if store.composerMode != nil { TaskComposerView(store: store).spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous)).transition(.opacity) }
+            else if store.hasBody { resultPanel.transition(.opacity) }
         }
         .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.hasBody)
     }
@@ -79,6 +96,12 @@ struct ContentView: View {
                 }.padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
+            if store.mode == .calendar || (store.mode == .all && store.allQuickResults.contains(where: { $0.id.hasPrefix("quick:event:") })) {
+                Picker(L.text("行事曆排序"), selection: $store.calendarSort) {
+                    ForEach(CalendarResultSort.allCases, id: \.self) { order in Text(L.text(order.title)).tag(order) }
+                }.controlSize(.small).padding(.horizontal, 18).padding(.vertical, 8)
+            }
+            SearchSourceHealthBanner(store: store)
             if !store.hotkeyError.isEmpty {
                 HStack(alignment: .top, spacing: 8) {
                     Label(L.text(store.hotkeyError), systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
@@ -160,6 +183,10 @@ struct ContentView: View {
                 }
             }
             Spacer()
+            if let start = item.startDate {
+                Text(L.text((item.endDate ?? start) < Date() ? "已過去" : start <= Date() ? "進行中" : "即將到來"))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
             if store.selection == item.id { Image(systemName: "return").font(.caption).foregroundStyle(.secondary) }
         }.padding(.horizontal, 12).padding(.vertical, 10)
             .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))

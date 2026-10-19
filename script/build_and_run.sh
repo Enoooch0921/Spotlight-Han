@@ -15,6 +15,7 @@ BUILD_DIR="$(swift build --package-path "$PACKAGE_DIR" --configuration "$BUILD_C
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+cp -R "$BUILD_DIR/HanSearch_HanSearchCore.bundle" "$APP_BUNDLE/Contents/Resources/"
 if [[ -f "$ROOT_DIR/Assets/SpotlightHan.icns" ]]; then cp "$ROOT_DIR/Assets/SpotlightHan.icns" "$APP_BUNDLE/Contents/Resources/SpotlightHan.icns"; fi
 cp "$ROOT_DIR/Assets/Shortcuts/Spotlight-Han-System-Clock.shortcut" "$APP_BUNDLE/Contents/Resources/"
 cp "$ROOT_DIR/LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
@@ -31,8 +32,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleLocalizations</key><array><string>zh-Hant</string><string>zh-Hans</string><string>en</string></array>
 <key>CFBundleIconFile</key><string>SpotlightHan.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.6.1</string>
-<key>CFBundleVersion</key><string>11</string>
+<key>CFBundleShortVersionString</key><string>0.7.0</string>
+<key>CFBundleVersion</key><string>12</string>
 <key>NSContactsUsageDescription</key><string>在本機搜尋你允許取用的聯絡人，不會上傳。</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>搜尋行事曆，並依你確認的指令新增行程。</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>搜尋提醒事項，並依你確認的指令新增提醒。</string>

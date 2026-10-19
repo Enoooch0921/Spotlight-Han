@@ -1,5 +1,7 @@
 # Spotlight Han
 
+繁體中文 · [English](README.en.md)
+
 <img src="Assets/SpotlightHan.png" alt="Spotlight Han app icon" width="112" />
 
 **用你習慣的中文，找到 Mac 裡的 App、影片和文件。**
@@ -11,7 +13,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 [![macOS checks](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml/badge.svg)](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[開發預覽與下載](https://github.com/Enoooch0921/Spotlight-Han/releases) · [開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[下載 Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.7.0/Spotlight-Han-0.7.0-macOS-arm64.dmg) · [開發預覽與下載](https://github.com/Enoooch0921/Spotlight-Han/releases) · [開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## 明明就在電腦裡，為什麼搜不到？
 
@@ -50,8 +52,15 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 | 直接用國名換算 | `3000NT=馬來西亞`、`3000nt 马来`、`3000NT=Malaysia`。 |
 | 台幣換人民幣 | `3000tb rmb` |
 | 同時看多個幣別 | `3000tb`，預設顯示 CNY、USD、JPY，可在設定更改。 |
-| 新增系統提醒事項 | `提醒我明天上午9點交報告`，預覽後按 Return。 |
+| 新增系統行事曆 | `cal`＋Tab → `明天下午3點到4點開會` → Return 預覽 → 確認建立。 |
+| 新增系統提醒事項 | `提醒`＋Tab → `30分鐘後喝水` → Return 預覽 → 確認建立。 |
 | 設定 Apple 時鐘鬧鐘 | `設定30分鐘後的鬧鐘`，首次需加入內附捷徑。 |
+
+行程預覽可調整標題、日期、開始／結束時間、全天與提前通知。在 Han 設定選擇預設行事曆（例如「大拇指」），每次確認預覽仍能改到其他可寫入的行事曆（例如「大腳趾」），只影響當次新增。
+
+自然語言日期使用內附 [Chrono](https://github.com/wanasit/chrono) 加上 Han 的中文補強，透過 JavaScriptCore 在本機處理；使用 App 不需 Node.js、API Key 或下載模型。這版支援單次事項，無法完整辨識或包含重複規則時會提示調整。
+
+行事曆搜尋預設依時間排序：進行中／即將到來的行程在前，過去行程由近到遠，也能切換日期新到舊或舊到新。已授權來源會背景更新：行事曆／提醒事項每 5 分鐘及系統變更後重讀，其他來源與文件索引每 15 分鐘更新。來源狀態會標示上次完整更新、失敗、部分資料與舊副本；權限失效時暫停並提示，不在背景要求授權。
 
 也支援經授權搜尋備忘錄、聯絡人、行事曆、提醒事項與 Mail，以及選擇啟用的剪貼板記錄。可在搜尋結果上方顯示 Apple 本機翻譯，來源及目標語言可自訂。
 
@@ -59,9 +68,9 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 ## 開始使用
 
-**目前為 0.6.1 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
+**目前為 0.7.0 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
-**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.6.1-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
+**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 提供 `Spotlight-Han-0.7.0-macOS-arm64.dmg` 拖曳安裝與 ZIP 壓縮包，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
 
 若要自行從原始碼建置，需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
 
@@ -94,6 +103,8 @@ cd Spotlight-Han
 如果你也遇過「明明有檔案，換個字形卻找不到」，歡迎[分享可重現的例子](https://github.com/Enoooch0921/Spotlight-Han/issues)。你的回饋能幫助我們找出真正需要改善的搜尋情境。
 
 回報時附上 macOS／Han 版本、輸入的關鍵字、預期結果與實際結果即可。請用自製測試檔案，避免公開私人文件、備忘錄或檔名快取。也歡迎提交 Pull Request，或給專案一顆 Star 方便追蹤進度。
+
+[第三方授權與日期解析建置](THIRD_PARTY_NOTICES.md) · [解析器重建方式](tools/date-parser/README.md)
 
 MIT License · Copyright 2026 Enoooch0921.
 

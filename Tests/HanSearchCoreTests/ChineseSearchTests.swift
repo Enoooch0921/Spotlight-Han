@@ -23,6 +23,11 @@ struct CheckRunner {
             return
         }
         let tests = ChineseSearchTests()
+        if CommandLine.arguments.contains("--task-parser-only") {
+            try await tests.testNaturalTaskComposer()
+            print("PASS: relocated local date parser, Chinese/English drafts, ranges and validation")
+            return
+        }
         tests.testAppAndFilenameAcrossScripts()
         tests.testNormalizationAvoidsOneSimplifiedToManyTraditionalMisses()
         tests.testMetadataPredicateTreatsInputAsData()
@@ -35,6 +40,7 @@ struct CheckRunner {
         tests.testPersonalRecordCrossScriptMatching()
         tests.testSafeQuickActions()
         try tests.testTaskCommands()
+        try await tests.testNaturalTaskComposer()
         tests.testCurrencyQueries()
         tests.testCurrencyCountryNames()
         tests.testSearchHighlights()
@@ -45,11 +51,113 @@ struct CheckRunner {
         try tests.testCancellableStreamingProcesses()
         tests.testSystemShortcutPreferences()
         tests.testSystemSettingsSearch()
-        print("PASS: 22 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        tests.testSourceFreshness()
+        tests.testCalendarChronologicalSort()
+        print("PASS: 25 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
 final class ChineseSearchTests {
+    func testSourceFreshness() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        var health = SourceHealth(phase: .loading)
+        XCTAssertFalse(health.hasSnapshot); XCTAssertFalse(health.needsAttention(at: now))
+        health.succeeded(at: now)
+        XCTAssertTrue(health.hasSnapshot); XCTAssertFalse(health.isStale(at: now.addingTimeInterval(899)))
+        XCTAssertTrue(health.isStale(at: now.addingTimeInterval(900)))
+        XCTAssertTrue(health.needsAttention(at: now.addingTimeInterval(901)))
+        health.invalidated = true; XCTAssertTrue(health.needsAttention(at: now))
+        health.succeeded(at: now); XCTAssertFalse(health.invalidated)
+        XCTAssertFalse(health.shouldRefresh(at: now.addingTimeInterval(299), interval: 300))
+        XCTAssertTrue(health.shouldRefresh(at: now.addingTimeInterval(300), interval: 300))
+        XCTAssertTrue(health.shouldRefresh(at: now, interval: 300, force: true))
+        health.phase = .loading; XCTAssertFalse(health.shouldRefresh(at: now.addingTimeInterval(1000), interval: 300, force: true))
+        health.phase = .failed
+        XCTAssertFalse(health.shouldRefresh(at: now.addingTimeInterval(300), interval: 300))
+        XCTAssertFalse(health.shouldRefresh(at: now.addingTimeInterval(300), interval: 300, force: true))
+        XCTAssertTrue(health.shouldRefresh(at: now.addingTimeInterval(900), interval: 300))
+        XCTAssertTrue(health.needsAttention(at: now)); XCTAssertEqual(health.lastSuccess, now)
+        XCTAssertTrue(health.hasSnapshot)
+        for phase: SourceHealth.Phase in [.failed, .incomplete, .stopped, .needsPermission] {
+            XCTAssertTrue(SourceHealth(phase: phase).needsAttention(at: now))
+        }
+        var partial = SourceHealth(phase: .loading, partialUpdate: now)
+        XCTAssertTrue(partial.hasSnapshot)
+        partial.phase = .failed; XCTAssertTrue(partial.needsAttention(at: now))
+        partial.succeeded(at: now); XCTAssertNil(partial.partialUpdate)
+    }
+    func testCalendarChronologicalSort() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func event(_ id: String, _ offset: Double?, end: Double? = nil) -> PersonalRecord {
+            PersonalRecord(id: id, title: "Sophie", subtitle: "測試", text: "會議", symbol: "calendar", mode: .calendar, action: .details(id), startDate: offset.map { now.addingTimeInterval($0) }, endDate: end.map { now.addingTimeInterval($0) })
+        }
+        let records = [event("old", -1000), event("far", 500), event("missing", nil), event("near", 100), event("past", -100), event("ongoing", -200, end: 100)]
+        XCTAssertEqual(CalendarResultSort.upcoming.sorted(records, now: now).map(\.id), ["ongoing","near","far","past","old","missing"])
+        XCTAssertEqual(CalendarResultSort.newest.sorted(records, now: now).map(\.id), ["far","near","past","ongoing","old","missing"])
+        XCTAssertEqual(CalendarResultSort.oldest.sorted(records, now: now).map(\.id), ["old","ongoing","past","near","far","missing"])
+        let note = PersonalRecord(id: "note", title: "Sophie", subtitle: "", text: "", symbol: "note", mode: .notes, action: .details(""))
+        let mixed = [records[0], note, records[3]]
+        XCTAssertEqual(CalendarResultSort.upcoming.sorted(mixed, now: now).map(\.id), ["near","note","old"])
+        XCTAssertEqual(CalendarResultSort.upcoming.sorted([event("b", 100),event("a",100)], now: now).map(\.id), ["a","b"])
+        let matches = CalendarResultSort.upcoming.sorted(records, now: now).compactMap { $0.result(query: "sophie", mode: .calendar) }
+        XCTAssertEqual(matches.map(\.id), ["quick:ongoing","quick:near","quick:far","quick:past","quick:old","quick:missing"])
+        XCTAssertEqual(matches.first?.endDate, now.addingTimeInterval(100))
+    }
+
+    func testNaturalTaskComposer() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Taipei")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 19, hour: 10))!
+        let parser = NaturalTaskParser()
+        func stamp(_ date: Date) -> String {
+            let formatter = DateFormatter(); formatter.calendar = calendar; formatter.timeZone = calendar.timeZone; formatter.dateFormat = "yyyy-MM-dd HH:mm"
+            return formatter.string(from: date)
+        }
+        let cases: [(String, TaskComposerMode, String, String, String, Bool)] = [
+            ("明天下午三點到四點和鼎達叔叔開會", .event, "和鼎達叔叔開會", "2026-10-20 15:00", "2026-10-20 16:00", false),
+            ("明天下午三点到四点和鼎达叔叔开会", .event, "和鼎达叔叔开会", "2026-10-20 15:00", "2026-10-20 16:00", false),
+            ("下下週一下午三點開會", .event, "開會", "2026-11-02 15:00", "2026-11-02 16:00", false),
+            ("下下周一下午三点开会", .event, "开会", "2026-11-02 15:00", "2026-11-02 16:00", false),
+            ("下週五上午10點開會30分鐘", .event, "開會", "2026-10-30 10:00", "2026-10-30 10:30", false),
+            ("下週日上午十點去教會", .event, "去教會", "2026-11-01 10:00", "2026-11-01 11:00", false),
+            ("明天開會", .event, "開會", "2026-10-20 00:00", "2026-10-21 00:00", true),
+            ("30分鐘後喝水", .reminder, "喝水", "2026-10-19 10:30", "2026-10-19 11:30", false),
+            ("半小時後喝水", .reminder, "喝水", "2026-10-19 10:30", "2026-10-19 11:30", false),
+            ("明天交報告", .reminder, "交報告", "2026-10-20 00:00", "2026-10-21 00:00", true),
+            ("提醒我明天上午9點交報告", .reminder, "交報告", "2026-10-20 09:00", "2026-10-20 10:00", false),
+            ("明天23:00到後天01:00值班", .event, "值班", "2026-10-20 23:00", "2026-10-21 01:00", false),
+            ("明天下午3點開會1小時30分鐘", .event, "開會", "2026-10-20 15:00", "2026-10-20 16:30", false),
+            ("tomorrow at 3pm meeting for 30 minutes", .event, "meeting", "2026-10-20 15:00", "2026-10-20 15:30", false),
+            ("tomorrow at 9am buy milk", .reminder, "buy milk", "2026-10-20 09:00", "2026-10-20 10:00", false),
+            ("鼎達叔叔 明天下午3點 開會", .event, "鼎達叔叔 開會", "2026-10-20 15:00", "2026-10-20 16:00", false)
+        ]
+        for (input, mode, title, start, end, allDay) in cases {
+            let draft = try await parser.parse(input, mode: mode, now: now, calendar: calendar)
+            XCTAssertEqual(draft.title, title); XCTAssertEqual(stamp(draft.start), start); XCTAssertEqual(stamp(draft.end), end)
+            XCTAssertEqual(draft.isAllDay, allDay); XCTAssertEqual(draft.kind, mode.kind)
+            XCTAssertNil(draft.validationError(at: now, calendar: calendar))
+            XCTAssertNil(draft.plan.relativeDelay)
+        }
+        let lead = try await parser.parse("明天下午3點開會提前10分鐘提醒", mode: .event, now: now, calendar: calendar)
+        XCTAssertEqual(lead.alarmOffset, -600); XCTAssertEqual(lead.title, "開會")
+        let compoundLead = try await parser.parse("明天下午3點開會提前1小時30分鐘提醒", mode: .event, now: now, calendar: calendar)
+        XCTAssertEqual(compoundLead.alarmOffset, -5400); XCTAssertEqual(compoundLead.title, "開會")
+        let relative = try await parser.parse("30分鐘後喝水", mode: .reminder, now: now, calendar: calendar)
+        XCTAssertEqual(relative.plan.resolved(at: now.addingTimeInterval(120)).start, relative.start)
+        XCTAssertNotNil(relative.validationError(at: now.addingTimeInterval(1900), calendar: calendar))
+        var invalid = lead; invalid.title = " "; XCTAssertNotNil(invalid.validationError(at: now, calendar: calendar))
+        invalid = lead; invalid.end = invalid.start; XCTAssertNotNil(invalid.validationError(at: now, calendar: calendar))
+        for input in ["", "開會", "明天下午開會", "每週一上午九點開會", "每個星期一上午9點開會", "每兩週一下午3點開會", "明天下午3點", "昨天上午9點交報告", "明天下午3點開會200小時", "明天上午9點開會 後天上午10點吃飯", "明天25:99開會", String(repeating: "字", count: 201)] {
+            do { _ = try await parser.parse(input, mode: .event, now: now, calendar: calendar); preconditionFailure("Should reject: \(input)") }
+            catch is NaturalTaskFailure { }
+        }
+        do { _ = try await parser.parse("明天下午3點到4點喝水", mode: .reminder, now: now, calendar: calendar); preconditionFailure("A reminder must not silently lose its time range") }
+        catch is NaturalTaskFailure { }
+        for command in ["cal", "CAL", "calendar", "行事曆", "行事历", "行程"] { XCTAssertEqual(TaskComposerMode.command(command), .event) }
+        for command in ["提醒", "提醒事項", "提醒事项", "rem", "reminder"] { XCTAssertEqual(TaskComposerMode.command(command), .reminder) }
+        for command in ["calendar app", "cal tomorrow", "提醒我", "cal.js"] { XCTAssertNil(TaskComposerMode.command(command)) }
+    }
+
     func testSystemSettingsSearch() {
         let examples: [(String, String)] = [
             ("隱私與安全性", "com.apple.settings.PrivacySecurity.extension"),

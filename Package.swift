@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [.executable(name: "HanSearch", targets: ["HanSearch"])],
     targets: [
-        .target(name: "HanSearchCore"),
+        .target(name: "HanSearchCore", resources: [.copy("Resources")]),
         .executableTarget(name: "HanSearch", dependencies: ["HanSearchCore"], exclude: ["Resources"]),
         .executableTarget(name: "HanSearchChecks", dependencies: ["HanSearchCore"], path: "Tests/HanSearchCoreTests")
     ]

@@ -22,10 +22,19 @@ mkdir -p "$RELEASE_DIR"
 ARCHIVE_NAME="Spotlight-Han-$VERSION-macOS-$ARCHIVE_ARCH.zip"
 /usr/bin/ditto --norsrc --noextattr --noqtn -c -k --keepParent "$APP_BUNDLE" "$RELEASE_DIR/$ARCHIVE_NAME"
 cp "$ROOT_DIR/docs/install.zh-Hant.md" "$RELEASE_DIR/INSTALL.zh-Hant.md"
+DMG_NAME="Spotlight-Han-$VERSION-macOS-$ARCHIVE_ARCH.dmg"
+DMG_CONTENTS="$STAGING_DIR/dmg"
+mkdir -p "$DMG_CONTENTS"
+/usr/bin/ditto --norsrc --noextattr --noqtn "$APP_BUNDLE" "$DMG_CONTENTS/Spotlight Han.app"
+ln -s /Applications "$DMG_CONTENTS/Applications"
+cp "$ROOT_DIR/docs/install.zh-Hant.md" "$DMG_CONTENTS/INSTALL.zh-Hant.md"
+/usr/bin/hdiutil create -quiet -ov -volname "Spotlight Han" -srcfolder "$DMG_CONTENTS" -format UDZO "$RELEASE_DIR/$DMG_NAME"
+/usr/bin/hdiutil verify -quiet "$RELEASE_DIR/$DMG_NAME"
 (
   cd "$RELEASE_DIR"
-  /usr/bin/shasum -a 256 "$ARCHIVE_NAME" INSTALL.zh-Hant.md > SHA256SUMS.txt
+  /usr/bin/shasum -a 256 "$ARCHIVE_NAME" "$DMG_NAME" INSTALL.zh-Hant.md > SHA256SUMS.txt
 )
 echo "Release archive: $RELEASE_DIR/$ARCHIVE_NAME"
+echo "Drag-to-Applications disk image: $RELEASE_DIR/$DMG_NAME"
 echo "Signing status follows; notarization must be completed separately for a trusted public distribution."
 /usr/bin/codesign -dvv "$APP_BUNDLE"

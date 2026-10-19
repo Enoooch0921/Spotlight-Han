@@ -7,12 +7,17 @@ public struct TaskPlan: Hashable, Sendable {
     public let start: Date
     public let duration: TimeInterval
     public let relativeDelay: TimeInterval?
+    public let isAllDay: Bool
+    public let alarmOffset: TimeInterval?
+    public let calendarID: String?
 
-    public init(kind: Kind, title: String, start: Date, duration: TimeInterval = 3600, relativeDelay: TimeInterval? = nil) {
+    public init(kind: Kind, title: String, start: Date, duration: TimeInterval = 3600, relativeDelay: TimeInterval? = nil, isAllDay: Bool = false, alarmOffset: TimeInterval? = nil, calendarID: String? = nil) {
         self.kind = kind; self.title = title; self.start = start; self.duration = duration; self.relativeDelay = relativeDelay
+        self.isAllDay = isAllDay; self.alarmOffset = alarmOffset
+        self.calendarID = calendarID
     }
     public func resolved(at now: Date) -> TaskPlan {
-        TaskPlan(kind: kind, title: title, start: relativeDelay.map { now.addingTimeInterval($0) } ?? start, duration: duration, relativeDelay: relativeDelay)
+        TaskPlan(kind: kind, title: title, start: relativeDelay.map { now.addingTimeInterval($0) } ?? start, duration: duration, relativeDelay: relativeDelay, isAllDay: isAllDay, alarmOffset: alarmOffset, calendarID: calendarID)
     }
 }
 

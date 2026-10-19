@@ -13,7 +13,7 @@ struct TranslationBridge: View {
     @State private var token = UUID()
     @State private var configuredRequest = ""
     private var target: Locale.Language { Locale.Language(identifier: store.translationTarget) }
-    private var requestID: String { store.query + "|" + store.mode.rawValue + "|" + String(store.translationEnabled) + "|" + store.translationSource + "|" + store.translationTarget }
+    private var requestID: String { store.query + "|" + store.mode.rawValue + "|" + String(store.translationEnabled) + "|" + store.translationSource + "|" + store.translationTarget + "|" + (store.composerMode?.rawValue ?? "") }
     var body: some View {
         Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
             .task(id: requestID) { await translateAutomatic() }
@@ -42,7 +42,7 @@ struct TranslationBridge: View {
     @MainActor private func translateAutomatic() async {
         token = UUID(); configuration = nil; store.setTranslation(nil)
         let query = currentQuery, request = requestID
-        guard store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
+        guard store.composerMode == nil, store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
               query.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 2,
               !CurrencyQuery.isCurrencyQuery(query), TaskCommandParser.parse(query) == nil, SystemSettingsCatalog.results(query: query).isEmpty,
               !Calculator.looksLikeExpression(query), UnitConverter.convert(query) == nil,

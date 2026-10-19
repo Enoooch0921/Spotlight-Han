@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
+        store.showLauncher = { [weak self] in self?.showSearch() }
         store.settingsVisibilityChanged = { [weak self] visible in
             if visible {
                 self?.hideSearch(animated: false)
@@ -112,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationDidResignActive(_ notification: Notification) { hideSearch(animated: false) }
     private func command(_ key: String) -> Bool {
+        if store.composerMode != nil, key != "f" { return false }
         switch key {
         case "1": store.mode = .apps
         case "2": store.mode = .names
@@ -127,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel else { return }
         let count = store.results.count + store.allQuickResults.count
         let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
-        let height: CGFloat = store.details != nil ? detailHeight : (!store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64))))
+        let height: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : (count == 0 ? 410 : min(650, CGFloat(282 + count * 64)))))
         let top = panel.frame.maxY
         let target = NSRect(x: panel.frame.minX, y: top - max(410, height), width: 804, height: max(410, height))
         let collapsed = NSRect(x: panel.frame.minX, y: top - height, width: 804, height: height)

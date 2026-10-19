@@ -30,6 +30,7 @@ struct SettingsView: View {
                 }
             }
             Section(L.text("快速檔名搜尋")) {
+                TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[.names], now: context.date) }
                 Text(L.text(store.catalogStatus)).font(.caption)
                 ForEach(store.catalogRoots, id: \.path) { root in
                     HStack {
@@ -49,6 +50,7 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(L.text("Word 與 PDF 內容")) {
+                if store.folder != nil { TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[.contents], now: context.date) } }
                 Text(store.folder?.path ?? L.text("未指定資料夾：文件內容模式使用 Spotlight 索引")).font(.caption)
                 if !store.indexNotice.isEmpty { Text(L.text(store.indexNotice)).font(.caption).foregroundStyle(.secondary) }
                 HStack {
@@ -62,6 +64,10 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(L.text("系統 App 資料來源")) {
+                Toggle(L.text("背景自動更新已連接來源"), isOn: $store.autoRefreshEnabled)
+                    .onChange(of: store.autoRefreshEnabled) { _, enabled in if enabled { store.refreshAuthorizedSources() } }
+                Text(L.text("授權有效時安靜更新，不會反覆詢問。行事曆／提醒事項每5分鐘及收到變更後更新；其他已連接來源與文件索引每15分鐘更新。權限失效會暫停並顯示狀態，等你主動重新連接。"))
+                    .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button(L.text("一次設定所有資料來源")) { store.setupAllSources() }.disabled(store.setupRunning || !store.connecting.isEmpty)
                     if store.setupRunning { ProgressView().controlSize(.small) }
@@ -80,6 +86,7 @@ struct SettingsView: View {
                                 Button(L.text("移除")) { store.disconnect(source) }
                             }
                         }
+                        TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[source], now: context.date) }
                         Text(L.text(store.personalStatus[source] ?? scope(source))).font(.caption).foregroundStyle(.secondary)
                     }.padding(.vertical, 3)
                 }
@@ -113,9 +120,11 @@ struct SettingsView: View {
                 Button(L.text("清除記錄")) { store.clearClipboard() }
             }
             Section(L.text("行程、提醒與鬧鐘指令")) {
+                EventCalendarPicker(store: store, selection: $store.defaultEventCalendarID, label: "Han 預設行事曆")
+                Text(L.text("新行程會先選這個行事曆；確認預覽時仍可更改。此設定只影響 Han。")).font(.caption).foregroundStyle(.secondary)
                 Text(L.text("設定30分鐘後的鬧鐘\n提醒我明天上午9點交報告\n明天下午3點開會30分鐘"))
                     .font(.callout).textSelection(.enabled)
-                Text(L.text("先顯示時間與內容，按 Return 才建立。行程及提醒使用系統預設行事曆／清單；新增需要相應的存取授權。鬧鐘交給 Apple 系統時鐘。首次按下方「連接系統時鐘」，在系統視窗加入一次捷徑；不用自己編輯。系統鬧鐘精度為分鐘，只支援下一次的指定時分。"))
+                Text(L.text("行程與提醒：輸入 cal／行事曆或提醒／rem，按 Tab 後輸入時間和事項。Return 進入確認預覽，按「確認建立」或 ⌘Return 才寫入。行程可選擇 Han 預設行事曆及當次目的地；提醒使用系統預設清單。系統鬧鐘仍按 Return 建立，首次需連接內附捷徑。"))
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Button(L.text("連接系統時鐘")) { store.beginClockSetup() }
@@ -131,8 +140,8 @@ struct SettingsView: View {
         }.formStyle(.grouped)
             .environment(\.locale, store.interfaceLanguage.locale)
             .id(store.interfaceLanguage.rawValue)
-            .onAppear { store.settingsVisibilityChanged?(true) }
-            .onDisappear { store.settingsVisibilityChanged?(false) }
+            .onAppear { store.settingsPresented = true; store.settingsVisibilityChanged?(true) }
+            .onDisappear { store.settingsPresented = false; store.settingsVisibilityChanged?(false) }
     }
     private func scope(_ mode: SearchMode) -> String {
         switch mode {

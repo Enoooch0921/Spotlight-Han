@@ -13,12 +13,24 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/date-parser/package-lock.json
+      - name: Verify vendored date parser is reproducible
+        run: |
+          npm ci --prefix tools/date-parser --ignore-scripts --no-audit --no-fund
+          npm run --prefix tools/date-parser build
+          git diff --exit-code -- Sources/HanSearchCore/Resources
       - name: Build app
         run: ./script/build_and_run.sh --build-only
       - name: Check interface localizations
         run: ./script/check_localizations.sh
       - name: Run functional checks
         run: swift run HanSearchChecks
+      - name: Check task composer without personal data
+        run: ./script/check_task_composer.sh
       - name: Verify signed Clock companion source
         run: python3 script/verify_clock_shortcut.py
       - name: Check Notes stream without private data

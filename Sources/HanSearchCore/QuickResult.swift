@@ -12,8 +12,11 @@ public struct QuickResult: Identifiable, Hashable, Sendable {
     public let subtitle: String
     public let symbol: String
     public let action: QuickAction
-    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction) {
+    public let startDate: Date?
+    public let endDate: Date?
+    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil) {
         self.id = "quick:" + id; self.title = title; self.subtitle = subtitle; self.symbol = symbol; self.action = action
+        self.startDate = startDate; self.endDate = endDate
     }
 }
 
@@ -26,10 +29,13 @@ public struct PersonalRecord: Sendable {
     public let symbol: String
     public let mode: SearchMode
     public let action: QuickAction
-    public init(id: String, title: String, subtitle: String, text: String, symbol: String, mode: SearchMode, action: QuickAction) {
+    public let startDate: Date?
+    public let endDate: Date?
+    public init(id: String, title: String, subtitle: String, text: String, symbol: String, mode: SearchMode, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil) {
         self.id = id; self.title = title; self.subtitle = subtitle; self.text = text
         self.folded = ChineseSearch.normalized(title + " " + subtitle + " " + text)
         self.symbol = symbol; self.mode = mode; self.action = action
+        self.startDate = startDate; self.endDate = endDate
     }
     public func result(query: String, mode: SearchMode) -> QuickResult? {
         guard mode == .all || mode == self.mode else { return nil }
@@ -41,7 +47,7 @@ public struct PersonalRecord: Sendable {
         } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query) {
             preview = SearchHighlight.excerpt(in: text, query: query)
         } else { preview = subtitle }
-        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action)
+        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate)
     }
 }
 
@@ -58,9 +64,10 @@ public enum QuickProvider {
                 catch { return [QuickResult(id: "task-command", title: "此時間無法建立系統鬧鐘", subtitle: error.localizedDescription, symbol: "exclamationmark.circle", action: .details(error.localizedDescription))] }
             } else { displayDate = plan.start }
             let kind = plan.kind == .alarm ? "設定鬧鐘" : (plan.kind == .reminder ? "新增提醒事項" : "新增行事曆行程")
-            let destination = plan.kind == .alarm ? "Apple 系統時鐘 · 分鐘精度，向上取整" : (plan.kind == .reminder ? "系統提醒事項（預設清單）" : "系統行事曆（預設行事曆）")
+            let destination = plan.kind == .alarm ? "Apple 系統時鐘 · 分鐘精度，向上取整" : (plan.kind == .reminder ? "系統提醒事項（預設清單）" : "行事曆（預覽時選擇）")
             let duration = plan.kind == .event ? " · \(Int(plan.duration / 60)) 分鐘" : ""
-            items.append(QuickResult(id: "task-command", title: kind + "：" + plan.title, subtitle: formatter.string(from: displayDate) + (plan.relativeDelay != nil ? " · 按 Return 起算" : "") + duration + " · " + destination + " · ↵ 建立", symbol: plan.kind == .alarm ? "alarm" : (plan.kind == .reminder ? "checklist" : "calendar.badge.plus"), action: .createTask(plan)))
+            let actionHint = plan.kind == .alarm ? " · ↵ 建立" : " · ↵ 確認預覽"
+            items.append(QuickResult(id: "task-command", title: kind + "：" + plan.title, subtitle: formatter.string(from: displayDate) + (plan.relativeDelay != nil ? " · 按 Return 起算" : "") + duration + " · " + destination + actionHint, symbol: plan.kind == .alarm ? "alarm" : (plan.kind == .reminder ? "checklist" : "calendar.badge.plus"), action: .createTask(plan)))
             return items
         }
         if Calculator.looksLikeExpression(query), let value = try? Calculator.evaluate(query) {

@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 import HanSearchCore
+import EventKit
+import Combine
 
 @MainActor
 final class SearchStore: ObservableObject {
@@ -51,6 +53,17 @@ final class SearchStore: ObservableObject {
     @Published var catalogRoots: [URL] = []
     @Published var milliseconds: Double = 0
     @Published var personalStatus: [SearchMode: String] = [:]
+    @Published var sourceHealth: [SearchMode: SourceHealth] = [:]
+    @Published var calendarSort = CalendarResultSort(rawValue: UserDefaults.standard.string(forKey: "calendarResultSort.v1") ?? "") ?? .upcoming {
+        didSet { UserDefaults.standard.set(calendarSort.rawValue, forKey: "calendarResultSort.v1"); search() }
+    }
+    private var eventChangeStore: EKEventStore?
+    private var eventChangeObserver: AnyCancellable?
+    private var backgroundRefreshTask: Task<Void, Never>?
+    private var eventRefreshTask: Task<Void, Never>?
+    @Published var autoRefreshEnabled = UserDefaults.standard.object(forKey: "autoRefreshSources.v1") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(autoRefreshEnabled, forKey: "autoRefreshSources.v1") }
+    }
     @Published var connecting = Set<SearchMode>()
     @Published var authorizationInFlight = false
     @Published var setupRunning = false
@@ -58,6 +71,28 @@ final class SearchStore: ObservableObject {
     @Published var details: String? { didSet { onLayoutChanged?() } }
     @Published var clockSetupPending = false
     @Published var actionInFlight = false
+    @Published var composerMode: TaskComposerMode?
+    @Published var composerDraft: TaskDraft?
+    @Published var composerReviewing = false
+    @Published var composerParsing = false
+    @Published var composerError = ""
+    @Published var composerCreated: String?
+    var composerTask: Task<Void, Never>?
+    var composerGeneration = UUID()
+    var composerWantsReview = false
+    var composerInput: String?
+    let naturalTaskParser = NaturalTaskParser()
+    var showLauncher: (() -> Void)?
+    let taskWriter: (@MainActor (TaskPlan) async throws -> String)?
+    private let taskPreferences: UserDefaults
+    let eventCalendarLoader: @MainActor () -> [TaskCalendarChoice]
+    @Published var defaultEventCalendarID = "" {
+        didSet { taskPreferences.set(defaultEventCalendarID, forKey: "defaultEventCalendarID.v1") }
+    }
+    @Published var eventCalendarChoices: [TaskCalendarChoice] = []
+    @Published var calendarSelectionBusy = false
+    @Published var calendarSelectionError = ""
+    var settingsPresented = false
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
@@ -67,7 +102,8 @@ final class SearchStore: ObservableObject {
     private var sourceTask: Task<Void, Never>?
     private var connectionGeneration = UUID()
     private var sourceReading = false
-    private let fileAccess = FileAccessBookmarks()
+    private var sourceOwnsAuthorization = false
+    private let fileAccess: FileAccessBookmarks
     private var documents: [IndexedDocument] = []
     private var entries: [CatalogEntry] = []
     private var personal: [PersonalRecord] = []
@@ -77,14 +113,36 @@ final class SearchStore: ObservableObject {
     private var generation = UUID()
     private var searchTask: Task<Void, Never>?
 
-    init() {
+    init(loadSources: Bool = true, fileAccess: FileAccessBookmarks? = nil, taskPreferences: UserDefaults = .standard, eventCalendarLoader: @escaping @MainActor () -> [TaskCalendarChoice] = { TaskService.eventCalendars() }, taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
+        self.fileAccess = fileAccess ?? FileAccessBookmarks()
+        self.taskWriter = taskWriter
+        self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
+        guard loadSources else { return }
+        eventChangeStore = EKEventStore()
+        eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged).receive(on: DispatchQueue.main).sink { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                for source: SearchMode in [.calendar, .reminders] where self.sourceHealth[source]?.hasSnapshot == true {
+                    self.sourceHealth[source]?.invalidated = true
+                }
+                self.refreshEventCalendars()
+                self.scheduleEventSourceRefresh()
+            }
+        }
+        backgroundRefreshTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                self?.refreshAuthorizedSources()
+            }
+        }
         if let saved = UserDefaults.standard.stringArray(forKey: "enabledSources.v1") {
             let renamed = saved.map { $0 == "動作" ? SearchMode.shortcuts.rawValue : $0 }
             if renamed != saved { UserDefaults.standard.set(renamed, forKey: "enabledSources.v1") }
         }
-        let allowed = fileAccess.urls
+        let allowed = self.fileAccess.urls
         if let saved = UserDefaults.standard.stringArray(forKey: "indexRootPaths.v2") {
-            catalogRoots = saved.map { fileAccess.resolvedIndexURL($0) }.filter { root in allowed.contains { root.path == $0.path || root.path.hasPrefix($0.path + "/") } }
+            catalogRoots = saved.map { self.fileAccess.resolvedIndexURL($0) }.filter { root in allowed.contains { root.path == $0.path || root.path.hasPrefix($0.path + "/") } }
         } else { catalogRoots = allowed }
         UserDefaults.standard.set(catalogRoots.map(\.path), forKey: "indexRootPaths.v2")
         clipboard.changed = { [weak self] value in
@@ -103,7 +161,7 @@ final class SearchStore: ObservableObject {
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
-    var hasBody: Bool { !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
+    var hasBody: Bool { composerMode != nil || !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
     var allIDs: [String] { allQuickResults.map(\.id) + results.map(\.id) }
     var activityDescription: String? {
         if searching { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }
@@ -118,6 +176,12 @@ final class SearchStore: ObservableObject {
         onLayoutChanged?()
         searchTask?.cancel()
         let token = UUID(); generation = token
+        if composerMode != nil {
+            currencyTask?.cancel(); currencyQuery = ""; currencyResults = []; translationResult = nil
+            results = []; quickResults = []; selection = nil; searching = false
+            updateComposerPreview()
+            return
+        }
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         updateCurrency(query: term)
         if mode == .clipboard {
@@ -130,7 +194,7 @@ final class SearchStore: ObservableObject {
             results = []; quickResults = []; selection = nil; searching = false; notice = ""; onLayoutChanged?(); return
         }
         searching = true; searchPhase = "正在比對\(mode == .all ? "App、檔名與已連接資料" : mode.rawValue)…"
-        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal
+        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort
         let processCancellation = ProcessCancellation()
         searchTask = Task {
             do { try await Task.sleep(for: .milliseconds(60)) } catch { return }
@@ -164,7 +228,7 @@ final class SearchStore: ObservableObject {
                     }
                 }
                 quick += utilities
-                if !utilityOnly { quick += personal.lazy.compactMap { $0.result(query: term, mode: mode) }.prefix(50) }
+                if !utilityOnly { quick += calendarSort.sorted(personal).lazy.compactMap { $0.result(query: term, mode: mode) }.prefix(50) }
                 if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {
@@ -184,6 +248,10 @@ final class SearchStore: ObservableObject {
             self.notice = warning ?? (files.count >= 200 ? "顯示前 200 筆，請增加關鍵字" : "")
             self.onLayoutChanged?()
         }
+    }
+    func pauseSearchForComposer() {
+        searchTask?.cancel(); generation = UUID(); currencyTask?.cancel(); currencyQuery = ""
+        results = []; quickResults = []; translationResult = nil; currencyResults = []; selection = nil; searching = false
     }
     private func updateCurrency(query: String) {
         let term = mode == .all ? query : ""
@@ -220,15 +288,21 @@ final class SearchStore: ObservableObject {
         guard !catalogRoots.isEmpty else { catalogStatus = "首次請在設定選擇搜尋資料夾"; return }
         if let cached = await Task.detached(priority: .utility, operation: { FileCatalog.load() }).value {
             entries = cached.entries.filter { entry in catalogRoots.contains { entry.path.hasPrefix($0.path + "/") } }; catalogCount = entries.count
+            sourceHealth[.names] = SourceHealth(phase: .ready, lastSuccess: cached.updated, invalidated: cached.unreadable > 0 || cached.capped)
             catalogStatus = "已載入 \(entries.count) 筆檔名，正在更新"; search()
         }
         refreshCatalog()
     }
-    func refreshIfNeeded() { if Date().timeIntervalSince(lastRefresh) > 30 { refreshCatalog() } }
+    func refreshIfNeeded() {
+        if Date().timeIntervalSince(lastRefresh) > 30 { refreshCatalog() }
+        refreshAuthorizedSources()
+    }
     func refreshCatalog() {
         guard !catalogRefreshing else { return }
         guard !catalogRoots.isEmpty else { catalogStatus = "首次請在設定選擇搜尋資料夾"; return }
         catalogRefreshing = true
+        sourceHealth[.names, default: SourceHealth()].phase = .loading
+        sourceHealth[.names, default: SourceHealth()].lastAttempt = Date()
         let roots = catalogRoots
         catalogStatus = "正在掃描檔名（不讀取影片內容）…"
         Task {
@@ -244,6 +318,11 @@ final class SearchStore: ObservableObject {
             let saveError = await Task.detached(priority: .utility) { () -> Bool in
                 do { try FileCatalog.save(snapshot); return false } catch { return true }
             }.value
+            if snapshot.unreadable > 0 || snapshot.capped || saveError {
+                sourceHealth[.names, default: SourceHealth()].phase = .incomplete
+                sourceHealth[.names, default: SourceHealth()].partialUpdate = snapshot.updated
+                sourceHealth[.names, default: SourceHealth()].lastAttempt = Date()
+            } else { sourceHealth[.names, default: SourceHealth()].succeeded(at: snapshot.updated) }
             if saveError { catalogStatus += " · 無法儲存快取" }; search()
         }
     }
@@ -267,11 +346,13 @@ final class SearchStore: ObservableObject {
         guard !catalogRefreshing else { return }
         catalogRoots.removeAll { $0.path == url.path }; saveCatalogRoots()
         entries.removeAll { entry in !catalogRoots.contains { entry.path.hasPrefix($0.path + "/") } }
+        if catalogRoots.isEmpty { sourceHealth[.names] = nil }
         catalogCount = entries.count; search(); refreshCatalog()
     }
     func forgetFolders() {
         guard !catalogRefreshing, !indexing else { return }
         fileAccess.clear(); catalogRoots = []; entries = []; documents = []; folder = nil; catalogCount = 0
+        sourceHealth[.names] = nil; sourceHealth[.contents] = nil
         saveCatalogRoots(); try? FileManager.default.removeItem(at: FileCatalog.cacheURL)
         catalogStatus = "已忘記資料夾；可重新選擇搜尋範圍"; search()
     }
@@ -285,14 +366,26 @@ final class SearchStore: ObservableObject {
     }
     func rebuildIndex() {
         guard let folder, !indexing else { return }
+        sourceHealth[.contents, default: SourceHealth()].phase = .loading
+        sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
         indexing = true; documents = []; indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; search()
         Task {
             let indexed = await Task.detached(priority: .utility) { SearchService.index(folder: folder) }.value
+            if indexed.skippedText > 0 || indexed.capped {
+                sourceHealth[.contents, default: SourceHealth()].phase = .incomplete
+                sourceHealth[.contents, default: SourceHealth()].partialUpdate = Date()
+                sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
+            } else { sourceHealth[.contents, default: SourceHealth()].succeeded(at: Date()) }
             documents = indexed.documents; indexing = false
             indexNotice = "已讀取 \(indexed.documents.count) 個檔案" + (indexed.skippedText > 0 ? " · \(indexed.skippedText) 份內容未完整讀取" : "") + (indexed.capped ? " · 10,000 檔案上限" : ""); search()
         }
     }
-    func resetScope() { guard !indexing else { return }; folder = nil; documents = []; indexNotice = ""; search() }
+    func resetScope() { guard !indexing else { return }; folder = nil; documents = []; sourceHealth[.contents] = nil; indexNotice = ""; search() }
+    func refreshSource(_ source: SearchMode) {
+        if source == .names { refreshCatalog() }
+        else if source == .contents { rebuildIndex() }
+        else { connect(source) }
+    }
     func connect(_ source: SearchMode) {
         enqueueSource(source, allowPrompt: true)
     }
@@ -314,18 +407,48 @@ final class SearchStore: ObservableObject {
         setupRunning = true
         // Request the short native permissions before potentially slow Notes/Mail indexing.
         for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
-            if personalStatus[source]?.hasPrefix("已連接") != true { enqueueSource(source, allowPrompt: true) }
+            if personalStatus[source]?.hasPrefix("已連接") != true || sourceHealth[source]?.isStale(at: Date()) == true { enqueueSource(source, allowPrompt: true) }
         }
         finishSetupIfIdle()
+    }
+    func refreshAuthorizedSources(changedOnly: Bool = false) {
+        guard autoRefreshEnabled, !authorizationInFlight, !actionInFlight, !setupRunning, NSApp.modalWindow == nil else { return }
+        let now = Date(), enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+        for source: SearchMode in [.calendar, .reminders, .contacts, .shortcuts, .notes, .mail, .alarms] {
+            guard enabled.contains(source.rawValue), !connecting.contains(source), let health = sourceHealth[source] else { continue }
+            if changedOnly && (source != .calendar && source != .reminders || !health.invalidated) { continue }
+            let interval: TimeInterval = source == .calendar || source == .reminders ? 300 : 900
+            guard health.shouldRefresh(at: now, interval: interval, force: changedOnly) else { continue }
+            guard PersonalSources.isAuthorized(source) else {
+                sourceHealth[source]?.phase = .needsPermission
+                personalStatus[source] = "需要重新授權；背景更新已暫停，請主動按連接。"
+                continue
+            }
+            // The worker checks again when it reaches the front of the shared queue.
+            enqueueSource(source, allowPrompt: false)
+        }
+        if !changedOnly {
+            if !catalogRoots.isEmpty, sourceHealth[.names]?.shouldRefresh(at: now, interval: 900) == true { refreshCatalog() }
+            if folder != nil, sourceHealth[.contents]?.shouldRefresh(at: now, interval: 900) == true { rebuildIndex() }
+        }
+    }
+    private func scheduleEventSourceRefresh() {
+        eventRefreshTask?.cancel()
+        eventRefreshTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            self?.refreshAuthorizedSources(changedOnly: true)
+        }
     }
     private func enqueueSource(_ source: SearchMode, allowPrompt: Bool) {
         if sourceQueue.enqueue(source, allowPrompt: allowPrompt) {
             connecting.insert(source); personalStatus[source] = "等待前一個來源完成…"
+            sourceHealth[source, default: SourceHealth()].phase = .queued
+            sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
         }
         startNextSource()
     }
-    private func startNextSource() {
-        guard sourceTask == nil, let request = sourceQueue.next() else { return }
+    func startNextSource() {
+        guard !authorizationInFlight, !actionInFlight, sourceTask == nil, let request = sourceQueue.next() else { return }
         connectionGeneration = UUID()
         let token = connectionGeneration
         sourceTask = Task {
@@ -345,20 +468,32 @@ final class SearchStore: ObservableObject {
         connectionGeneration = UUID(); sourceTask?.cancel(); sourceTask = nil
         sourceQueue.cancelAll()
         sourceReading = false
-        for source in connecting { personalStatus[source] = "已停止連接；已載入的結果仍可搜尋。系統授權視窗若仍開著，請自行處理或關閉。" }
-        connecting.removeAll(); setupRunning = false; authorizationInFlight = false
+        for source in connecting {
+            personalStatus[source] = "已停止連接；已載入的結果仍可搜尋。系統授權視窗若仍開著，請自行處理或關閉。"
+            sourceHealth[source, default: SourceHealth()].phase = .stopped
+            sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
+        }
+        connecting.removeAll(); setupRunning = false
+        if sourceOwnsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false }
         setupStatus = "已停止，可稍後逐一重新連接。"; search()
     }
     private func loadSource(_ source: SearchMode, allowPrompt: Bool, token: UUID) async {
         personalStatus[source] = "正在檢查授權…"
         if setupRunning { setupStatus = "正在連接\(source.rawValue)；可隨時停止" }
         let cancellation = ProcessCancellation()
-        defer { if token == connectionGeneration { authorizationInFlight = false; sourceReading = false } }
+        var ownsAuthorization = false
+        defer { if token == connectionGeneration {
+            if ownsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false }
+            sourceReading = false
+        } }
         do {
             if !PersonalSources.isAuthorized(source) {
                 guard allowPrompt else {
-                    personalStatus[source] = "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。"; return
+                    personalStatus[source] = "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。"
+                    sourceHealth[source, default: SourceHealth()].phase = .needsPermission; return
                 }
+                sourceHealth[source, default: SourceHealth()].phase = .authorizing
+                ownsAuthorization = true; sourceOwnsAuthorization = true
                 authorizationInFlight = true; prepareSystemAuthorization?()
                 personalStatus[source] = "等待系統授權；請在系統視窗選擇允許或不允許…"
                 await Task.yield()
@@ -366,13 +501,15 @@ final class SearchStore: ObservableObject {
             }
             try Task.checkCancellation()
             sourceReading = true
-            authorizationInFlight = false
+            sourceHealth[source, default: SourceHealth()].phase = .loading
+            if ownsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false; ownsAuthorization = false }
             personalStatus[source] = "正在讀取\(source.rawValue)…"
             let loaded: PersonalLoad
             if source == .alarms {
                 let connected = try await Task.detached { try SystemClockService.isConnected() }.value
                 guard connected else {
-                    guard allowPrompt else { personalStatus[source] = "系統時鐘捷徑尚未連接，請按「檢查連接」。"; return }
+                    guard allowPrompt else { personalStatus[source] = "系統時鐘捷徑尚未連接，請按「檢查連接」。"; sourceHealth[source, default: SourceHealth()].phase = .needsPermission; return }
+                    sourceHealth[source, default: SourceHealth()].phase = .needsPermission
                     beginClockSetup()
                     personalStatus[source] = "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。"
                     return
@@ -389,9 +526,9 @@ final class SearchStore: ObservableObject {
                 case .notes: return try PersonalSources.notes(cancellation: cancellation) { [weak self] update in
                     Task { @MainActor in
                         guard let self, token == self.connectionGeneration, self.sourceReading, self.sourceQueue.active?.source == .notes else { return }
-                        self.authorizationInFlight = false
                         if !update.records.isEmpty {
                             self.personal.removeAll { $0.mode == .notes }; self.personal += update.records
+                            self.sourceHealth[.notes, default: SourceHealth()].partialUpdate = Date()
                         }
                         self.personalStatus[.notes] = update.status; self.search()
                     }
@@ -408,33 +545,38 @@ final class SearchStore: ObservableObject {
             try Task.checkCancellation()
             guard token == connectionGeneration else { return }
             personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
+            sourceHealth[source, default: SourceHealth()].succeeded(at: Date())
             var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
             remembered.insert(source.rawValue)
             UserDefaults.standard.set(remembered.sorted(), forKey: "enabledSources.v1")
         } catch is CancellationError { return }
         catch {
             guard token == connectionGeneration else { return }
-            if authorizationInFlight {
+            if ownsAuthorization {
                 for request in sourceQueue.discardPending() {
                     connecting.remove(request.source)
+                    sourceHealth[request.source, default: SourceHealth()].phase = .stopped
                     personalStatus[request.source] = "已暫停排隊，請先處理前一個來源的授權，再重新連接。"
                 }
                 setupRunning = false
                 setupStatus = "授權未完成，已停止後續連接，避免繼續疊加系統提示。"
             }
+            sourceHealth[source, default: SourceHealth()].phase = .failed
+            sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
             personalStatus[source] = "連接失敗：" + error.localizedDescription + " 可檢查系統設定 → 隱私權與安全性。"
         }
         if token == connectionGeneration { search() }
     }
 
     func disconnect(_ source: SearchMode) {
-        personal.removeAll { $0.mode == source }; personalStatus[source] = nil
+        personal.removeAll { $0.mode == source }; personalStatus[source] = nil; sourceHealth[source] = nil
         let remembered = (UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? []).filter { $0 != source.rawValue }
         UserDefaults.standard.set(remembered, forKey: "enabledSources.v1"); search()
     }
     private func updateClipboard() { if clipboardEnabled { clipboard.start() } else { clipboard.stop(); clips = [] }; search() }
     func clearClipboard() { clips = []; search() }
     func openSelection() {
+        if composerMode != nil { reviewComposer(); return }
         if let quick = allQuickResults.first(where: { $0.id == selection }) {
             switch quick.action {
             case .copy(let value):
@@ -443,6 +585,7 @@ final class SearchStore: ObservableObject {
             case .details(let text): details = text
             case .prepareTranslation(let source): prepareTranslation?(source)
             case .createTask(let plan):
+                if plan.kind != .alarm { previewTask(plan); return }
                 guard !actionInFlight else { return }
                 actionInFlight = true
                 searchTask?.cancel(); generation = UUID()
@@ -464,7 +607,7 @@ final class SearchStore: ObservableObject {
                             results = []; selection = quickResults.first?.id; onLayoutChanged?()
                         }
                     }
-                    actionInFlight = false
+                    actionInFlight = false; startNextSource()
                 }
             case .note(let identifier):
                 Task {

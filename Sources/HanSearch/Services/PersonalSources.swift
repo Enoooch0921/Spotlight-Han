@@ -93,11 +93,14 @@ enum PersonalSources {
         let end = calendar.date(byAdding: .year, value: 1, to: now)!
         let events = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
-        let records = events.prefix(10000).map { event -> PersonalRecord in
+        let ordered = events.sorted { CalendarResultSort.upcoming.precedes(start: $0.startDate, end: $0.endDate, id: $0.eventIdentifier ?? "", start: $1.startDate, end: $1.endDate, id: $1.eventIdentifier ?? "", now: now) }
+        let records = ordered.prefix(10000).map { event -> PersonalRecord in
             let title = event.title ?? "未命名行程"
             let date = formatter.string(from: event.startDate)
-            let details = [title, date, event.location ?? "", event.notes ?? ""].filter { !$0.isEmpty }.joined(separator: "\n")
-            return PersonalRecord(id: "event:" + (event.eventIdentifier ?? UUID().uuidString) + date, title: title, subtitle: date, text: details, symbol: "calendar", mode: .calendar, action: .details(details))
+            let timing = event.isAllDay ? event.startDate.formatted(date: .abbreviated, time: .omitted) + " · " + L.text("全天") : date + " – " + formatter.string(from: event.endDate)
+            let subtitle = timing + " · " + event.calendar.title
+            let details = [title, subtitle, event.location ?? "", event.notes ?? ""].filter { !$0.isEmpty }.joined(separator: "\n")
+            return PersonalRecord(id: "event:" + (event.eventIdentifier ?? UUID().uuidString) + date, title: title, subtitle: subtitle, text: details, symbol: "calendar", mode: .calendar, action: .details(details), startDate: event.startDate, endDate: event.endDate)
         }
         return PersonalLoad(records: records, status: "已連接 \(records.count) 個行程（前後各一年）")
     }
