@@ -1,4 +1,13 @@
 import Foundation
+import Darwin
+
+public final class ProcessCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    public init() {}
+    public func cancel() { lock.lock(); cancelled = true; lock.unlock() }
+    public var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
+}
 
 public enum ProcessFailure: Error, LocalizedError {
     case failed(String)
@@ -8,7 +17,9 @@ public enum ProcessFailure: Error, LocalizedError {
 }
 
 public enum ProcessRunner {
-    public static func run(_ executable: String, _ arguments: [String], timeout: Double = 15) throws -> Data {
+    public static func run(_ executable: String, _ arguments: [String], timeout: Double = 15,
+                           cancellation: ProcessCancellation? = nil, onLine: ((Data) -> Void)? = nil) throws -> Data {
+        if cancellation?.isCancelled == true { throw CancellationError() }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
@@ -16,13 +27,31 @@ public enum ProcessRunner {
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
         try process.run()
-        let watchdog = DispatchWorkItem {
-            if process.isRunning { process.terminate() }
+        let deadline = Date().addingTimeInterval(timeout)
+        let watchdog = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "local.hansearch.process-watchdog"))
+        watchdog.schedule(deadline: .now(), repeating: .milliseconds(100))
+        watchdog.setEventHandler {
+            guard process.isRunning, Date() >= deadline || cancellation?.isCancelled == true else { return }
+            // osascript can remain inside an Apple event after SIGTERM. Ensure the pipe eventually closes.
+            kill(process.processIdentifier, SIGKILL)
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: watchdog)
-        let data = output.fileHandleForReading.readDataToEndOfFile()
+        watchdog.resume()
+        defer { watchdog.cancel(); try? output.fileHandleForReading.close() }
+        var data = Data(), pending = Data()
+        while true {
+            let chunk = output.fileHandleForReading.availableData
+            if chunk.isEmpty { break }
+            data.append(chunk)
+            if let onLine {
+                pending.append(chunk)
+                while let newline = pending.firstIndex(of: 10) {
+                    onLine(Data(pending[..<newline])); pending.removeSubrange(...newline)
+                }
+            }
+        }
+        if let onLine, !pending.isEmpty { onLine(pending) }
         process.waitUntilExit()
-        watchdog.cancel()
+        if cancellation?.isCancelled == true { throw CancellationError() }
         guard process.terminationStatus == 0 else {
             throw ProcessFailure.failed("搜尋或文件讀取未完成（可能逾時或無法讀取）。")
         }

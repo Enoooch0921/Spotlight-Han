@@ -11,7 +11,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 [![macOS checks](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml/badge.svg)](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[開發預覽與下載](https://github.com/Enoooch0921/Spotlight-Han/releases) · [開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## 明明就在電腦裡，為什麼搜不到？
 
@@ -56,11 +56,11 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 ## 開始使用
 
-**目前為 0.5.2 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
+**目前為 0.5.3 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
-目前 GitHub 提供原始碼建置，尚未提供 Developer ID 簽章、公證的可下載安裝包。
+**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 預覽包檔名為 `Spotlight-Han-0.5.3-macOS-arm64.zip`，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
 
-需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
+若要自行從原始碼建置，需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
 
 ```sh
 git clone https://github.com/Enoooch0921/Spotlight-Han.git

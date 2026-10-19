@@ -10,25 +10,70 @@ struct PersonalLoad: Sendable {
 }
 
 enum PersonalSources {
+    static func isAuthorized(_ source: SearchMode) -> Bool {
+        switch source {
+        case .contacts:
+            let status = CNContactStore.authorizationStatus(for: .contacts)
+            return status == .authorized || status.rawValue == 4
+        case .calendar: return EKEventStore.authorizationStatus(for: .event) == .fullAccess
+        case .reminders: return EKEventStore.authorizationStatus(for: .reminder) == .fullAccess
+        case .notes, .mail:
+            let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
+            return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
+        default: return true
+        }
+    }
+
+    @MainActor static func authorize(_ source: SearchMode) async throws {
+        if isAuthorized(source) { return }
+        let granted: Bool
+        switch source {
+        case .contacts:
+            let store = CNContactStore()
+            granted = try await TimedCallback.wait(timeout: 120) { reply in
+                store.requestAccess(for: .contacts) { allowed, error in
+                    if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
+                }
+            }
+        case .calendar:
+            let store = EKEventStore()
+            granted = try await TimedCallback.wait(timeout: 120) { reply in
+                store.requestFullAccessToEvents { allowed, error in
+                    if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
+                }
+            }
+        case .reminders:
+            let store = EKEventStore()
+            granted = try await TimedCallback.wait(timeout: 120) { reply in
+                store.requestFullAccessToReminders { allowed, error in
+                    if let error { reply(.failure(error)) } else { reply(.success(allowed)) }
+                }
+            }
+        default: return // Notes and Mail present their own Apple event authorization during the read.
+        }
+        guard granted else { throw ProcessFailure.failed("\(source.rawValue)未授權，可在系統設定的隱私權中調整。") }
+    }
+
     static func contacts() async throws -> PersonalLoad {
+        guard isAuthorized(.contacts) else { throw ProcessFailure.failed("聯絡人尚未授權，請按連接。") }
         let store = CNContactStore()
-        let granted = try await store.requestAccess(for: .contacts)
-        guard granted else { throw ProcessFailure.failed("聯絡人未授權，可在系統設定的隱私權中調整。") }
         let keys: [CNKeyDescriptor] = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactEmailAddressesKey as CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
         var records: [PersonalRecord] = []
-        try store.enumerateContacts(with: request) { contact, _ in
+        try store.enumerateContacts(with: request) { contact, stop in
+            if Task.isCancelled { stop.pointee = true; return }
             let name = CNContactFormatter.string(from: contact, style: .fullName) ?? "未命名聯絡人"
             let details = contact.phoneNumbers.map { $0.value.stringValue } + contact.emailAddresses.map { String($0.value) }
             let text = ([name] + details).joined(separator: "\n")
             records.append(PersonalRecord(id: "contact:" + contact.identifier, title: name, subtitle: details.first ?? "聯絡人", text: text, symbol: "person.crop.circle", mode: .contacts, action: .details(text)))
         }
+        try Task.checkCancellation()
         return PersonalLoad(records: records, status: "已連接 \(records.count) 位聯絡人")
     }
 
     static func calendar() async throws -> PersonalLoad {
+        guard isAuthorized(.calendar) else { throw ProcessFailure.failed("行事曆尚未授權，請按連接。") }
         let store = EKEventStore()
-        guard try await store.requestFullAccessToEvents() else { throw ProcessFailure.failed("行事曆未授權。") }
         let calendar = Calendar.current, now = Date()
         let start = calendar.date(byAdding: .year, value: -1, to: now)!
         let end = calendar.date(byAdding: .year, value: 1, to: now)!
@@ -44,11 +89,11 @@ enum PersonalSources {
     }
 
     static func reminders() async throws -> PersonalLoad {
+        guard isAuthorized(.reminders) else { throw ProcessFailure.failed("提醒事項尚未授權，請按連接。") }
         let store = EKEventStore()
-        guard try await store.requestFullAccessToReminders() else { throw ProcessFailure.failed("提醒事項未授權。") }
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: nil)
-        let reminders: [EKReminder] = await withCheckedContinuation { continuation in
-            store.fetchReminders(matching: predicate) { continuation.resume(returning: $0 ?? []) }
+        let reminders: [EKReminder] = try await TimedCallback.wait(timeout: 45) { reply in
+            store.fetchReminders(matching: predicate) { reply(.success($0 ?? [])) }
         }
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
         let records = reminders.prefix(10000).map { reminder -> PersonalRecord in
@@ -63,33 +108,68 @@ enum PersonalSources {
     private struct RawItem: Decodable { let id: String; let title: String; let text: String; let detail: String }
     private struct RawLoad: Decodable { let items: [RawItem]; let skipped: Int; let capped: Bool }
 
-    static func notes() throws -> PersonalLoad {
+    private struct NoteEvent: Decodable {
+        let kind: String
+        let total: Int?
+        let capped: Bool?
+        let item: RawItem?
+        let truncated: Bool?
+    }
+
+    static func notes(cancellation: ProcessCancellation, progress: @escaping @Sendable (PersonalLoad) -> Void) throws -> PersonalLoad {
         // These are read-only Apple events. Password-protected notes are deliberately skipped.
         let script = #"""
         function run() {
-            const app = Application('Notes'), all = app.notes(), items = [];
-            let skipped = 0, bytes = 0, capped = all.length > 2000;
+            ObjC.import('Foundation');
+            function emit(value) {
+                $.NSFileHandle.fileHandleWithStandardOutput.writeData($(JSON.stringify(value)+'\n').dataUsingEncoding($.NSUTF8StringEncoding));
+            }
+            const app = Application('Notes'), all = app.notes();
+            let bytes = 0, capped = all.length > 2000;
+            emit({kind:'start', total:Math.min(all.length,2000), capped:capped});
             for (let i = 0; i < Math.min(all.length, 2000); i++) {
                 try {
                     const n = all[i];
-                    if (n.passwordProtected()) { skipped++; continue; }
+                    if (n.passwordProtected()) { emit({kind:'skip'}); continue; }
                     const title = n.name(), id = n.id();
                     let text = n.plaintext();
-                    if (text.length > 100000 || bytes + text.length > 16000000) { text = ''; skipped++; }
+                    const truncated = text.length > 100000 || bytes + text.length > 16000000;
+                    if (truncated) { text = ''; }
                     bytes += text.length;
-                    items.push({id:id, title:title, text:text, detail:'備忘錄'});
-                } catch (e) { skipped++; }
+                    emit({kind:'note', item:{id:id, title:title, text:text, detail:'備忘錄'}, truncated:truncated});
+                } catch (e) { emit({kind:'skip'}); }
             }
-            return JSON.stringify({items:items, skipped:skipped, capped:capped});
+            return '';
         }
         """#
-        let data = try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], timeout: 90)
-        let load = try JSONDecoder().decode(RawLoad.self, from: data)
-        let records = load.items.map { PersonalRecord(id: "note:" + $0.id, title: $0.title, subtitle: String($0.text.replacingOccurrences(of: "\n", with: " ").prefix(100)), text: $0.text, symbol: "note.text", mode: .notes, action: .note($0.id)) }
-        return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄" + (load.skipped > 0 ? "；\(load.skipped) 則受保護或無法完整讀取" : "") + (load.capped ? "（2,000 則上限）" : ""))
+        var records: [PersonalRecord] = [], total = 0, processed = 0, skipped = 0, capped = false, receivedHeader = false
+        let decoder = JSONDecoder()
+        do {
+            _ = try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], timeout: 90, cancellation: cancellation) { line in
+                guard let event = try? decoder.decode(NoteEvent.self, from: line) else { return }
+                if event.kind == "start" { total = event.total ?? 0; capped = event.capped ?? false; receivedHeader = true }
+                else {
+                    processed += 1
+                    if let item = event.item {
+                        records.append(PersonalRecord(id: "note:" + item.id, title: item.title, subtitle: String(item.text.replacingOccurrences(of: "\n", with: " ").prefix(100)), text: item.text, symbol: "note.text", mode: .notes, action: .note(item.id)))
+                        if event.truncated == true { skipped += 1 }
+                    } else { skipped += 1 }
+                }
+                if processed <= 1 || processed % 10 == 0 || processed == total {
+                    progress(PersonalLoad(records: records, status: "正在讀取備忘錄 \(processed)/\(total)；已載入 \(records.count) 則，可先搜尋"))
+                }
+            }
+        } catch is CancellationError { throw CancellationError() }
+        catch {
+            guard isAuthorized(.notes) else { throw ProcessFailure.failed("備忘錄尚未授權，請在系統設定 → 隱私權與安全性 → 自動化中檢查 Han 對備忘錄的存取。") }
+            guard !records.isEmpty else { throw ProcessFailure.failed("備忘錄讀取逾時或未完成。備忘錄資料多、iCloud 同步或系統等待授權時可能較久；請稍後重試。") }
+            return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄（部分讀取；可按重新讀取）")
+        }
+        guard receivedHeader else { throw ProcessFailure.failed("備忘錄未回傳有效的讀取狀態，請稍後重試。") }
+        return PersonalLoad(records: records, status: "已連接 \(records.count) 則備忘錄" + (skipped > 0 ? "；\(skipped) 則受保護或無法完整讀取" : "") + (capped ? "（2,000 則上限）" : ""))
     }
 
-    static func mail() throws -> PersonalLoad {
+    static func mail(cancellation: ProcessCancellation) throws -> PersonalLoad {
         let script = #"""
         function run() {
             const app = Application('Mail'), all = app.inbox.messages(), items = [];
@@ -103,7 +183,7 @@ enum PersonalSources {
             return JSON.stringify({items:items, skipped:skipped, capped:all.length > 200});
         }
         """#
-        let data = try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], timeout: 90)
+        let data = try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], timeout: 90, cancellation: cancellation)
         let load = try JSONDecoder().decode(RawLoad.self, from: data)
         let records = load.items.map { item -> PersonalRecord in
             let id = "<" + item.id.trimmingCharacters(in: CharacterSet(charactersIn: "<>")) + ">"

@@ -3,18 +3,21 @@ set -euo pipefail
 MODE="${1:-run}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$ROOT_DIR"
-APP_BUNDLE="$ROOT_DIR/outputs/Spotlight Han.app"
+APP_BUNDLE="${HANSEARCH_APP_BUNDLE:-$ROOT_DIR/outputs/Spotlight Han.app}"
+BUILD_CONFIGURATION="${HANSEARCH_BUILD_CONFIGURATION:-debug}"
 APP_NAME="HanSearch"
 
 case "$MODE" in run|--verify|--debug|--logs|--telemetry|--build-only) ;; *) echo "Usage: $0 [run|--verify|--debug|--logs|--telemetry|--build-only]" >&2; exit 2 ;; esac
+case "$BUILD_CONFIGURATION" in debug|release) ;; *) echo "Build configuration must be debug or release" >&2; exit 2 ;; esac
 if [[ "$MODE" != "--build-only" ]]; then pkill -x "$APP_NAME" >/dev/null 2>&1 || true; fi
-swift build --package-path "$PACKAGE_DIR"
-BUILD_DIR="$(swift build --package-path "$PACKAGE_DIR" --show-bin-path)"
+swift build --package-path "$PACKAGE_DIR" --configuration "$BUILD_CONFIGURATION"
+BUILD_DIR="$(swift build --package-path "$PACKAGE_DIR" --configuration "$BUILD_CONFIGURATION" --show-bin-path)"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 if [[ -f "$ROOT_DIR/Assets/SpotlightHan.icns" ]]; then cp "$ROOT_DIR/Assets/SpotlightHan.icns" "$APP_BUNDLE/Contents/Resources/SpotlightHan.icns"; fi
 cp "$ROOT_DIR/Assets/Shortcuts/Spotlight-Han-System-Clock.shortcut" "$APP_BUNDLE/Contents/Resources/"
+cp "$ROOT_DIR/LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE"
 cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -25,8 +28,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>Spotlight Han</string>
 <key>CFBundleIconFile</key><string>SpotlightHan.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.5.2</string>
-<key>CFBundleVersion</key><string>7</string>
+<key>CFBundleShortVersionString</key><string>0.5.3</string>
+<key>CFBundleVersion</key><string>8</string>
 <key>NSContactsUsageDescription</key><string>在本機搜尋你允許取用的聯絡人，不會上傳。</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>搜尋行事曆，並依你確認的指令新增行程。</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>搜尋提醒事項，並依你確認的指令新增提醒。</string>
@@ -37,6 +40,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+if [[ "$BUILD_CONFIGURATION" == "release" ]]; then
+  /usr/bin/strip -S "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+fi
 /usr/bin/codesign --force --sign "${CODE_SIGN_IDENTITY:--}" "$APP_BUNDLE"
 case "$MODE" in
   --build-only) ;;

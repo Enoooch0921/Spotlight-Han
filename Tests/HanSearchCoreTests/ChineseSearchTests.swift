@@ -9,7 +9,7 @@ private func XCTAssertEqual<T: Equatable>(_ lhs: T, _ rhs: T) { precondition(lhs
 
 @main
 struct CheckRunner {
-    static func main() throws {
+    static func main() async throws {
         if CommandLine.arguments.contains("--benchmark") {
             guard let cache = FileCatalog.load() else { print("No filename cache yet. Open HanSearch and allow its scan to finish."); return }
             var durations: [Double] = []
@@ -38,11 +38,80 @@ struct CheckRunner {
         tests.testCurrencyQueries()
         try tests.testShortcutBindings()
         tests.testLauncherVisibilityAfterSwitchingApps()
-        print("PASS: 15 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps.")
+        tests.testSourceConnectionQueue()
+        try await tests.testBoundedSystemCallbacks()
+        try tests.testCancellableStreamingProcesses()
+        print("PASS: 18 check groups — Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation.")
     }
 }
 
 final class ChineseSearchTests {
+    func testSourceConnectionQueue() {
+        var queue = SourceConnectionQueue()
+        XCTAssertTrue(queue.enqueue(.notes, allowPrompt: false))
+        XCTAssertTrue(queue.enqueue(.contacts, allowPrompt: false))
+        XCTAssertFalse(queue.enqueue(.contacts, allowPrompt: true))
+        XCTAssertEqual(queue.next()?.source, .notes)
+        XCTAssertNil(queue.next())
+        XCTAssertFalse(queue.enqueue(.notes, allowPrompt: true))
+        queue.finish()
+        let contacts = queue.next()
+        XCTAssertEqual(contacts?.source, .contacts)
+        XCTAssertEqual(contacts?.allowPrompt, true)
+        queue.enqueue(.reminders, allowPrompt: true)
+        XCTAssertEqual(queue.discardPending().map(\.source), [.reminders])
+        XCTAssertEqual(queue.active?.source, .contacts)
+        XCTAssertNil(queue.next())
+        queue.enqueue(.reminders, allowPrompt: true)
+        queue.cancelAll()
+        XCTAssertNil(queue.active); XCTAssertTrue(queue.pending.isEmpty); XCTAssertNil(queue.next())
+        queue.enqueue(.calendar, allowPrompt: true)
+        XCTAssertEqual(queue.next()?.source, .calendar)
+    }
+
+    @MainActor func testBoundedSystemCallbacks() async throws {
+        let result: Int = try await TimedCallback.wait(timeout: 1) { reply in
+            reply(.success(7)); reply(.success(9))
+        }
+        XCTAssertEqual(result, 7)
+        let start = Date()
+        do {
+            let _: Int = try await TimedCallback.wait(timeout: 0.03) { reply in
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.08) { reply(.success(99)) }
+            }
+            preconditionFailure("Missing callback should time out")
+        } catch CallbackFailure.timedOut { }
+        XCTAssertTrue(Date().timeIntervalSince(start) < 2)
+        let pending = Task { @MainActor in
+            try await TimedCallback.wait(timeout: 5) { (_: @escaping @Sendable (Result<Int, Error>) -> Void) in }
+        }
+        await Task.yield(); pending.cancel()
+        do { _ = try await pending.value; preconditionFailure("Cancelled callback should stop") }
+        catch is CancellationError { }
+        // Allow the deliberately late callback to arrive and prove it cannot resume twice.
+        try await Task.sleep(for: .milliseconds(100))
+    }
+
+    func testCancellableStreamingProcesses() throws {
+        var lines: [String] = []
+        let bytes = try ProcessRunner.run("/bin/sh", ["-c", "printf 'one\\ntwo\\nlast'"]) { lines.append(String(decoding: $0, as: UTF8.self)) }
+        XCTAssertEqual(lines, ["one", "two", "last"])
+        XCTAssertEqual(String(decoding: bytes, as: UTF8.self), "one\ntwo\nlast")
+        let start = Date()
+        do {
+            _ = try ProcessRunner.run("/bin/sh", ["-c", "trap '' TERM; exec /bin/sleep 30"], timeout: 0.15)
+            preconditionFailure("An unresponsive child should time out")
+        } catch is ProcessFailure { }
+        XCTAssertTrue(Date().timeIntervalSince(start) < 3)
+        let cancellation = ProcessCancellation()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) { cancellation.cancel() }
+        do {
+            _ = try ProcessRunner.run("/bin/sleep", ["30"], timeout: 10, cancellation: cancellation)
+            preconditionFailure("Cancelled child should stop")
+        } catch is CancellationError { }
+        XCTAssertTrue(Date().timeIntervalSince(start) < 3)
+    }
+
     func testAppAndFilenameAcrossScripts() {
         XCTAssertTrue(ChineseSearch.matches("红果短剧", query: "紅果短劇"))
         XCTAssertTrue(ChineseSearch.matches("教會活動紀錄.docx", query: "教会 活动"))

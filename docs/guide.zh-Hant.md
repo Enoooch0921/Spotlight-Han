@@ -2,7 +2,7 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：0.5.2，開發預覽。
+目前版本：0.5.3，開發預覽。
 
 ## 功能
 
@@ -52,6 +52,10 @@
 
 在設定中按 **「一次設定所有資料來源」**，會依序連接備忘錄、聯絡人、行事曆、提醒事項、郵件、捷徑與系統時鐘。成功啟用的來源會記住，之後啟動會自動讀取，不需要每次逐個連接。
 
+啟動自動讀取、單一來源連接與集中設定共用同一個佇列，同一時間只處理一個來源。啟動時若發現權限不足，會提示手動重新連接，避免自動重複跳出授權視窗。聯絡人、行事曆與提醒事項的授權請求在主執行緒發起，資料讀取則在背景處理；等待系統授權最多兩分鐘，逾時會結束等待並顯示原因。
+
+備忘錄首次讀取可能需要時間，尤其是資料多、iCloud 正在同步或 Notes 忙碌時。畫面顯示讀取數量，每批載入後即可先搜尋；90 秒內未完成會保留已讀結果並標示部分讀取。可按 **「停止連接」** 清除剩餘佇列並停止備忘錄／郵件的讀取程序，已載入內容仍可搜尋。這個按鈕不能代替使用者選擇或關閉 macOS 的授權對話框。
+
 macOS 的 Contacts、Calendars、Automation 是不同權限；系統仍可能分別請你確認。完整磁碟存取也不能取代這些權限，App 沒有一個可略過它們的總開關。[Apple 權限說明](https://support.apple.com/en-au/guide/mac-help/mchl211c911f/mac)
 
 目前本機建置預設是 ad hoc 簽章，重新編譯後程式的代碼身份可能改變，系統可能重新詢問權限。正式版本應使用穩定的 Apple Development／Developer ID 簽章；可透過 `CODE_SIGN_IDENTITY` 指定已有的簽章身份。腳本不會建立憑證、改寫系統授權資料庫或關閉系統保護。
@@ -90,16 +94,27 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
+公開預覽安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。0.5.3 的打包目標為 Apple Silicon ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+
+```sh
+./script/package_release.sh
+```
+
+打包腳本使用 Release 組態，建立獨立暫存 App、驗證簽章，將 ZIP、安裝說明與 SHA-256 校驗檔輸出至 `outputs/releases/`。不會重啟或覆蓋正在使用的本機 App。`HANSEARCH_BUILD_CONFIGURATION` 與 `HANSEARCH_APP_BUNDLE` 可供建置腳本指定組態及輸出路徑。腳本不會自動公證；即使指定 Developer ID 身分，仍須另外完成 hardened runtime、相關 entitlement 檢查與公證。
+
 ```sh
 swift run HanSearchChecks
 swift run HanSearchChecks --benchmark
 python3 script/verify_clock_shortcut.py
+python3 script/check_notes_stream.py
 mkdir -p work
 swiftc -parse-as-library Sources/HanSearch/Services/FileAccessBookmarks.swift script/check_folder_bookmarks.swift -o work/BookmarkChecks
 work/BookmarkChecks
 ```
 
 使用獨立檢查程式，能在沒有 XCTest 的 Command Line Tools 環境執行。涵蓋真實 DOCX 擷取、檔名索引、繁簡比對、算式安全、單位換算與查詢跳脫。`--benchmark` 使用本機現有檔名快取，僅印數量與比對時間，不印私人路徑或檔名。
+
+目前共 18 組核心檢查，包含來源佇列排隊／去重／取消、系統回呼逾時／取消／延遲回覆，以及讀取程序的串流與強制逾時。備忘錄另以假的 Notes 橋接測試實際使用的 JXA 腳本，驗證分批輸出、Unicode、受保護項目跳過與文字容量上限；不會讀取私人備忘錄，也不能取代真實系統授權視窗的互動驗收。
 
 ## 搜尋範圍與更新
 

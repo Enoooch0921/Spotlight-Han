@@ -42,6 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
+        store.prepareSystemAuthorization = { [weak self] in
+            self?.hideSearch(animated: false)
+            NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
+            if let window = NSApp.windows.first(where: { $0.isVisible && $0 !== self?.panel && $0.canBecomeMain }) {
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
         store.prepareTranslation = { [weak self] source in
             guard let self else { return }
             if #available(macOS 15.0, *) {
@@ -110,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let data = try? JSONEncoder().encode(binding) { UserDefaults.standard.set(data, forKey: "shortcutBinding.v1") }
     }
     func toggleSearch() {
-        guard NSApp.modalWindow == nil, translationWindow?.attachedSheet == nil else { return }
+        guard !store.authorizationInFlight, NSApp.modalWindow == nil, translationWindow?.attachedSheet == nil else { return }
         // Carbon and a local monitor can observe the same physical press. Ignore only that tiny duplicate window.
         guard Date().timeIntervalSince(lastToggle) > 0.04 else { return }
         lastToggle = Date()
@@ -133,7 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     func showSearch() {
-        guard let panel, NSApp.modalWindow == nil else { return }
+        guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
         fadeGeneration += 1
         let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden
         // Resize offscreen on entry; later structural expansions retarget the native window animation.

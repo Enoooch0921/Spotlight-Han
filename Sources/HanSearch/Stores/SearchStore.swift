@@ -41,6 +41,7 @@ final class SearchStore: ObservableObject {
     @Published var milliseconds: Double = 0
     @Published var personalStatus: [SearchMode: String] = [:]
     @Published var connecting = Set<SearchMode>()
+    @Published var authorizationInFlight = false
     @Published var setupRunning = false
     @Published var setupStatus = ""
     @Published var details: String? { didSet { onLayoutChanged?() } }
@@ -49,6 +50,11 @@ final class SearchStore: ObservableObject {
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
+    var prepareSystemAuthorization: (() -> Void)?
+    private var sourceQueue = SourceConnectionQueue()
+    private var sourceTask: Task<Void, Never>?
+    private var connectionGeneration = UUID()
+    private var sourceReading = false
     private let fileAccess = FileAccessBookmarks()
     private var documents: [IndexedDocument] = []
     private var entries: [CatalogEntry] = []
@@ -74,8 +80,9 @@ final class SearchStore: ObservableObject {
         }
         Task {
             await loadCatalog()
-            for raw in UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [] {
-                if let source = SearchMode(rawValue: raw) { await loadSource(source) }
+            let enabled = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+            for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
+                if enabled.contains(source.rawValue) { enqueueSource(source, allowPrompt: false) }
             }
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
@@ -252,7 +259,7 @@ final class SearchStore: ObservableObject {
     }
     func resetScope() { guard !indexing else { return }; folder = nil; documents = []; indexNotice = ""; search() }
     func connect(_ source: SearchMode) {
-        Task { await loadSource(source) }
+        enqueueSource(source, allowPrompt: true)
     }
     func beginClockSetup() {
         clockSetupPending = true
@@ -263,57 +270,128 @@ final class SearchStore: ObservableObject {
         guard clockSetupPending, !connecting.contains(.alarms) else { return }
         Task {
             if (try? await Task.detached { try SystemClockService.isConnected() }.value) == true {
-                await loadSource(.alarms)
+                connect(.alarms)
             }
         }
     }
     func setupAllSources() {
         guard !setupRunning else { return }
         setupRunning = true
-        Task {
-            let sources: [SearchMode] = [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .alarms]
-            for (index, source) in sources.enumerated() {
-                setupStatus = "\(index + 1)/\(sources.count) · \(source.rawValue)"
-                if personalStatus[source]?.hasPrefix("已連接") != true { await loadSource(source) }
-            }
-            let successful = sources.filter { personalStatus[$0]?.hasPrefix("已連接") == true }.count
-            setupStatus = "已連接 \(successful)/\(sources.count) 個來源；已啟用的來源會在下次啟動自動連接"
-            setupRunning = false
+        // Request the short native permissions before potentially slow Notes/Mail indexing.
+        for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
+            if personalStatus[source]?.hasPrefix("已連接") != true { enqueueSource(source, allowPrompt: true) }
+        }
+        finishSetupIfIdle()
+    }
+    private func enqueueSource(_ source: SearchMode, allowPrompt: Bool) {
+        if sourceQueue.enqueue(source, allowPrompt: allowPrompt) {
+            connecting.insert(source); personalStatus[source] = "等待前一個來源完成…"
+        }
+        startNextSource()
+    }
+    private func startNextSource() {
+        guard sourceTask == nil, let request = sourceQueue.next() else { return }
+        connectionGeneration = UUID()
+        let token = connectionGeneration
+        sourceTask = Task {
+            await loadSource(request.source, allowPrompt: request.allowPrompt, token: token)
+            guard token == connectionGeneration else { return }
+            connecting.remove(request.source); sourceQueue.finish(); sourceTask = nil
+            startNextSource(); finishSetupIfIdle()
         }
     }
-    private func loadSource(_ source: SearchMode) async {
-        guard !connecting.contains(source) else { return }
-        connecting.insert(source); personalStatus[source] = "正在連接，請留意系統授權視窗…"
-            do {
-                let loaded: PersonalLoad
-                if source == .alarms {
-                    let connected = try await Task.detached { try SystemClockService.isConnected() }.value
-                    guard connected else {
-                        beginClockSetup()
-                        personalStatus[source] = "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。"
-                        connecting.remove(source); return
-                    }
-                    clockSetupPending = false
-                    loaded = PersonalLoad(records: [], status: "已連接 Apple 系統時鐘")
-                }
-                else { loaded = try await Task.detached(priority: .utility) { () async throws -> PersonalLoad in
-                    switch source {
-                    case .contacts: return try await PersonalSources.contacts()
-                    case .calendar: return try await PersonalSources.calendar()
-                    case .reminders: return try await PersonalSources.reminders()
-                    case .notes: return try PersonalSources.notes()
-                    case .mail: return try PersonalSources.mail()
-                    case .shortcuts: return try PersonalSources.shortcuts()
-                    default: throw ProcessFailure.failed("此來源不支援連接。")
-                    }
-                }.value }
-                personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
-                var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
-                remembered.insert(source.rawValue)
-                UserDefaults.standard.set(remembered.sorted(), forKey: "enabledSources.v1")
-            } catch { personalStatus[source] = "連接失敗：" + error.localizedDescription + " 可檢查系統設定 → 隱私權與安全性。" }
-            connecting.remove(source); search()
+    private func finishSetupIfIdle() {
+        guard setupRunning, sourceTask == nil, sourceQueue.pending.isEmpty else { return }
+        let successful = personalStatus.values.filter { $0.hasPrefix("已連接") }.count
+        setupStatus = "已連接 \(successful)/7 個來源；已啟用的來源會在下次啟動自動連接"
+        setupRunning = false
     }
+    func cancelConnections() {
+        connectionGeneration = UUID(); sourceTask?.cancel(); sourceTask = nil
+        sourceQueue.cancelAll()
+        sourceReading = false
+        for source in connecting { personalStatus[source] = "已停止連接；已載入的結果仍可搜尋。系統授權視窗若仍開著，請自行處理或關閉。" }
+        connecting.removeAll(); setupRunning = false; authorizationInFlight = false
+        setupStatus = "已停止，可稍後逐一重新連接。"; search()
+    }
+    private func loadSource(_ source: SearchMode, allowPrompt: Bool, token: UUID) async {
+        personalStatus[source] = "正在檢查授權…"
+        if setupRunning { setupStatus = "正在連接\(source.rawValue)；可隨時停止" }
+        let cancellation = ProcessCancellation()
+        defer { if token == connectionGeneration { authorizationInFlight = false; sourceReading = false } }
+        do {
+            if !PersonalSources.isAuthorized(source) {
+                guard allowPrompt else {
+                    personalStatus[source] = "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。"; return
+                }
+                authorizationInFlight = true; prepareSystemAuthorization?()
+                personalStatus[source] = "等待系統授權；請在系統視窗選擇允許或不允許…"
+                await Task.yield()
+                try await PersonalSources.authorize(source)
+            }
+            try Task.checkCancellation()
+            sourceReading = true
+            if source != .notes && source != .mail { authorizationInFlight = false }
+            personalStatus[source] = "正在讀取\(source.rawValue)…"
+            let loaded: PersonalLoad
+            if source == .alarms {
+                let connected = try await Task.detached { try SystemClockService.isConnected() }.value
+                guard connected else {
+                    guard allowPrompt else { personalStatus[source] = "系統時鐘捷徑尚未連接，請按「檢查連接」。"; return }
+                    beginClockSetup()
+                    personalStatus[source] = "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。"
+                    return
+                }
+                clockSetupPending = false
+                loaded = PersonalLoad(records: [], status: "已連接 Apple 系統時鐘")
+            }
+            else {
+                let worker = Task.detached(priority: .utility) { () async throws -> PersonalLoad in
+                switch source {
+                case .contacts: return try await PersonalSources.contacts()
+                case .calendar: return try await PersonalSources.calendar()
+                case .reminders: return try await PersonalSources.reminders()
+                case .notes: return try PersonalSources.notes(cancellation: cancellation) { [weak self] update in
+                    Task { @MainActor in
+                        guard let self, token == self.connectionGeneration, self.sourceReading, self.sourceQueue.active?.source == .notes else { return }
+                        self.authorizationInFlight = false
+                        if !update.records.isEmpty {
+                            self.personal.removeAll { $0.mode == .notes }; self.personal += update.records
+                        }
+                        self.personalStatus[.notes] = update.status; self.search()
+                    }
+                }
+                case .mail: return try PersonalSources.mail(cancellation: cancellation)
+                case .shortcuts: return try PersonalSources.shortcuts()
+                default: throw ProcessFailure.failed("此來源不支援連接。")
+                }
+                }
+                loaded = try await withTaskCancellationHandler {
+                    try await worker.value
+                } onCancel: { cancellation.cancel(); worker.cancel() }
+            }
+            try Task.checkCancellation()
+            guard token == connectionGeneration else { return }
+            personal.removeAll { $0.mode == source }; personal += loaded.records; personalStatus[source] = loaded.status
+            var remembered = Set(UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? [])
+            remembered.insert(source.rawValue)
+            UserDefaults.standard.set(remembered.sorted(), forKey: "enabledSources.v1")
+        } catch is CancellationError { return }
+        catch {
+            guard token == connectionGeneration else { return }
+            if authorizationInFlight {
+                for request in sourceQueue.discardPending() {
+                    connecting.remove(request.source)
+                    personalStatus[request.source] = "已暫停排隊，請先處理前一個來源的授權，再重新連接。"
+                }
+                setupRunning = false
+                setupStatus = "授權未完成，已停止後續連接，避免繼續疊加系統提示。"
+            }
+            personalStatus[source] = "連接失敗：" + error.localizedDescription + " 可檢查系統設定 → 隱私權與安全性。"
+        }
+        if token == connectionGeneration { search() }
+    }
+
     func disconnect(_ source: SearchMode) {
         personal.removeAll { $0.mode == source }; personalStatus[source] = nil
         let remembered = (UserDefaults.standard.stringArray(forKey: "enabledSources.v1") ?? []).filter { $0 != source.rawValue }

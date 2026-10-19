@@ -61,8 +61,9 @@ struct SettingsView: View {
                 HStack {
                     Button("一次設定所有資料來源") { store.setupAllSources() }.disabled(store.setupRunning || !store.connecting.isEmpty)
                     if store.setupRunning { ProgressView().controlSize(.small) }
+                    if !store.connecting.isEmpty { Button("停止連接") { store.cancelConnections() } }
                 }
-                Text(store.setupStatus.isEmpty ? "集中連接備忘錄、聯絡人、行事曆、提醒事項、郵件、捷徑與系統時鐘。macOS 仍可能分別詢問授權；成功後會記住，之後自動連接。" : store.setupStatus)
+                Text(store.setupStatus.isEmpty ? "所有連接依序處理，避免同時跳出多個授權視窗。備忘錄分批載入並顯示進度；可按停止，已載入內容仍可搜尋。成功後會記住，之後自動讀取已授權的來源。" : store.setupStatus)
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(sources, id: \.self) { source in
                     VStack(alignment: .leading, spacing: 5) {
@@ -117,7 +118,7 @@ struct SettingsView: View {
                 }
             }
             Section("關於") {
-                Text("Spotlight Han 0.5.1 · 繁簡中文搜尋")
+                Text("Spotlight Han \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "開發版") · 繁簡中文搜尋")
                 Text("依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。")
                     .font(.caption).foregroundStyle(.secondary)
             }
