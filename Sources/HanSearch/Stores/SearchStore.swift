@@ -92,6 +92,10 @@ final class SearchStore: ObservableObject {
     private var habitsObservation: AnyCancellable?
     private var aliasesObservation: AnyCancellable?
     let appUpdater = AppUpdateService()
+    let onboarding: OnboardingProgress
+    var showOnboarding: (() -> Void)?
+    @Published var settingsPage: SettingsPage = .general
+    var onboardingPresented = false
     @Published var interfaceLanguage = L.language {
         didSet { UserDefaults.standard.set(interfaceLanguage.rawValue, forKey: "interfaceLanguage.v1") }
     }
@@ -215,6 +219,7 @@ final class SearchStore: ObservableObject {
         self.fileCreationDateLoader = fileCreationDateLoader
         self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
+        self.onboarding = OnboardingProgress(defaults: taskPreferences)
         self.aliases = SearchAliasStore(defaults: taskPreferences)
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
         self.taskWriter = taskWriter

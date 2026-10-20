@@ -1,29 +1,5 @@
 import SwiftUI
 
-private enum SettingsPage: String, CaseIterable, Identifiable {
-    case general, search, files, sources, tools, about
-    var id: Self { self }
-    var title: String {
-        switch self {
-        case .general: return "一般"
-        case .search: return "搜尋與快捷鍵"
-        case .files: return "檔案與索引"
-        case .sources: return "資料來源"
-        case .tools: return "翻譯與工具"
-        case .about: return "更新與關於"
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .general: return "gearshape"
-        case .search: return "magnifyingglass"
-        case .files: return "folder"
-        case .sources: return "square.stack.3d.up"
-        case .tools: return "character.bubble"
-        case .about: return "info.circle"
-        }
-    }
-}
 
 struct SettingsView: View {
     @ObservedObject var store: SearchStore
@@ -63,7 +39,13 @@ struct SettingsView: View {
         }
         .environment(\.locale, store.interfaceLanguage.locale)
         .id(store.interfaceLanguage.rawValue)
-        .onAppear { store.settingsPresented = true; store.settingsVisibilityChanged?(true); store.reconcileSourcePermissions() }
-        .onDisappear { store.settingsPresented = false; store.settingsVisibilityChanged?(store.helpPresented) }
+        .onChange(of: page) { _, value in store.settingsPage = value ?? .general }
+        .onChange(of: store.settingsPage) { _, value in page = value }
+        .onAppear { page = store.settingsPage }
+        .background(AuxiliaryWindowLifecycle { visible in
+            store.settingsPresented = visible
+            store.settingsVisibilityChanged?(visible || store.helpPresented || store.onboardingPresented)
+            if visible { store.reconcileSourcePermissions() }
+        })
     }
 }

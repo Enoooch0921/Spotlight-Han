@@ -7,6 +7,7 @@ struct AboutSettingsView: View {
         Form {
             Section(L.text("軟體更新")) { AppUpdateSettingsView(updater: store.appUpdater) }
             Section(L.text("關於")) {
+                Button(L.text("重新查看新手引導…")) { store.showOnboarding?() }
                 HStack {
                     Link(L.text("GitHub 專案與原始碼"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han")!)
                     Link(L.text("回報問題"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han/issues")!)

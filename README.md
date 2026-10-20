@@ -82,6 +82,8 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 ## 開始使用
 
+首次開啟提供三步 App 內引導，協助設定快捷鍵、搜尋保留時間及文件範圍；可以略過，之後隨時重新查看。
+
 **目前為 0.8.3 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
 **[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 提供 `Spotlight-Han-0.8.3-macOS-arm64.dmg` 拖曳安裝與 ZIP 壓縮包，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。

@@ -29,8 +29,9 @@ private struct HanMenuView: View {
     var body: some View {
         Group {
             Button(L.text("開啟 Spotlight Han"), action: open)
-            SettingsLink { Text(L.text("設定與資料來源…")) }
+            SettingsEntryButton(store: store) { Text(L.text("設定與資料來源…")) }
             Button(L.text("使用說明…")) { openWindow(id: "usage-guide") }
+            Button(L.text("新手引導…")) { store.showOnboarding?() }
             AppUpdateMenu(updater: store.appUpdater)
             Link(L.text("GitHub 專案與原始碼"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han")!)
             Divider()
@@ -45,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkey = HotKey()
     private var panel: LauncherPanel?
     private var translationWindow: NSWindow?
+    private var onboardingWindow: OnboardingWindowController?
     private var keyMonitor: Any?
     private var lastToggle = Date.distantPast
     private var rejectedBinding: ShortcutBinding?
@@ -74,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             else { self.hideSearch() }
         }
         self.panel = panel
+        store.showOnboarding = { [weak self] in self?.showOnboarding() }
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
         store.showLauncher = { [weak self] in self?.showSearch(continuingFlow: true) }
@@ -116,14 +119,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let saved { rejectedBinding = saved; store.hotkeyError = HotKey.systemConflict(saved) ?? "原快捷鍵無法註冊，已使用預設快捷鍵。" }
         } else { store.hotkeyError = "快捷鍵被占用，請從選單列開啟並重新設定。" }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.panel?.isKeyWindow == true, self.hotkey.matches(event) else { return event }
+            guard let self, self.panel?.isKeyWindow == true else { return event }
+            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
+                self.hideSearch(animated: false)
+                NSApp.setActivationPolicy(.regular)
+                return event
+            }
+            guard self.hotkey.matches(event) else { return event }
             if !event.isARepeat { self.toggleSearch() }
             return nil
         }
         let launchEvent = NSAppleEventManager.shared().currentAppleEvent
         let loginLaunch = launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAELaunchedAsLogInItem))?.booleanValue == true ||
             launchEvent?.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem)
-        if !loginLaunch { showSearch() }
+        if !loginLaunch {
+            if store.onboarding.hasFinished { showSearch() } else { showOnboarding() }
+        }
         updateObservation = store.appUpdater.$available.combineLatest(store.appUpdater.$dismissedVersion).sink { [weak self] _ in
             DispatchQueue.main.async { self?.resizePanel() }
         }
@@ -136,6 +147,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.checkClockSetupOnReturn(); store.loginItem.refresh()
         if let rejectedBinding { setHotkey(rejectedBinding) }
         else if let binding = hotkey.binding { store.hotkeyError = HotKey.systemConflict(binding) ?? "" }
+    }
+    private func showOnboarding() {
+        hideSearch(animated: false)
+        if onboardingWindow == nil { onboardingWindow = OnboardingWindowController(store: store) }
+        onboardingWindow?.present { [weak self] in self?.showSearch() }
     }
     func applicationDidResignActive(_ notification: Notification) { hideSearch(animated: false) }
     private func command(_ key: String) -> Bool {
@@ -207,6 +223,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func showSearch(continuingFlow: Bool = false) {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
+        if !store.onboarding.hasFinished { showOnboarding(); return }
+        if store.onboardingPresented { onboardingWindow?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         store.prepareLauncherForOpening(continuingFlow: continuingFlow)
         fadeGeneration += 1
         let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden

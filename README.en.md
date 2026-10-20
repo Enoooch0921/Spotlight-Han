@@ -16,6 +16,8 @@ Han matches both Chinese scripts while keeping original filenames and text. File
 
 This is script matching, not synonym search: `影片` and `視頻` are not automatically treated as the same word.
 
+New users get an optional three-step in-app guide for shortcuts, search retention and document folders. Replay it from the menu or Updates & About.
+
 ## What it does
 
 - Launch apps and search filenames, videos, Word/PDF/PowerPoint/Excel/text content, with visible cross-script keyword highlights and hit-centred excerpts.

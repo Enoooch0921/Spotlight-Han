@@ -136,7 +136,7 @@ struct ContentView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Label(L.text(store.hotkeyError), systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
                     Spacer(minLength: 0)
-                    SettingsLink { Text(L.text("前往設定")) }.controlSize(.small)
+                    SettingsEntryButton(store: store) { Text(L.text("前往設定")) }.controlSize(.small)
                 }.padding(.horizontal, 18).padding(.vertical, 10)
             }
             if let details = store.details {
@@ -193,7 +193,7 @@ struct ContentView: View {
                     Button(L.text("選擇資料夾…")) { store.chooseCatalogFolder() }.controlSize(.small)
                 }
                 Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
-                SettingsLink { Image(systemName: "gearshape") }.buttonStyle(.plain).help(L.text("設定與資料來源"))
+                SettingsEntryButton(store: store) { Image(systemName: "gearshape") }.buttonStyle(.plain).help(L.text("設定與資料來源"))
                 Text(L.text("↵ 開啟")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
@@ -295,7 +295,7 @@ struct ContentView: View {
                 Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.buttonStyle(.bordered)
             }
             if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
-                SettingsLink { Text(L.text("設定資料來源")) }.buttonStyle(.bordered)
+                SettingsEntryButton(store: store) { Text(L.text("設定資料來源")) }.buttonStyle(.bordered)
             }
         }.padding(24)
     }

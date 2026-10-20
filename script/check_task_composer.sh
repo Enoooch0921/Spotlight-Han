@@ -45,3 +45,5 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_launcher_reopen.swift -o "$BUILD_DIR/HanLauncherReopenChecks"
 "$BUILD_DIR/HanLauncherReopenChecks"
+swiftc -parse-as-library Sources/HanSearch/Services/OnboardingProgress.swift script/check_onboarding.swift -o "$BUILD_DIR/HanOnboardingChecks"
+"$BUILD_DIR/HanOnboardingChecks"

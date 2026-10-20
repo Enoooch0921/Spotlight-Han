@@ -66,7 +66,9 @@ struct UsageGuideView: View {
         }
         .environment(\.locale, store.interfaceLanguage.locale)
         .id(store.interfaceLanguage.rawValue)
-        .onAppear { store.helpPresented = true; store.settingsVisibilityChanged?(true) }
-        .onDisappear { store.helpPresented = false; store.settingsVisibilityChanged?(store.settingsPresented) }
+        .background(AuxiliaryWindowLifecycle { visible in
+            store.helpPresented = visible
+            store.settingsVisibilityChanged?(visible || store.settingsPresented || store.onboardingPresented)
+        })
     }
 }

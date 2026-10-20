@@ -41,6 +41,7 @@
 "Han 索引已暫停；已儲存的文件仍可搜尋" = "Han indexing paused; saved documents remain searchable";
 "Han 索引空間已達上限，尚有文件未收錄" = "Han index storage limit reached; some files are not indexed";
 "Han 索引：已檢查 %@ 份，擷取 %@ 份，沿用 %@ 份" = "Han index: checked %@ files, extracted %@, reused %@";
+"Han 自建本機索引，重新啟動也能接續搜尋。" = "Han builds its own local index so you can keep searching after a restart.";
 "Han 自行讀取已選資料夾的 Word、文字 PDF、PowerPoint、Excel 與文字文件，索引保存在本機，重新開啟後可接續搜尋，不依賴 Spotlight。" = "Han reads Word, text-based PDF, PowerPoint, Excel and text files in selected folders. The local index persists across launches and works independently of Spotlight.";
 "Han 預設行事曆" = "Han default calendar";
 "Microsoft Office" = "Microsoft Office";
@@ -63,8 +64,10 @@
 "「全部」包含文件內文" = "Include document contents in All";
 "「全部」搜尋 Han 文件內文索引" = "Include Han document contents in All";
 "「讀取不完整」仍可搜尋成功讀取的文件。展開未完成明細查看處理建議：雲端檔先下載、掃描 PDF 先做 OCR、舊格式轉成 PPTX／XLSX、損壞檔修復或重新匯出。" = "Partial reads still let you search successfully indexed documents. Expand failure details for remedies: download cloud files, run OCR on scans, convert older formats to PPTX/XLSX, or repair and re-export damaged documents.";
+"一個搜尋框，找回你要的東西" = "One search box. Find what you need.";
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
+"上一步" = "Back";
 "上次完整更新：%@" = "Last complete refresh: %@";
 "上次搜尋僅在本次執行期間保留；重新啟動 App 會開啟空白的預設頁。未確認的新增事項草稿會保留。" = "The previous search is kept for this app session only. Restarting opens a blank default page. Unconfirmed task drafts are preserved.";
 "上次檢查：%@" = "Last checked: %@";
@@ -72,6 +75,7 @@
 "下載 DMG" = "Download DMG";
 "下載新版本 %@" = "Download update %@";
 "不另設通知" = "No event notification";
+"不用猜檔名是繁體還是簡體，也不用再翻好幾層資料夾。" = "Stop guessing which Chinese script a filename uses, or digging through folder after folder.";
 "中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。" = "Search Chinese app names, filenames and connected record titles using Pinyin or Zhuyin, such as hongguo / hg or ㄏㄨㄥˊ ㄍㄨㄛˇ / ㄏㄍ. System transliteration may choose a different pronunciation for polyphonic characters; custom aliases can add alternatives.";
 "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。" = "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as hgdj or ㄏㄍㄉㄐ apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example hong2 guo3.";
 "也可以輸入「下下週一上午10點開會30分鐘」。只填日期會建立全天行程。" = "Try “tomorrow at 10am meeting for 30 minutes”. A date without a time creates an all-day event.";
@@ -111,6 +115,7 @@
 "儲存空間" = "Storage";
 "先在 Finder 下載並保留在本機，再更新索引。" = "Download and keep the file locally in Finder, then update the index.";
 "先確認原檔能正常開啟；若權限不足，重新選取資料夾；若檔案損壞，請修復或重新匯出。" = "Check that the original opens normally. Reselect the folder if access is denied; repair or re-export damaged files.";
+"先選常用資料夾即可。需要備忘錄或行事曆時，再連接對應來源。" = "Start with frequently used folders. Connect Notes or Calendar whenever you need them.";
 "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" = "Choose search folders to save access. Apps, calculations and conversions work without them.";
 "先顯示時間與內容，按 Return 才建立。行程及提醒使用系統預設行事曆／清單；新增需要相應的存取授權。鬧鐘交給 Apple 系統時鐘。首次按下方「連接系統時鐘」，在系統視窗加入一次捷徑；不用自己編輯。系統鬧鐘精度為分鐘，只支援下一次的指定時分。" = "Review the time and content, then press Return to create. Events and reminders use system defaults and require permission. Alarms are created in Apple Clock through the bundled shortcut. Precision is one minute and only the next occurrence is supported.";
 "內文摘要已取消" = "Content preview cancelled";
@@ -158,6 +163,7 @@
 "只整理尚未手動分類的 App；不覆蓋你的安排。音訊外掛本體不屬於可啟動的 App。" = "Only organizes apps without a manual category. Audio plug-in files are not launchable apps.";
 "只設定到期日期，通知行為依系統提醒事項的設定。" = "Only a due date is set. Notifications follow your system Reminders settings.";
 "只設定日期（不指定通知時間）" = "Date only (no specific notification time)";
+"可以稍後再設定：設定頁左下角有使用說明，「更新與關於」可重新開啟這份引導。" = "You can set these up later. Open the User Guide at the bottom left of settings, or replay this guide in Updates & About.";
 "可另存成 PPTX，或開啟 Spotlight 補充搜尋。" = "Save as PPTX, or enable supplementary Spotlight search.";
 "可另存成 XLSX，或開啟 Spotlight 補充搜尋。" = "Save as XLSX, or enable supplementary Spotlight search.";
 "可拆分成較小文件或匯出文字副本，再更新索引。" = "Split into smaller documents or export a text copy, then update the index.";
@@ -222,6 +228,7 @@
 "已移至「%@」" = "Moved to “%@”";
 "已複製" = "Copied";
 "已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
+"已設定" = "Configured";
 "已調整分類順序" = "Category order updated";
 "已讀取 %@ 個檔案" = "Read %@ documents";
 "已讀取 %@ 個檔案 · %@ 份內容未完整讀取" = "Read %@ documents · %@ contents incomplete";
@@ -244,6 +251,7 @@
 "已達內文總量 32 MB 上限" = "Reached the 32 MB total-text limit";
 "已達摘要讀取上限；可開啟文件查看" = "Preview limit reached; open the document to view content";
 "已釘選" = "Pinned";
+"常用小事，順手完成" = "Handle everyday tasks";
 "常用結果會優先；學習紀錄只存在這台 Mac。" = "Frequently opened results rank higher. Learning history stays on this Mac.";
 "建立 Han 索引" = "Build Han index";
 "建立所選分類" = "Create selected categories";
@@ -263,10 +271,12 @@
 "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再到 Han「搜尋與快捷鍵」按「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。" = "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight. In Han, go to Search & Shortcuts and choose Use ⌘Space. Conflicts keep the previous shortcut.";
 "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再按上方「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。" = "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight, then choose Use ⌘Space. Conflicts keep your previous shortcut.";
 "快捷鍵被占用，請從選單列開啟並重新設定。" = "Shortcut unavailable. Open settings from the menu bar.";
+"快速找檔名與影片" = "Find files and videos by name";
 "快速檔名搜尋" = "Local filename search";
 "快速檔名清單用來找檔名與影片；Han 文件全文索引用來找文件內文。兩者需要各自選取搜尋範圍，「全部」會合併結果。" = "The filename catalog finds files and videos by name. The Han full-text index searches document contents. Select folders for each; All combines their results.";
 "快速開始" = "Getting started";
 "恢復預設" = "Restore default";
+"想用 ⌘Space，可在設定中直接前往 macOS 關閉原 Spotlight 快捷鍵，再指定給 Han。" = "To use ⌘Space, settings can take you to macOS to disable the original Spotlight shortcut before assigning it to Han.";
 "應用程式" = "Applications";
 "應用程式 ⌘1" = "Applications ⌘1";
 "成功開啟後才學習。同一搜尋詞反覆開啟的結果會優先；常用 App／備忘錄／檔案等類型只小幅加分。空白的 App 分類仍按名稱或最近開啟排列，行事曆仍保留日期排序。" = "Learns only after a successful opening. Repeated choices for the same query take priority; usual result types receive a small boost. Browsing keeps its name/recent order and calendars retain date sorting.";
@@ -274,6 +284,7 @@
 "所選語言已安裝，可以開始翻譯。" = "Selected languages are installed and ready to use.";
 "找不到符合的項目" = "No matching results";
 "找到多個時間，請一次新增一件事項。" = "Multiple times were found. Please add one item at a time.";
+"找檔名，也找文件裡的字" = "Search names and document contents";
 "把 App 拖到左側此分類，即可加入" = "Drag an app onto this category in the sidebar to add it.";
 "拖動 App 到左側分類；分類可拖動排序，自訂分類可右鍵編輯。" = "Drag apps to sidebar categories. Drag any category to reorder; right-click custom categories to edit.";
 "拼音、注音與搜尋縮寫" = "Pinyin, Zhuyin and Search Aliases";
@@ -300,6 +311,7 @@
 "搜尋" = "Search";
 "搜尋%@" = "Search %@";
 "搜尋應用程式…" = "Search apps…";
+"搜尋文件內文" = "Search document contents";
 "搜尋網頁「%@」" = "Search the web for “%@”";
 "搜尋縮寫已儲存" = "Search aliases saved";
 "搜尋習慣" = "Search habits";
@@ -322,6 +334,7 @@
 "新增提醒事項：%@" = "Create reminder: %@";
 "新增行事曆行程" = "New calendar event";
 "新增行事曆行程：%@" = "Create event: %@";
+"新手引導…" = "Getting Started…";
 "新版本 %@" = "New version %@";
 "新行程會先選這個行事曆；確認預覽時仍可更改。此設定只影響 Han。" = "New events start with this calendar. You can change it during review. This setting affects Han only.";
 "日期或時間無效，請重新輸入。" = "Invalid date or time. Please try again.";
@@ -373,6 +386,7 @@
 "檢查翻譯…" = "Check translation…";
 "檢查語言…" = "Check languages…";
 "檢查連接" = "Check connection";
+"歡迎使用 Spotlight Han" = "Welcome to Spotlight Han";
 "正在取得公開匯率。" = "Fetching public exchange rates.";
 "正在取得匯率…" = "Fetching exchange rates…";
 "正在取得每日參考匯率…" = "Fetching daily exchange rates…";
@@ -435,10 +449,12 @@
 "無法開啟備忘錄，請檢查自動化授權。" = "Cannot open Notes. Check Automation permission.";
 "無法開啟檔案" = "Cannot open file";
 "無法開啟項目" = "Could not open the item";
+"由你選擇要連接的 App，授權後可背景更新。" = "Choose which apps to connect. Authorized sources can update in the background.";
 "登入 Mac 時自動啟動" = "Launch at login";
 "登入項目與延伸功能" = "Login Items & Extensions";
 "目前不會在登入時自動開啟。" = "Launch at login is off.";
 "目前已是最新可用版本" = "You have the latest available version";
+"目前快捷鍵：%@" = "Current shortcut: %@";
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目標語言" = "Target language";
 "直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PPT／PPTX 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PPT/PPTX and text files across this Mac in All. App and filename results appear first, followed by document matches. Disabling the Spotlight shortcut does not disable its index.";
@@ -456,13 +472,16 @@
 "移除所有文件範圍並清除索引" = "Remove all document scopes and clear index";
 "移除搜尋範圍會清除對應的 Han 內文索引；清除並重建會重新擷取原檔。這些操作不刪除原始文件。Spotlight 補充搜尋預設關閉，開啟後的補充結果仍受系統索引限制。" = "Removing a scope clears its Han full-text index. Rebuilding extracts the original documents again. Neither deletes originals. Supplementary Spotlight search is off by default and remains subject to system index limitations.";
 "稍後" = "Later";
+"稍後設定" = "Set up later";
 "空間或掃描範圍達限，尚有文件未收錄；請調整範圍或容量後更新索引。" = "Storage or scan limit reached. Some files are not indexed. Adjust scope or capacity and update the index.";
+"第 %@／3 步" = "Step %@ of 3";
 "等待前一個來源完成…" = "Waiting for the previous source…";
 "等待授權" = "Waiting for permission";
 "等待系統授權；請在系統視窗選擇允許或不允許…" = "Waiting for system consent. Choose Allow or Don't Allow in the system dialog.";
 "等待續讀（已有部分資料）" = "Waiting to continue (partial data available)";
 "等待語言準備完成 · 已等待 %@ 秒" = "Waiting for languages · %@ seconds elapsed";
 "等待讀取" = "Queued";
+"管理…" = "Manage…";
 "簡報 XML 文字無法完整讀取。" = "The presentation XML could not be read completely.";
 "簡報文字格式無法安全讀取。" = "The presentation text format could not be read safely.";
 "簡報沒有可讀取的文字頁面，或超過讀取上限。" = "The presentation has no readable text parts or exceeds the read limit.";
@@ -494,6 +513,8 @@
 "網路或匯率服務暫不可用，稍後再試。" = "Network or rate service unavailable. Try again later.";
 "編輯分類名稱與圖示" = "Edit category name and icon";
 "縮寫未儲存：每項最多32字、最多8項，總共最多2,000個項目。" = "Aliases were not saved: up to 8 aliases of 32 characters each, for at most 2,000 items.";
+"繁簡都找得到" = "Search across Chinese scripts";
+"繼續" = "Continue";
 "繼續索引" = "Resume indexing";
 "缺少時間解析元件，請重新安裝 Han。" = "The date parser is missing. Please reinstall Han.";
 "翻譯" = "Translation";
@@ -528,10 +549,13 @@
 "複製內容" = "Copy content";
 "複製翻譯" = "Copy translation";
 "觸控式軌跡板" = "Trackpad";
+"計算、每日匯率、翻譯，以及預覽後建立行程與提醒。" = "Calculate, convert currencies with daily rates, translate, and preview events or reminders before creating them.";
 "記錄剪貼板文字" = "Remember clipboard text";
 "記錄預設關閉；啟用後只保留本次執行期間的文字。" = "History is off by default and only retained during this session.";
 "設定30分鐘後的鬧鐘\n提醒我明天上午9點交報告\n明天下午3點開會30分鐘" = "Chinese command examples:\n設定30分鐘後的鬧鐘 (alarm in 30 minutes)\n提醒我明天上午9點交報告 (reminder tomorrow at 9am)\n明天下午3點開會30分鐘 (30-minute event tomorrow at 3pm)";
+"設定…" = "Settings…";
 "設定快捷鍵" = "Set shortcut";
+"設定快捷鍵…" = "Set shortcut…";
 "設定未完成：%@" = "Could not apply setting: %@";
 "設定與資料來源" = "Settings and sources";
 "設定與資料來源…" = "Settings and sources…";
@@ -560,6 +584,7 @@
 "讀取失敗（仍顯示舊／部分資料）" = "Read failed (showing old/partial data)";
 "讀取失敗（沒有可用資料）" = "Read failed (no data available)";
 "讀取已選資料夾，索引只存在本機；移除索引不會刪除原始文件。" = "Indexes selected folders locally. Removing the index does not delete original documents.";
+"讓 Han 配合你的習慣" = "Make Han work your way";
 "貨幣可輸入 3000tb=rmb、3000tb rmb、nt3000 = rmb。只輸入 3000tb 或 3000台幣，會顯示下方選取的目標；也可明寫 3000tb=rmb,usd,jpy。參考匯率每日更新，結果標示資料時間及過期快取，非銀行成交價。" = "Try 3000tb rmb or nt3000 = rmb. Enter 3000tb to see your selected default currencies, or specify 3000tb=rmb,usd,jpy. Daily reference rates show their timestamp and stale cache status; they are not bank transaction rates.";
 "資料來源" = "Data Sources";
 "資料來源仍在連接中，請稍後再建立。" = "A data source is still connecting. Please try again shortly.";
@@ -573,6 +598,7 @@
 "跟隨系統預設" = "Follow system default";
 "軟體更新" = "Software updates";
 "輔助使用" = "Accessibility";
+"輸入「紅果短劇」，也能找到已安裝的「红果短剧」。" = "Type Traditional Chinese 紅果短劇 to find an installed app named 红果短剧 in Simplified Chinese.";
 "輸入「設定30分鐘後的鬧鐘」，先預覽時間，按 Return 交給系統時鐘新增。" = "Type a Chinese alarm command, review the time, then press Return to create it in Apple Clock.";
 "輸入後先看解析結果，再按 Return 檢查預覽。" = "Check the parsed result, then press Return to review.";
 "輸入時間和事項" = "Enter a time and task";
@@ -586,16 +612,21 @@
 "通訊與網路" = "Communication & Web";
 "連接" = "Connect";
 "連接%@" = "Connect %@";
+"連接備忘錄與行事曆等來源" = "Connect Notes, Calendar and other sources";
 "連接失敗：%@ 可檢查系統設定 → 隱私權與安全性。" = "Could not connect: %@ Check System Settings > Privacy & Security.";
 "連接系統時鐘" = "Connect Apple Clock";
 "進行中" = "Ongoing";
 "遊戲" = "Games";
+"選取資料夾後，可搜尋 Word、文字 PDF、PPTX、Excel 內文與命中片段。" = "Choose folders to search Word, text PDF, PPTX and Excel contents, with matching excerpts.";
+"選擇下載、文件、影片等常用位置。" = "Choose frequently used locations such as Downloads, Documents or Movies.";
+"選擇你想搜尋的範圍" = "Choose where to search";
 "選擇搜尋資料夾…" = "Choose search folders…";
 "選擇要保存在本機搜尋索引的文件資料夾。只讀取支援的文字文件，不複製原始檔；可一次選擇多個資料夾。" = "Select document folders for the persistent local search index. Only supported document text is read; originals are not copied. You can select multiple folders.";
 "選擇資料夾…" = "Choose folders…";
 "部分資料讀取於：%@" = "Partial data read: %@";
 "郵件" = "Mail";
 "重新命名分類" = "Rename category";
+"重新查看新手引導…" = "Show Getting Started…";
 "重新讀取" = "Reload";
 "重新讀取行事曆清單" = "Reload calendar list";
 "重新開啟時接續上次的搜尋文字與頁面；預設頁只用於重新啟動 App。" = "Resume the previous query and page. The default page is used when restarting the app.";
@@ -611,6 +642,7 @@
 "開啟隱私權設定" = "Open privacy settings";
 "開啟／收起使用短淡入淡出，結果面板平順展開。系統開啟「減少動態效果」時保留淡化、停止高度動畫。" = "Use brief fades and smooth panel expansion. Reduce Motion disables expansion animations.";
 "開始" = "Start";
+"開始使用" = "Start searching";
 "開始時" = "At start";
 "開發工具" = "Development";
 "開發測試版在重新編譯或重新簽章後，macOS 仍可能要求重新授權；正式發行需要固定的開發者簽章。" = "Development builds may require permission again after rebuilding or signing. Stable distribution needs a consistent developer signature.";
@@ -623,6 +655,7 @@
 "需要重新授權；背景更新已暫停，請主動按連接。" = "Permission is required again. Background refresh is paused; choose Connect to continue.";
 "音訊外掛本體不屬於可啟動的 App；此處整理獨立程式與管理工具。" = "Plug-in files are not launchable apps. This list organizes standalone apps and management tools.";
 "預覽與調整 ↵" = "Review and adjust ↵";
+"預設保留上次搜尋 3 分鐘；你可以自訂時間及再次開啟的頁面。" = "Searches are kept for 3 minutes by default. Customize the duration and the page shown when reopening.";
 "預設換算目標（至少選一種，可多選）" = "Default target currencies (choose at least one)";
 "預設搜尋頁" = "Default search page";
 "預設關閉。啟用後只在記憶體保留最近 50 筆、每筆最多 2,000 字；略過標示為隱藏／暫存的內容及常見密碼管理器。其他 App 未標示的敏感文字仍可能被記錄。" = "Off by default. Stores the latest 50 text entries in memory, up to 2,000 characters each. Skips marked hidden or temporary content and common password managers. Unmarked sensitive text may still be captured.";
@@ -632,6 +665,7 @@
 "顯示器" = "Displays";
 "顯示方式" = "View";
 "顯示查詢翻譯" = "Translate search queries";
+"首次不會自動掃描整個 Mac，也不會一次要求所有隱私權限。" = "Han does not automatically scan your entire Mac or ask for every privacy permission at startup.";
 "首次只需加入一個預先做好的捷徑，不用自己編輯。鬧鐘以分鐘為精度，會向上取整；支援下一次的指定時分，更晚日期請用提醒事項。鬧鐘由系統時鐘管理，這裡不顯示或儲存鬧鐘清單。" = "Add the bundled shortcut once. Alarms round up to the next minute and support the next occurrence only. Use Reminders for later dates. Apple Clock manages the alarms.";
 "首次請在設定選擇搜尋資料夾" = "Choose search folders in Settings to begin";
 "首次集中選擇搜尋範圍，之後使用已保存的資料夾書籤；不會在啟動時自動探查未選的下載或文件資料夾。選擇使用者資料夾可涵蓋下載、影片、文件。只讀取檔名、不依賴 Spotlight，更新間隔至少 30 秒。" = "Choose folders once to save access. Unselected protected folders are not scanned. Choosing your home folder indexes Downloads, Movies and Documents. Filename indexing is independent of Spotlight and refreshes at intervals of at least 30 seconds.";
