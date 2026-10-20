@@ -6,17 +6,17 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.3/Spotlight-Han-0.8.3-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.0.0/Spotlight-Han-1.0.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
-An app is named `红果短剧`, but you type `紅果短劇`. A Word document contains `教会活动`, but you search for `教會活動`. Or you need a video urgently and want to search the folders you actually use.
+A file is named `会议记录.docx`, but you type `會議記錄`. A Word document mentions `台北出差`, and you want to find the matching passage. Or you need a video urgently and want to search the folders you actually use.
 
 Han matches both Chinese scripts while keeping original filenames and text. Filename and video search uses its own index of folders you select. Document text is indexed locally in selected folders and persisted across launches. Spotlight is an optional supplement, disabled by default.
 
 This is script matching, not synonym search: `影片` and `視頻` are not automatically treated as the same word.
 
-New users get an optional in-app guide. Published v0.8.3 has three steps; the unreleased local revision expands it to six, covering search examples, shortcuts and resume behavior, file scopes, personal sources, everyday tools and a real setup summary. Replay it from the menu or Updates & About.
+New users get an optional in-app guide. Version 1.0.0 has six steps with separate Pinyin and Zhuyin app examples, covering search examples, shortcuts and resume behavior, file scopes, personal sources, everyday tools and a real setup summary. Replay it from the menu or Updates & About.
 
 ## What it does
 
@@ -28,11 +28,11 @@ New users get an optional in-app guide. Published v0.8.3 has three steps; the un
 - Sort event search results by upcoming first, newest date first or oldest date first.
 - Calculate expressions, convert units/currencies, open system settings panes and optionally translate queries with Apple's local Translation framework.
 
-Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) parser plus Han-specific Chinese rules in JavaScriptCore. No API key, Node.js runtime or model download is needed for event parsing. This preview supports one-time items; recurrence and ambiguous time clauses require editing. See [third-party notices](THIRD_PARTY_NOTICES.md).
+Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) parser plus Han-specific Chinese rules in JavaScriptCore. No API key, Node.js runtime or model download is needed for event parsing. This version supports one-time items; recurrence and ambiguous time clauses require editing. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Install and try
 
-**v0.8.3 is a development preview for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v1.0.0 is the first stable release for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 
@@ -68,8 +68,8 @@ Han checks public GitHub releases at most once daily and offers a DMG download w
 
 App searches such as `logicpro` now match **Logic Pro**; `fcp` / `fcpx` match **Final Cut Pro**. Curated aliases also include `ps`, `ai`, `ae`, `pr`, `vscode` and `ppt`. Local learning prioritizes repeated choices for the same query and gently adapts to preferred result types across apps, Notes and files. Raw queries and contents are not saved or uploaded; learning can be disabled or cleared.
 
-Chinese names support full Pinyin and Zhuyin; only apps automatically match initials (`hgdj` / `ㄏㄍㄉㄐ`). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Initials are App-only; filenames and personal titles require full phonetic input or an explicit custom alias. Model queries such as dl32 keep their digits.
+Chinese names support full Pinyin and Zhuyin; only apps automatically match initials (`jsj` / `ㄐㄙㄐ` for Calculator). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Initials are App-only; filenames and personal titles require full phonetic input or an explicit custom alias. Model queries such as dl32 keep their digits.
 
-All searches Han's independent persistent full-text index for selected Word, PDF, PowerPoint, Excel and text files. Background reconciliation reuses unchanged content and removes deleted entries after complete scans. Storage controls, scope removal and per-file failures are visible. Spotlight supplementation is optional and disabled by default. This feature is currently local development work and has not been released.
+All searches Han's independent persistent full-text index for selected Word, PDF, PowerPoint, Excel and text files. Background reconciliation reuses unchanged content and removes deleted entries after complete scans. Storage controls, scope removal and per-file failures are visible. Spotlight supplementation is optional and disabled by default.
 
 File results show filesystem creation dates and times, read in the background. Choose relevance, newest first or oldest first; the preference is remembered. Unavailable dates are labelled explicitly and sorted last.

@@ -1,10 +1,10 @@
-# Spotlight Han · 開發預覽版安裝說明
+# Spotlight Han · 正式版安裝說明
 
-目前打包版本為 **0.8.3 開發預覽**，供願意協助回報問題的使用者試用。公開狀態以 Releases 列表為準；它尚未達到 Spotlight 的完整功能對等。
+目前版本為 **1.0.0 正式版**。GitHub Release 不標示為測試版；Apple Developer ID 簽章與公證仍待補上，兩者是不同的發布狀態。它尚未達到 Spotlight 的完整功能對等。
 
 ## 下載哪個檔案？
 
-到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v0.8.3 版本下載 `Spotlight-Han-0.8.3-macOS-arm64.dmg`（拖曳安裝），或 `Spotlight-Han-0.8.3-macOS-arm64.zip`（壓縮包）。若列表還沒有這個版本，代表尚未公開。
+到 [GitHub Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)，在公開的 v1.0.0 版本下載 `Spotlight-Han-1.0.0-macOS-arm64.dmg`（拖曳安裝），或 `Spotlight-Han-1.0.0-macOS-arm64.zip`（壓縮包）。
 
 - `arm64` 適用於 Apple Silicon（M 系列）Mac。目前未提供 Intel 版或 Universal 版安裝包。
 - 目前已驗證 Apple Silicon、macOS 26.6.1。程式宣告最低 macOS 14，macOS 14／15 尚待真機驗證。
@@ -13,16 +13,16 @@
 
 ## 重要：目前的簽章狀態
 
-這個開發預覽包採用 **ad hoc 簽章**，尚無 Developer ID 簽章及 Apple 公證。DMG 與 ZIP 都是封裝格式，DMG 並不代表已完成 Apple 公證。從網路下載後，macOS Gatekeeper 可能阻擋開啟；本機開發環境能執行不代表其他 Mac 能直接安裝。
+目前安裝包採用 **ad hoc 簽章**，尚無 Developer ID 簽章及 Apple 公證。DMG 與 ZIP 都是封裝格式，DMG 並不代表已完成 Apple 公證。從網路下載後，macOS Gatekeeper 可能阻擋開啟；本機開發環境能執行不代表其他 Mac 能直接安裝。
 
-若被系統阻擋，請保留系統安全保護，等候後續完成 Developer ID 簽章與公證的版本。此預覽不適合作為所有一般使用者都能順利安裝的正式發行版。
+若被系統阻擋，請保留系統安全保護，等候後續完成 Developer ID 簽章與公證的版本。版本標示為正式版並不表示已通過 Apple 公證，也無法保證每台 Mac 都能直接開啟。
 
 具備開發環境的使用者也可依[專案首頁](https://github.com/Enoooch0921/Spotlight-Han#開始使用)自行從原始碼建置。這個選項仍需 Xcode／Command Line Tools，不能取代正式簽章發行流程。
 
 ## 首次使用
 
 1. 開啟 DMG，將 `Spotlight Han.app` 拖到同一視窗的 `Applications`；或解壓縮 ZIP 後放到「應用程式」。
-2. 系統允許開啟後，全新使用者會看到三步引導，可設定快捷鍵、搜尋保留時間（預設3分鐘）與搜尋範圍；也能稍後設定。
+2. 系統允許開啟後，全新使用者會看到六步引導，包含搜尋示範、快捷鍵與接續（預設3分鐘）、搜尋範圍、資料來源、日常工具及設定摘要；也能稍後設定。
 3. 預設以 `Control + Option + Space` 叫出或收起搜尋。在引導或設定選擇檔名及文件內文資料夾，等待首次索引完成。
 4. 輸入繁體或簡體關鍵字。`↑ / ↓` 選擇，`Return` 開啟，`Escape` 收起。
 5. 若想改用 `⌘Space`，到 Han 設定開啟系統 Spotlight 快捷鍵頁，自行關閉原生組合鍵，再回 Han 選擇「使用 ⌘Space」。
@@ -37,7 +37,7 @@ Apple 時鐘鬧鐘需要一次加入內附的 `Spotlight-Han-System-Clock` 捷�
 
 ## 更新與回報
 
-更新時先從 Han 選單結束 App，再以新版本取代舊 App。Han 可提醒及下載新版，但由你安裝。已保存的來源選擇與設定會保留；目前臨時簽章的預覽在更換程式後仍可能需要重新授權，完整改善需要固定 Developer ID 簽章。
+更新時先從 Han 選單結束 App，再以新版本取代舊 App。Han 可提醒及下載新版，但由你安裝。已保存的來源選擇與設定會保留；目前臨時簽章的安裝包在更換程式後仍可能需要重新授權，完整改善需要固定 Developer ID 簽章。
 
 歡迎到 [Issues](https://github.com/Enoooch0921/Spotlight-Han/issues)回報 macOS／Han 版本、搜尋關鍵字、預期與實際結果。請以自製測試資料重現，避免公開私人檔案、備忘錄或檔名快取。
 

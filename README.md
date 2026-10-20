@@ -13,11 +13,11 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 [![macOS checks](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml/badge.svg)](https://github.com/Enoooch0921/Spotlight-Han/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[下載 Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v0.8.3/Spotlight-Han-0.8.3-macOS-arm64.dmg) · [開發預覽與下載](https://github.com/Enoooch0921/Spotlight-Han/releases) · [開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[下載 Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.0.0/Spotlight-Han-1.0.0-macOS-arm64.dmg) · [版本與下載](https://github.com/Enoooch0921/Spotlight-Han/releases) · [開始使用](#開始使用) · [完整說明](docs/guide.zh-Hant.md) · [回報問題](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## 明明就在電腦裡，為什麼搜不到？
 
-App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「教会活动」，你記得的是「教會活動」。要播影片時，知道檔名，搜尋結果卻遲遲找不到它。
+檔案叫「会议记录.docx」，你輸入「會議記錄」。Word 裡寫的是「台北出差」，你想直接找到提到它的那一段。要播影片時，知道檔名，搜尋結果卻遲遲找不到它。
 
 遇到這些情況，我們常常得換一種字形、再試一次，甚至打開資料夾一層一層找。
 
@@ -25,7 +25,7 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 | 你遇到的情況 | 在 Han 裡怎麼找 |
 | --- | --- |
-| App 使用簡體名稱，平常習慣打繁體 | 輸入 `紅果短劇`，比對名稱為 `红果短剧` 的 App。 |
+| 檔案使用簡體名稱，平常習慣打繁體 | 輸入 `會議記錄`，比對名稱為 `会议记录.docx` 的文件。 |
 | 資料夾裡的檔名繁簡混用 | `教會活動`、`教会活动` 都能比對對應字形的檔名，原檔名保持原樣。 |
 | Word 用簡體寫，記得的關鍵字是繁體 | 在「全部」搜尋 `教會活動`，比對已索引文件內文中的 `教会活动`；也可加入資料夾補強直接擷取。 |
 | 急著找影片，結果混著其他檔案 | 切到「影片」，在已選資料夾的本機檔名清單中搜尋。 |
@@ -62,7 +62,7 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 行事曆搜尋預設依時間排序：進行中／即將到來的行程在前，過去行程由近到遠，也能切換日期新到舊或舊到新。已授權來源會背景更新：行事曆／提醒事項每 5 分鐘及系統變更後重讀，其他來源與文件索引每 15 分鐘更新。來源狀態會標示上次完整更新、失敗、部分資料與舊副本；權限失效時暫停並提示，不在背景要求授權。
 
-也支援經授權搜尋備忘錄、聯絡人、行事曆、提醒事項與 Mail，以及選擇啟用的剪貼板記錄。可在搜尋結果上方顯示 Apple 本機翻譯，來源及目標語言可自訂。
+也支援經授權搜尋備忘錄、聯絡人、行事曆、提醒事項與 Mail，以及選擇啟用的剪貼板記錄。可在搜尋結果下方顯示 Apple 本機翻譯，來源及目標語言可自訂。
 
 匯率使用免費每日參考資料，畫面標示時間與來源；本機翻譯需 macOS 15 以上並先準備 Apple 語言模型。私人資料來源與建立指令需個別設定及系統授權。詳見[完整功能與限制](docs/guide.zh-Hant.md#功能)。
 
@@ -72,21 +72,21 @@ App 叫「红果短剧」，你輸入「紅果短劇」。Word 裡寫的是「�
 
 有新版時，Han 會在面板與選單列提示；可直接下載 DMG。設定中可關閉每日檢查或選擇是否接收測試版。
 
-中文名稱可用完整拼音與注音；App 另支援首字母：`hgdj`／`ㄏㄍㄉㄐ` 找紅果短劇，`zdj` 找終端機；檔名和個人資料標題不自動套用首字母，結果右鍵仍可自訂搜尋縮寫。
+中文名稱可用完整拼音與注音；App 另支援首字母：拼音首字母 `jsj`／注音首符號 `ㄐㄙㄐ` 找計算機，`zdj` 找終端機；檔名和個人資料標題不自動套用首字母，結果右鍵仍可自訂搜尋縮寫。
 
 搜尋 `logicpro` 也能找到 **Logic Pro**，`fcp`／`fcpx` 可找到 **Final Cut Pro**；另內建 `ps`、`ai`、`ae`、`pr`、`vscode`、`ppt` 等常見縮寫。新增本機搜尋習慣：重複開啟的同詞結果優先，App、備忘錄與檔案共同排序；設定可關閉或清除，原始搜尋文字與內容不保存、不上傳。
 
-「全部」直接搜尋 Han 自建的 **Word／PDF／PowerPoint／Excel 全文索引**。先選擇文件資料夾，索引保存在本機、重啟可沿用，背景只重新擷取有變動的文件。可顯示命中摘要與逐檔失敗原因。Spotlight 全機文件結果改為可選補充，預設關閉。此功能目前為未發布的本機開發版本。
+「全部」直接搜尋 Han 自建的 **Word／PDF／PowerPoint／Excel 全文索引**。先選擇文件資料夾，索引保存在本機、重啟可沿用，背景只重新擷取有變動的文件。可顯示命中摘要與逐檔失敗原因。Spotlight 全機文件結果改為可選補充，預設關閉。
 
 檔案搜尋結果會顯示檔案系統的建立日期與時間；無法讀取時明確標示。日期在背景按需讀取；可切換相關度、建立日期新到舊／舊到新，並記住排序偏好。
 
 ## 開始使用
 
-首次開啟提供可略過、可重新查看的 App 內引導。已發布 v0.8.3 使用三步版本；本機待發布版本已擴充為六步，涵蓋操作範例、快捷鍵與接續、檔案及全文範圍、個人資料來源、日常工具及真實設定摘要。
+首次開啟提供可略過、可重新查看的 App 內引導。v1.0.0 提供六步引導，並可切換 App 拼音與注音範例，涵蓋操作範例、快捷鍵與接續、檔案及全文範圍、個人資料來源、日常工具及真實設定摘要。
 
-**目前為 0.8.3 開發預覽。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
+**目前為 v1.0.0 正式版。** 已在 Apple Silicon、macOS 26.6.1 驗證；目標最低執行版本為 macOS 14，較舊版本與 Intel Mac 尚待驗證。
 
-**[公開預覽與下載狀態請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。若尚無公開版本，可先使用下方原始碼建置方式。Apple Silicon 提供 `Spotlight-Han-0.8.3-macOS-arm64.dmg` 拖曳安裝與 ZIP 壓縮包，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
+**[正式版本與下載請見 Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)**。Apple Silicon 提供 `Spotlight-Han-1.0.0-macOS-arm64.dmg` 拖曳安裝與 ZIP 壓縮包，採用 ad hoc 簽章，尚未完成 Developer ID 簽章與 Apple 公證，從網路下載後可能被 macOS 阻擋開啟。一般使用者可等候完成簽章與公證的版本；詳見[安裝說明](docs/install.zh-Hant.md)。
 
 若要自行從原始碼建置，需要包含 macOS 26 SDK 的 Xcode／Command Line Tools，以及 Swift 5.9 以上：
 
@@ -105,9 +105,9 @@ cd Spotlight-Han
 
 想改用 **⌘Space**：在 Han 設定按「開啟 Spotlight 快捷鍵開關」，自行關閉原生 Spotlight 的組合鍵，再回 Han 按「使用 ⌘Space」。Han 會檢查系統快捷鍵衝突；無法註冊時保留原本的組合。其他 App 的衝突仍以系統是否允許註冊為準。
 
-## 試用前，先了解這幾件事
+## 使用前，先了解這幾件事
 
-- **目前仍是開發預覽。** 目標是成為 Spotlight 的開源替代品，現階段尚未達到完整功能對等。
+- **目前功能仍有範圍。** 這是獨立的開源啟動器，現階段尚未達到 Spotlight 完整功能對等。
 - **檔名清單需要首次掃描。** 已選範圍在啟動及叫出面板時按間隔更新，也可手動更新；目前尚非即時檔案監看。
 - **全文搜尋有指定範圍。** 加入資料夾後可直接讀取支援的 Word、文字 PDF、PPTX、XLSX 與純文字；未加入資料夾的文件不在 Han 索引範圍；可另外開啟 Spotlight 補充。掃描圖片與掃描 PDF 尚不支援 OCR。
 - **授權由 macOS 管理。** 已選資料夾會保存存取書籤；系統撤銷權限或開發版重新簽章後，仍可能需要再次授權。
