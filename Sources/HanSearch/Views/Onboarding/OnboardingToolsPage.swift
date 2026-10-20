@@ -3,7 +3,7 @@ import SwiftUI
 struct OnboardingToolsPage: View {
     let settings: (SettingsPage) -> Void
     @State private var tool = 0
-    private let examples = ["36 * 24", "3000nt = 馬來西亞", "明天下午3點開會30分鐘", "hello", "hgdj"]
+    private let examples = ["36 * 24", "3000nt = 馬來西亞", "明天下午3點開會30分鐘", "hello", "jsj"]
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             Picker(L.text("工具範例"), selection: $tool) {
@@ -41,7 +41,7 @@ struct OnboardingToolsPage: View {
         }
     }
     private var resultTitle: String {
-        switch tool { case 0: return "864"; case 1: return "TWD → MYR"; case 2: return "開會 · 明天 15:00–15:30"; case 3: return "你好"; default: return "红果短剧" }
+        switch tool { case 0: return "864"; case 1: return "TWD → MYR"; case 2: return "開會 · 明天 15:00–15:30"; case 3: return "你好"; default: return "計算機" }
     }
     private var resultDetail: String {
         switch tool {
@@ -61,7 +61,7 @@ struct OnboardingToolsPage: View {
         case 1: return "3000tb rmb、nt3000 = usd 都可以；設定裡可勾選多個預設目標。免費匯率每日更新，並非銀行成交價。"
         case 2: return "輸入自然語言時間與事項，再按 Return 看預覽。提醒也可用 rem；系統鬧鐘需先連接時鐘捷徑。"
         case 3: return "下載語言可能需要一些時間；翻譯顯示在搜尋結果下方，原本的檔案與 App 搜尋不受影響。"
-        default: return "App 可用 hgdj、完整拼音或注音搜尋。右鍵點結果，還能自訂自己熟悉的縮寫。"
+        default: return "例如「計算機」可用 jsj、jisuanji 或 ㄐㄧㄙㄨㄢㄐㄧ 搜尋。右鍵點結果，還能自訂縮寫。"
         }
     }
 }

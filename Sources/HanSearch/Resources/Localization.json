@@ -767,5 +767,9 @@
   "還沒設定的項目不影響 App、計算與系統設定搜尋。之後可從「更新與關於」重看引導。": "Unconfigured features do not block app, calculator or system settings search. Replay this guide from Updates & About.",
   "檢查資料來源與更新狀態…": "Check sources & update status…",
   "搜尋習慣由你決定": "Learning is your choice",
-  "目前已關閉搜尋習慣學習，可在「搜尋與快捷鍵」更改。": "Search learning is currently off. Change it in Search & Shortcuts."
+  "目前已關閉搜尋習慣學習，可在「搜尋與快捷鍵」更改。": "Search learning is currently off. Change it in Search & Shortcuts.",
+  "輸入繁體「會議記錄」，也能找到簡體檔名。": "Type Traditional Chinese 會議記錄 to find a filename in Simplified Chinese.",
+  "輸入「計算機」的拼音首字母 jsj，也能找到 App。": "Type jsj, the Pinyin initials of 計算機, to find the Calculator app.",
+  "例如「計算機」可用 jsj、jisuanji 或 ㄐㄧㄙㄨㄢㄐㄧ 搜尋。右鍵點結果，還能自訂縮寫。": "Find Calculator with jsj, jisuanji or ㄐㄧㄙㄨㄢㄐㄧ. Right-click a result to add your own aliases.",
+  "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如計算機 jsj／ㄐㄙㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 ji4 suan4 ji1。": "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as jsj or ㄐㄙㄐ for Calculator apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example ji4 suan4 ji1."
 }

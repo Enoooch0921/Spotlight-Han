@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingWelcomePage: View {
     @State private var example = 0
-    private let queries = ["紅果短劇", "教會活動", "hgdj"]
+    private let queries = ["會議記錄", "台北出差", "jsj"]
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(spacing: 0) {
@@ -13,14 +13,17 @@ struct OnboardingWelcomePage: View {
                 }.padding(20)
                 Divider().padding(.horizontal, 20)
                 HStack(spacing: 16) {
-                    Image(systemName: example == 1 ? "doc.text" : "play.rectangle.fill")
+                    Image(systemName: example == 2 ? "plus.forwardslash.minus" : "doc.text")
                         .font(.system(size: 28, weight: .light)).frame(width: 44, height: 44)
                     VStack(alignment: .leading, spacing: 5) {
-                        HighlightedText(text: example == 1 ? "教會活動計畫.docx" : "红果短剧", query: queries[example]).font(.headline)
+                        HighlightedText(text: example == 0 ? "会议记录.docx" : (example == 1 ? "出差計畫.docx" : "計算機"), query: queries[example]).font(.headline)
                         if example == 1 {
-                            HighlightedText(text: "為教会活动準備場地與設備。", query: queries[example])
+                            HighlightedText(text: "下週到台北出差，記得預訂車票與住宿。", query: queries[example])
                                 .font(.callout).foregroundStyle(.secondary)
-                        } else { Text(L.text("繁簡與 App 首字母，都能比對原始名稱。" )).font(.callout).foregroundStyle(.secondary) }
+                        } else {
+                            Text(L.text(example == 0 ? "輸入繁體「會議記錄」，也能找到簡體檔名。" : "輸入「計算機」的拼音首字母 jsj，也能找到 App。"))
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.left").foregroundStyle(.tertiary)
