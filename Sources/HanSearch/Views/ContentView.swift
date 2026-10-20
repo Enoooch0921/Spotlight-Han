@@ -187,7 +187,9 @@ struct ContentView: View {
                 if store.catalogRefreshing || store.indexing { ProgressView().controlSize(.mini) }
                 Text(L.text(statusText)).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 2)
-                if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
+                if store.documentIndexRoots.isEmpty && store.fullTextInAll && [.all, .contents].contains(store.mode) {
+                    Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.controlSize(.small)
+                } else if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
                     Button(L.text("選擇資料夾…")) { store.chooseCatalogFolder() }.controlSize(.small)
                 }
                 Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
@@ -234,11 +236,11 @@ struct ContentView: View {
     private var statusText: String {
         if let activity = store.activityDescription { return activity }
         if !store.notice.isEmpty { return store.notice }
-        if store.mode == .contents { return store.folder == nil ? "系統文件索引 · 可在設定加入資料夾加強全文比對" : store.indexNotice }
+        if store.mode == .contents { return store.documentIndexRoots.isEmpty ? "加入文件資料夾以建立 Han 全文索引" : store.indexNotice }
         if store.mode == .notes || store.mode == .contacts || store.mode == .calendar || store.mode == .reminders || store.mode == .mail || store.mode == .shortcuts {
             return store.personalStatus[store.mode] ?? "尚未連接 · 前往設定啟用"
         }
-        let summary = store.mode == .all && store.fullTextInAll && store.catalogRoots.isEmpty ? L.text("全機文件內文・系統索引") : L.text(store.catalogStatus)
+        let summary = store.mode == .all && store.fullTextInAll && store.catalogRoots.isEmpty ? L.text(store.spotlightSupplement ? "Han 文件索引＋Spotlight 補充" : store.documentIndexRoots.isEmpty ? "尚未建立 Han 文件索引" : "Han 文件索引・已選資料夾") : L.text(store.catalogStatus)
         return summary + (store.query.isEmpty ? "" : String(format: L.text(" · 比對 %.1f ms"), store.milliseconds))
     }
     private func quickRow(_ item: QuickResult) -> some View {
@@ -289,6 +291,9 @@ struct ContentView: View {
             if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
                 Button(L.text("選擇搜尋資料夾…")) { store.chooseCatalogFolder() }.buttonStyle(.bordered)
             }
+            if [.all, .contents].contains(store.mode) && store.documentIndexRoots.isEmpty {
+                Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.buttonStyle(.bordered)
+            }
             if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
                 SettingsLink { Text(L.text("設定資料來源")) }.buttonStyle(.bordered)
             }
@@ -307,7 +312,7 @@ struct ContentView: View {
         if store.verifyingDocumentContents { return "正在核對文件內文，已確認的結果會先顯示…" }
         if store.otherIndexedResultCount > 0 { return "尚未找到完整字詞命中；其他系統索引結果已收起，可展開查看。" }
         if store.mode == .all && store.fullTextInAll {
-            return store.searching ? "正在查詢全機文件內文；可先使用已出現的結果。" : "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。"
+            return store.searching ? "正在搜尋 Han 文件索引與已連接資料…" : "已搜尋 Han 收錄的文件與已連接資料；可增加搜尋資料夾。Spotlight 補充可在設定另行啟用；掃描 PDF 尚需 OCR。"
         }
         return store.catalogRoots.isEmpty ? "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" : "請縮短關鍵字，或在設定中加入檔案所在資料夾。"
     }

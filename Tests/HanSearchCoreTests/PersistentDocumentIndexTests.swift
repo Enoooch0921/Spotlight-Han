@@ -1,0 +1,67 @@
+import Foundation
+import HanSearchCore
+
+extension ChineseSearchTests {
+    func testPersistentDocumentIndex() throws {
+        func check(_ condition: @autoclosure () throws -> Bool, _ message: String = "Persistent index expectation failed") throws { let value = try condition(); precondition(value, message) }
+        let fm = FileManager.default
+        let base = fm.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("HanPersistent-" + UUID().uuidString)
+        let root = base.appendingPathComponent("Documents"), other = base.appendingPathComponent("Other")
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        try fm.createDirectory(at: other, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: base) }
+        let a = root.appendingPathComponent("a.txt"), b = root.appendingPathComponent("b.md"), c = other.appendingPathComponent("c.txt")
+        try "这里有教会活动。只用这两个字。设备是 DL-32。".write(to: a, atomically: true, encoding: .utf8)
+        try "ABCD elsewhere BCDE；設備 DL320 不是同型號。".write(to: b, atomically: true, encoding: .utf8)
+        try "只在另外資料夾的機密測試詞。".write(to: c, atomically: true, encoding: .utf8)
+        let library = root.appendingPathComponent("Library"), hidden = root.appendingPathComponent(".hidden")
+        try fm.createDirectory(at: library, withIntermediateDirectories: true)
+        try fm.createDirectory(at: hidden, withIntermediateDirectories: true)
+        try "不該收錄的獨特文字".write(to: library.appendingPathComponent("cache.txt"), atomically: true, encoding: .utf8)
+        try "不該收錄的獨特文字".write(to: hidden.appendingPathComponent("secret.txt"), atomically: true, encoding: .utf8)
+        try fm.createSymbolicLink(at: root.appendingPathComponent("outside-link.txt"), withDestinationURL: c)
+        let db = base.appendingPathComponent("Index/Documents.sqlite")
+        let index = PersistentDocumentIndex(databaseURL: db)
+        let initial = try index.synchronize(roots: [root, other])
+        precondition(initial.files == 3 && initial.searchable == 3 && initial.extracted == 3 && !initial.capped && initial.updated != nil)
+        precondition(initial.bytes > 0 && initial.bytes < index.limitBytes)
+        func hits(_ query: String, _ roots: [URL] = [root, other], _ mode: SearchMode = .all) throws -> [SearchItem] { try index.search(query: query, roots: roots, mode: mode).items }
+        try check(hits("教會活動").map(\.url) == [a])
+        try check(hits("教會").map(\.url) == [a], "Two-character Chinese needs independent indexing")
+        try check(hits("教").map(\.url) == [a], "Single-character Chinese cannot be dropped by a trigram-only design")
+        try check(hits("dl32").map(\.url) == [a], "Model separators work without returning DL320")
+        try check(hits("ABCDE").isEmpty, "FTS gram intersections must be verified as actual phrases")
+        try check(hits("不該收錄").isEmpty)
+        try check(hits("機密", [root]).isEmpty, "The current authorized roots, not DB contents, control query scope")
+        try check(hits("a.txt", [root], .contents).isEmpty, "Contents mode must not invent body hits for filenames")
+        let reopened = PersistentDocumentIndex(databaseURL: db)
+        try check(reopened.search(query: "教會活動", roots: [root]).items.first?.excerpt.contains("教会活动") == true)
+        let repeated = try reopened.synchronize(roots: [root, other])
+        precondition(repeated.extracted == 0 && repeated.reused == 3, "Unchanged files must reuse persistent text")
+        try "新的精確片段，替換舊內容。".write(to: a, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.modificationDate: Date().addingTimeInterval(10)], ofItemAtPath: a.path)
+        let changed = try index.synchronize(roots: [root, other])
+        precondition(changed.extracted == 1 && changed.reused == 2)
+        try check(hits("教會活動").isEmpty && hits("新的精確").count == 1, "Updates remove old FTS terms as well as old snippets")
+        let renamed = root.appendingPathComponent("renamed.md")
+        try fm.moveItem(at: b, to: renamed)
+        try fm.removeItem(at: a)
+        _ = try index.synchronize(roots: [root, other])
+        try check(index.statistics(roots: [root]).files == 1 && hits("DL320").map(\.url) == [renamed])
+        try index.retain(roots: [root])
+        try check(index.statistics(roots: [other]).files == 0 && hits("機密").isEmpty)
+        let cancellation = ProcessCancellation(); cancellation.cancel()
+        do { _ = try index.synchronize(roots: [root], cancellation: cancellation); preconditionFailure("Expected cancellation") } catch is CancellationError {}
+        try check(hits("DL320").count == 1, "Cancelled scans preserve committed content")
+        let tiny = PersistentDocumentIndex(databaseURL: base.appendingPathComponent("Tiny/Index.sqlite"), limitBytes: 131_072)
+        let capped = try tiny.synchronize(roots: [root])
+        precondition(capped.capped, "The capacity estimate must stop indexing visibly before filling the disk")
+        let bad = root.appendingPathComponent("broken.pdf")
+        try Data("not a PDF".utf8).write(to: bad)
+        let broken = try index.synchronize(roots: [root])
+        precondition(broken.unfinished == 1 && broken.issues.contains { $0.url == bad && $0.reason == .readFailed })
+        try index.retain(roots: [])
+        try check(index.statistics(roots: [root, other]).files == 0 && hits("DL320").isEmpty)
+        print("PASS: independent persistent FTS, Chinese 1/2-character search, script/model excerpts, reopen/reuse, updates/deletes/renames, scope isolation, exclusions/symlinks, cancellation, capacity and clearing; synthetic local files only")
+    }
+}

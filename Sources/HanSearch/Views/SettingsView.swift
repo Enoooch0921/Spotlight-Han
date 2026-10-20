@@ -52,29 +52,8 @@ struct SettingsView: View {
                 Text(L.text("首次集中選擇搜尋範圍，之後使用已保存的資料夾書籤；不會在啟動時自動探查未選的下載或文件資料夾。選擇使用者資料夾可涵蓋下載、影片、文件。只讀取檔名、不依賴 Spotlight，更新間隔至少 30 秒。"))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section(L.text("Word、PDF、PowerPoint 與 Excel 內容")) {
-                Toggle(L.text("「全部」加入全機文件搜尋（含內文）"), isOn: $store.fullTextInAll)
-                Text(L.text("直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PowerPoint、Excel 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(L.text("全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可補強繁簡比對、PPTX 與 XLSX 儲存格文字；「全部」仍保留全機搜尋，不必為此重掃整個使用者資料夾。舊版 PPT／XLS 取決於系統索引。"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(L.text("系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(L.text("全機文件結果會在背景核對候選文件，優先顯示有完整字詞命中的摘要；其餘系統索引結果預設收起，可展開查看。"))
-                    .font(.caption).foregroundStyle(.secondary)
-                if store.folder != nil { TimelineView(.periodic(from: Date(), by: 30)) { context in SourceHealthView(health: store.sourceHealth[.contents], now: context.date) } }
-                Text(store.folder?.path ?? L.text("未指定資料夾：文件內容模式使用 Spotlight 索引")).font(.caption)
-                if !store.indexNotice.isEmpty { Text(L.text(store.indexNotice)).font(.caption).foregroundStyle(.secondary) }
-                DocumentReadDetailsView(issues: store.documentIssues, capped: store.documentIndexCapped)
-                HStack {
-                    Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.disabled(store.indexing)
-                    if store.folder != nil {
-                        Button(L.text("重新讀取")) { store.rebuildIndex() }.disabled(store.indexing)
-                        Button(L.text("使用系統索引")) { store.resetScope() }.disabled(store.indexing)
-                    }
-                }
-                Text(L.text("資料夾全文索引只留在記憶體，結束 App 後需重新加入。掃描文件尚未提供 OCR。"))
-                    .font(.caption).foregroundStyle(.secondary)
+            Section(L.text("Han 文件全文索引")) {
+                DocumentIndexSettingsView(store: store)
             }
             Section(L.text("系統 App 資料來源")) {
                 Toggle(L.text("背景自動更新已連接來源"), isOn: $store.autoRefreshEnabled)

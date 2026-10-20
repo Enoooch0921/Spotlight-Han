@@ -9,7 +9,7 @@ final class FileAccessBookmarks {
     private var bookmarks: [String: Data] = [:]
     private var active: [String: URL] = [:]
     private var scoped = Set<String>()
-    var urls: [URL] { Array(active.values).sorted { $0.path < $1.path } }
+    var urls: [URL] { active.values.map { $0.standardizedFileURL.resolvingSymlinksInPath() }.sorted { $0.path < $1.path } }
     var unavailablePaths: [String] { bookmarks.keys.filter { active[$0] == nil }.sorted() }
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -18,11 +18,12 @@ final class FileAccessBookmarks {
         for (oldPath, bookmark) in stored {
             var stale = false
             guard let url = try? URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope, .withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale) else { continue }
-            if url.startAccessingSecurityScopedResource() { scoped.insert(url.path) }
-            active[url.path] = url
-            if oldPath != url.path { bookmarks.removeValue(forKey: oldPath) }
-            renamed[URL(fileURLWithPath: oldPath).resolvingSymlinksInPath().path] = url.path
-            bookmarks[url.path] = stale ? ((try? Self.bookmark(url)) ?? bookmark) : bookmark
+            let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+            if url.startAccessingSecurityScopedResource() { scoped.insert(path) }
+            active[path] = url // Retain the original scoped URL for the matching stop call.
+            if oldPath != path { bookmarks.removeValue(forKey: oldPath) }
+            renamed[URL(fileURLWithPath: oldPath).resolvingSymlinksInPath().path] = path
+            bookmarks[path] = stale ? ((try? Self.bookmark(url)) ?? bookmark) : bookmark
         }
         persist()
     }
@@ -44,8 +45,9 @@ final class FileAccessBookmarks {
     func add(_ urls: [URL]) throws {
         for url in urls {
             let data = try Self.bookmark(url)
-            if active[url.path] == nil, url.startAccessingSecurityScopedResource() { scoped.insert(url.path) }
-            active[url.path] = url; bookmarks[url.path] = data
+            let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+            if active[path] == nil, url.startAccessingSecurityScopedResource() { scoped.insert(path) }
+            active[path] = url; bookmarks[path] = data
         }
         persist()
     }

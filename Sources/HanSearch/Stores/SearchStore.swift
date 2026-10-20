@@ -48,6 +48,25 @@ final class SearchStore: ObservableObject {
     @Published var folder: URL?
     @Published var notice = ""
     @Published var indexNotice = ""
+    @Published var documentRoots: [URL] = []
+    @Published var unavailableDocumentRoots: [URL] = []
+    @Published var indexSnapshot = DocumentIndexSnapshot()
+    @Published var indexPaused = false
+    @Published var indexStorageMB = 500 {
+        didSet { taskPreferences.set(indexStorageMB, forKey: "documentIndexStorageMB.v1") }
+    }
+    @Published var spotlightSupplement = false {
+        didSet { taskPreferences.set(spotlightSupplement, forKey: "spotlightSupplement.v1"); cachedGlobalQuery = nil; cachedGlobalContents = []; search() }
+    }
+    let documentIndexURL: URL
+    var documentIndex: PersistentDocumentIndex { PersistentDocumentIndex(databaseURL: documentIndexURL, limitBytes: Int64(indexStorageMB) * 1_000_000) }
+    var documentIndexRoots: [URL] { documentRoots.isEmpty ? folder.map { [$0] } ?? [] : documentRoots }
+    let documentWatcher = DocumentIndexWatcher()
+    var documentIndexTask: Task<Void, Never>?
+    var documentIndexCancellation: ProcessCancellation?
+    var documentIndexGeneration = UUID()
+    var documentChangeTask: Task<Void, Never>?
+    var documentChangePending = false
     @Published var documentIssues: [DocumentReadIssue] = []
     @Published var documentIndexCapped = false
     @Published var fullTextInAll = true {
@@ -94,7 +113,7 @@ final class SearchStore: ObservableObject {
     private var backgroundRefreshTask: Task<Void, Never>?
     private var eventRefreshTask: Task<Void, Never>?
     @Published var autoRefreshEnabled = true {
-        didSet { sourcePreferences.set(autoRefreshEnabled, forKey: "autoRefreshSources.v1") }
+        didSet { sourcePreferences.set(autoRefreshEnabled, forKey: "autoRefreshSources.v1"); configureDocumentWatcher(); if autoRefreshEnabled && !indexPaused { rebuildIndex() } }
     }
     @Published var connecting = Set<SearchMode>()
     @Published var authorizationInFlight = false
@@ -116,7 +135,7 @@ final class SearchStore: ObservableObject {
     let naturalTaskParser = NaturalTaskParser()
     var showLauncher: (() -> Void)?
     let taskWriter: (@MainActor (TaskPlan) async throws -> String)?
-    private let taskPreferences: UserDefaults
+    let taskPreferences: UserDefaults
     let eventCalendarLoader: @MainActor () -> [TaskCalendarChoice]
     @Published var defaultEventCalendarID = "" {
         didSet { taskPreferences.set(defaultEventCalendarID, forKey: "defaultEventCalendarID.v1") }
@@ -144,13 +163,12 @@ final class SearchStore: ObservableObject {
     private let contentSearcher: @Sendable (String, ProcessCancellation) -> SearchResponse
     let documentPreviewLoader: @Sendable (URL, String) async -> DocumentPreview
     let fileCreationDateLoader: @Sendable (URL) async -> Date?
-    private var cachedGlobalQuery: String?
-    private var cachedGlobalContents: [SearchItem] = []
+    var cachedGlobalQuery: String?
+    var cachedGlobalContents: [SearchItem] = []
     private let sourcePreferences: UserDefaults
     private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
     private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
-    private let fileAccess: FileAccessBookmarks
-    private var documents: [IndexedDocument] = []
+    let fileAccess: FileAccessBookmarks
     private var entries: [CatalogEntry] = []
     private var personal: [PersonalRecord] = []
     private var clips: [String] = []
@@ -176,10 +194,12 @@ final class SearchStore: ObservableObject {
          contentSearcher: @escaping @Sendable (String, ProcessCancellation) -> SearchResponse = { query, cancellation in SearchService.searchDocumentContents(query: query, cancellation: cancellation) },
          documentPreviewLoader: @escaping @Sendable (URL, String) async -> DocumentPreview = { url, query in await DocumentPreviewStore.shared.preview(url: url, query: query) },
          fileCreationDateLoader: @escaping @Sendable (URL) async -> Date? = { await FileCreationDateStore.shared.date(for: $0) },
+         documentIndexURL: URL = PersistentDocumentIndex.defaultURL,
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.contentSearcher = contentSearcher
         self.documentPreviewLoader = documentPreviewLoader
+        self.documentIndexURL = documentIndexURL
         self.fileCreationDateLoader = fileCreationDateLoader
         self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
@@ -189,6 +209,8 @@ final class SearchStore: ObservableObject {
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.indexStorageMB = [100, 500, 1000, 2000].contains(taskPreferences.integer(forKey: "documentIndexStorageMB.v1")) ? taskPreferences.integer(forKey: "documentIndexStorageMB.v1") : 500
+        self.spotlightSupplement = taskPreferences.object(forKey: "spotlightSupplement.v1") as? Bool ?? false
         self.fileSort = FileResultSort(rawValue: taskPreferences.string(forKey: "fileResultSort.v1") ?? "") ?? .relevance
         self.defaultEventCalendarID = taskPreferences.string(forKey: "defaultEventCalendarID.v1") ?? ""
         appLibrary.onOpened = { [weak self] app, query in
@@ -208,6 +230,9 @@ final class SearchStore: ObservableObject {
         aliasesObservation = aliases.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { self?.objectWillChange.send(); self?.appLibrary.objectWillChange.send() }
         }
+        let restoredDocuments = self.fileAccess.restoreIndexRoots(taskPreferences.stringArray(forKey: "documentIndexRoots.v1") ?? [])
+        documentRoots = restoredDocuments.available; unavailableDocumentRoots = restoredDocuments.unavailable
+        folder = documentRoots.first
         guard loadSources else { return }
         activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
             Task { @MainActor in self?.reconcileSourcePermissions() }
@@ -243,6 +268,7 @@ final class SearchStore: ObservableObject {
             if self.mode == .clipboard { self.refreshSearchResults() }
         }
         Task {
+            await loadPersistentDocumentIndex()
             await loadCatalog()
             let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
             for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
@@ -321,7 +347,8 @@ final class SearchStore: ObservableObject {
                 self.showSearchActivity = true
             }
         }
-        let mode = mode, folder = folder, docs = documents, entries = entries, personal = personal, calendarSort = calendarSort
+        let mode = mode, folder = folder, localIndex = documentIndex, localRoots = documentIndexRoots, entries = entries, personal = personal, calendarSort = calendarSort
+        let spotlightSupplement = spotlightSupplement
         let cachedContents = cachedGlobalQuery == term ? cachedGlobalContents : []
         let fullTextInAll = fullTextInAll, contentSearcher = contentSearcher
         let aliasTargets = aliases.matchingTargets(term)
@@ -333,6 +360,7 @@ final class SearchStore: ObservableObject {
             let task = Task.detached(priority: silent ? .utility : .userInitiated) {
                 let start = Date()
                 var files: [SearchItem] = [], quick: [QuickResult] = []
+                var localWarning: String?
                 let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
@@ -341,11 +369,16 @@ final class SearchStore: ObservableObject {
                 if !utilityOnly && (mode == .all || mode == .apps) {
                     files += SearchService.searchApplications(query: term, aliasTargets: aliasTargets)
                 }
-                if !utilityOnly && (mode == .contents || mode == .all) {
-                    let documentMode: SearchMode = mode == .contents ? .contents : fullTextInAll ? .all : .names
-                    files += docs.compactMap { $0.match(query: term, mode: documentMode) }
+                if !utilityOnly && (mode == .contents || mode == .all || mode == .names) {
+                    let documentMode: SearchMode = mode == .contents ? .contents : mode == .names ? .names : fullTextInAll ? .all : .names
+                    do {
+                        let response = try localIndex.search(query: term, roots: localRoots, mode: documentMode, cancellation: processCancellation)
+                        files += response.items
+                        if response.truncated { localWarning = "Han 內文符合超過 200 筆，請增加關鍵字" }
+                    } catch is CancellationError {}
+                    catch { localWarning = error.localizedDescription }
                 }
-                let lookup = !utilityOnly && (mode == .all && fullTextInAll || mode == .contents && folder == nil)
+                let lookup = spotlightSupplement && !utilityOnly && (mode == .all && fullTextInAll || mode == .contents && folder == nil)
                 let base = files
                 if lookup { files += cachedContents }
                 quick += utilities
@@ -357,9 +390,9 @@ final class SearchStore: ObservableObject {
                     }
                 }
                 let web = mode == .all ? QuickProvider.webSearch(query: term) : nil
-                return (SearchService.merge(files, query: term), quick, web, lookup && !silent, base, Date().timeIntervalSince(start) * 1000)
+                return (SearchService.merge(files, query: term), quick, web, lookup && !silent, base, Date().timeIntervalSince(start) * 1000, localWarning)
             }
-            let (files, quick, web, lookup, base, elapsed) = await withTaskCancellationHandler {
+            let (files, quick, web, lookup, base, elapsed, localWarning) = await withTaskCancellationHandler {
                 await task.value
             } onCancel: { processCancellation.cancel(); task.cancel() }
             guard !Task.isCancelled, self.generation == token else { return }
@@ -369,7 +402,7 @@ final class SearchStore: ObservableObject {
                 self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first
             }
             self.onLayoutChanged?()
-            var finalFiles = files, warning: String?, totalElapsed = elapsed
+            var finalFiles = files, warning = localWarning, totalElapsed = elapsed
             if lookup {
                 let contentStarted = Date()
                 self.searchPhase = "正在搜尋整台 Mac 的文件內文…"
@@ -379,12 +412,13 @@ final class SearchStore: ObservableObject {
                 let response = await withTaskCancellationHandler { await contentTask.value } onCancel: { processCancellation.cancel(); contentTask.cancel() }
                 guard !Task.isCancelled, self.generation == token else { return }
                 totalElapsed += Date().timeIntervalSince(contentStarted) * 1000
-                warning = response.warning
-                if warning == nil {
+                warning = [localWarning, response.warning].compactMap { $0 }.joined(separator: " · ")
+                if warning?.isEmpty == true { warning = nil }
+                if response.warning == nil {
                     self.cachedGlobalQuery = term; self.cachedGlobalContents = response.items
                 }
                 // Keep already-visible local matches when the system index fails.
-                finalFiles = SearchService.merge(base + (warning == nil ? response.items : cachedContents), query: term)
+                finalFiles = SearchService.merge(base + (response.warning == nil ? response.items : cachedContents), query: term)
                 self.results = finalFiles; self.quickResults = quick
                 if finalFiles.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
                 if !self.allIDs.contains(self.selection ?? "") { self.selection = self.allIDs.first(where: { $0 != "quick:web" }) ?? self.allIDs.first }
@@ -509,42 +543,12 @@ final class SearchStore: ObservableObject {
     }
     func forgetFolders() {
         guard !catalogRefreshing, !indexing else { return }
-        fileAccess.clear(); catalogRoots = []; unavailableCatalogRoots = []; entries = []; documents = []; documentIssues = []; documentIndexCapped = false; folder = nil; catalogCount = 0
+        clearDocumentScopes()
+        fileAccess.clear(); catalogRoots = []; unavailableCatalogRoots = []; entries = []; documentIssues = []; documentIndexCapped = false; folder = nil; catalogCount = 0
         sourceHealth[.names] = nil; sourceHealth[.contents] = nil
         saveCatalogRoots(); try? FileManager.default.removeItem(at: FileCatalog.cacheURL)
         catalogStatus = "已忘記資料夾；可重新選擇搜尋範圍"; search()
     }
-    func chooseFolder() {
-        guard !indexing else { return }
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = L.text("讀取文件內容"); panel.message = L.text("直接讀取此資料夾的 Word、文字 PDF、PowerPoint、Excel 與純文字，供繁簡全文搜尋。")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do { try fileAccess.add([url]); folder = url; mode = .contents; rebuildIndex() }
-        catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }
-    }
-    func rebuildIndex() {
-        guard let folder, !indexing else { return }
-        sourceHealth[.contents, default: SourceHealth()].phase = .loading
-        sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
-        indexing = true; documents = []; documentIssues = []; documentIndexCapped = false
-        indexNotice = "正在讀取「\(folder.lastPathComponent)」中的文件…"; refreshSearchResults()
-        Task {
-            let indexed = await Task.detached(priority: .utility) { SearchService.index(folder: folder) }.value
-            if indexed.skippedText > 0 || indexed.capped {
-                if indexed.documents.isEmpty {
-                    sourceHealth[.contents] = SourceHealth(phase: .failed, lastAttempt: Date())
-                } else {
-                    sourceHealth[.contents, default: SourceHealth()].phase = .incomplete
-                    sourceHealth[.contents, default: SourceHealth()].partialUpdate = Date()
-                }
-                sourceHealth[.contents, default: SourceHealth()].lastAttempt = Date()
-            } else { sourceHealth[.contents, default: SourceHealth()].succeeded(at: Date()) }
-            documents = indexed.documents; indexing = false
-            documentIssues = indexed.issues; documentIndexCapped = indexed.capped
-            indexNotice = "已檢查 \(indexed.examinedFiles) 個檔案，\(indexed.extractedFiles) 份可搜尋內文，\(indexed.skippedText) 份未完成，\(indexed.unsupportedFiles) 個未支援格式"; refreshSearchResults()
-        }
-    }
-    func resetScope() { guard !indexing else { return }; folder = nil; documents = []; documentIssues = []; documentIndexCapped = false; sourceHealth[.contents] = nil; indexNotice = ""; search() }
     func openSourcePrivacy(_ source: SearchMode) {
         let anchor: String
         switch source {
@@ -637,7 +641,7 @@ final class SearchStore: ObservableObject {
         }
         if !changedOnly && !setupRunning {
             if !catalogRoots.isEmpty, sourceHealth[.names]?.shouldRefresh(at: now, interval: 900) == true { refreshCatalog() }
-            if folder != nil, sourceHealth[.contents]?.shouldRefresh(at: now, interval: 900) == true { rebuildIndex() }
+            if !documentIndexRoots.isEmpty, !indexPaused, sourceHealth[.contents]?.shouldRefresh(at: now, interval: 900) == true { rebuildIndex() }
         }
     }
     func eventSourcesDidChange() {

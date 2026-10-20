@@ -25,6 +25,17 @@
 "Excel 結構或文字超過讀取上限" = "Excel structure or text exceeds the reading limit";
 "GitHub 專案與原始碼" = "GitHub project and source";
 "Google · 按下 Return 後開啟瀏覽器" = "Google · Press Return to open the browser";
+"Han 內文符合超過 200 筆，請增加關鍵字" = "More than 200 Han content matches; refine your query";
+"Han 已收錄 %@ 份文件，%@ 份可搜尋內文，%@ 份未完成" = "Han indexed %@ documents; %@ have searchable text, %@ unfinished";
+"Han 文件全文索引" = "Han full-text document index";
+"Han 文件索引・已選資料夾" = "Han document index · Selected folders";
+"Han 文件索引＋Spotlight 補充" = "Han index + Spotlight supplement";
+"Han 索引・內文" = "Han index · Content";
+"Han 索引・檔名" = "Han index · Filename";
+"Han 索引已暫停；已儲存的文件仍可搜尋" = "Han indexing paused; saved documents remain searchable";
+"Han 索引空間已達上限，尚有文件未收錄" = "Han index storage limit reached; some files are not indexed";
+"Han 索引：已檢查 %@ 份，擷取 %@ 份，沿用 %@ 份" = "Han index: checked %@ files, extracted %@, reused %@";
+"Han 自行讀取已選資料夾的 Word、文字 PDF、PowerPoint、Excel 與文字文件，索引保存在本機，重新開啟後可接續搜尋，不依賴 Spotlight。" = "Han reads Word, text-based PDF, PowerPoint, Excel and text files in selected folders. The local index persists across launches and works independently of Spotlight.";
 "Han 預設行事曆" = "Han default calendar";
 "Microsoft Office" = "Microsoft Office";
 "PDF 受密碼保護" = "PDF is password protected";
@@ -44,6 +55,7 @@
 "⌘Space 仍被系統使用。請先關閉 Spotlight 的「顯示 Spotlight 搜尋」；也請檢查「顯示應用程式」是否使用相同組合。" = "⌘Space is still assigned to macOS. Disable Show Spotlight search and check Show Applications for the same shortcut.";
 "「全部」加入全機文件搜尋（含內文）" = "Search system-wide documents in All (including contents)";
 "「全部」包含文件內文" = "Include document contents in All";
+"「全部」搜尋 Han 文件內文索引" = "Include Han document contents in All";
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
 "上次完整更新：%@" = "Last complete refresh: %@";
@@ -60,6 +72,7 @@
 "事項名稱" = "Title";
 "事項名稱最多 200 字。" = "Titles can contain up to 200 characters.";
 "介面語言" = "Interface language";
+"以下原因分類僅統計前 200 份明細；未完成總數請見上方。" = "Reason counts below cover only the first 200 entries; see the total unfinished count above.";
 "你允許取用的聯絡人姓名、電話與電子郵件" = "Names, phone numbers and email addresses you permit";
 "使用 App 原始分類" = "Use Original Category";
 "使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，選取翻譯結果按 Return 開啟語言視窗，再進入系統語言下載設定。下載後可跨 App 共用。原查詢的檔案與 App 結果仍保留。" = "Uses Apple on-device translation on macOS 15+. Choose source and target languages. Missing models can be prepared through the language window. Your original search results remain available.";
@@ -84,6 +97,8 @@
 "備忘錄本批未能繼續讀取；已保留先前進度，稍後可重新讀取。" = "This Notes batch made no progress. The previous checkpoint is preserved for the next attempt.";
 "儲存" = "Save";
 "儲存空間" = "Storage";
+"先在 Finder 下載並保留在本機，再更新索引。" = "Download and keep the file locally in Finder, then update the index.";
+"先確認原檔能正常開啟；若權限不足，重新選取資料夾；若檔案損壞，請修復或重新匯出。" = "Check that the original opens normally. Reselect the folder if access is denied; repair or re-export damaged files.";
 "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" = "Choose search folders to save access. Apps, calculations and conversions work without them.";
 "先顯示時間與內容，按 Return 才建立。行程及提醒使用系統預設行事曆／清單；新增需要相應的存取授權。鬧鐘交給 Apple 系統時鐘。首次按下方「連接系統時鐘」，在系統視窗加入一次捷徑；不用自己編輯。系統鬧鐘精度為分鐘，只支援下一次的指定時分。" = "Review the time and content, then press Return to create. Events and reminders use system defaults and require permission. Alarms are created in Apple Clock through the bundled shortcut. Precision is one minute and only the next occurrence is supported.";
 "內文摘要已取消" = "Content preview cancelled";
@@ -112,6 +127,7 @@
 "剪貼板 · 按 Return 複製" = "Clipboard · Press Return to copy";
 "剪貼板 ⌘4" = "Clipboard ⌘4";
 "加入文件資料夾…" = "Add document folder…";
+"加入文件資料夾以建立 Han 全文索引" = "Add document folders to build the Han full-text index";
 "勾選分類，展開可查看全部 App。建立時會保留原本手動分類。" = "Select categories and expand to see every app. Existing manual categories are preserved.";
 "包含測試版更新" = "Include preview releases";
 "匯率服務暫不可用。" = "Exchange rate service is unavailable.";
@@ -128,14 +144,19 @@
 "只整理尚未手動分類的 App；不覆蓋你的安排。音訊外掛本體不屬於可啟動的 App。" = "Only organizes apps without a manual category. Audio plug-in files are not launchable apps.";
 "只設定到期日期，通知行為依系統提醒事項的設定。" = "Only a due date is set. Notifications follow your system Reminders settings.";
 "只設定日期（不指定通知時間）" = "Date only (no specific notification time)";
+"可另存成 PPTX，或開啟 Spotlight 補充搜尋。" = "Save as PPTX, or enable supplementary Spotlight search.";
+"可另存成 XLSX，或開啟 Spotlight 補充搜尋。" = "Save as XLSX, or enable supplementary Spotlight search.";
+"可拆分成較小文件或匯出文字副本，再更新索引。" = "Split into smaller documents or export a text copy, then update the index.";
 "可調整預覽欄位；修改上方文字會重新解析。" = "Adjust these fields, or edit the text above to parse it again.";
 "右鍵 App 即可釘選常用項目" = "Right-click an app to pin it here";
 "右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。" = "Right-click an app, file or personal result and choose Custom Search Aliases. Aliases and item identifiers stay on this Mac. Save an empty field to remove them. Calculator and task commands keep priority.";
 "啟用剪貼板記錄" = "Enable clipboard history";
 "喚出搜尋" = "Show search";
+"單份文件文字超過 Han 索引 8 MB 上限" = "Document text exceeds the Han index limit of 8 MB";
 "回報問題" = "Report an issue";
 "圖示" = "Grid";
 "在 Finder 顯示" = "Show in Finder";
+"在 Finder 顯示索引" = "Reveal index in Finder";
 "在設定中啟用，並依系統提示授權。" = "Enable this source in Settings and approve access if you wish.";
 "在預設瀏覽器開啟" = "Open in default browser";
 "執行" = "Run";
@@ -147,12 +168,14 @@
 "完成" = "Done";
 "專注模式" = "Focus";
 "尚未完成授權" = "Permission not yet completed";
+"尚未建立 Han 文件索引" = "No Han document index yet";
 "尚未找到完整字詞命中；其他系統索引結果已收起，可展開查看。" = "No literal match confirmed. Expand other system-index results to inspect them.";
 "尚未授權" = "Not authorised";
 "尚未檢查更新" = "Updates have not been checked";
 "尚未確認完整內文命中，可能只有檔名、中繼資料或系統分詞符合；預設收起。" = "No confirmed literal content match. These may match names, metadata or system tokenization; collapsed by default.";
 "尚未辨識到時間，試試「明天下午3點開會」。" = "No time recognised. Try “tomorrow at 3pm meeting”.";
 "尚未連接 · 前往設定啟用" = "Not connected · Enable in Settings";
+"尚未選擇文件資料夾；Han 不會自動掃描整個使用者資料夾。" = "No document folders selected. Han does not automatically scan your entire home folder.";
 "尚無剪貼板記錄" = "No clipboard history yet";
 "尚無可寫入的預設提醒事項清單" = "No writable default reminder list";
 "尚無可寫入的預設行事曆" = "No writable default calendar";
@@ -169,6 +192,7 @@
 "已建立" = "Created";
 "已忘記資料夾；可重新選擇搜尋範圍" = "Folders forgotten. Choose your search scope again.";
 "已掃描 %@ 筆檔名…" = "Scanned %@ filenames…";
+"已搜尋 Han 收錄的文件與已連接資料；可增加搜尋資料夾。Spotlight 補充可在設定另行啟用；掃描 PDF 尚需 OCR。" = "Searched Han-indexed documents and connected sources. Add more folders to expand coverage. Spotlight supplementation is optional in Settings; scanned PDFs require OCR.";
 "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。" = "Searched the system document index and connected sources. Try fewer keywords or add a folder for unindexed documents. Scanned PDFs still need OCR.";
 "已整理 %@ 個 App；保留原本手動分類" = "Organized %@ apps; kept existing manual categories";
 "已新增提醒「%@」" = "Created reminder “%@”";
@@ -177,6 +201,7 @@
 "已有同名分類，請換個名稱" = "This category name already exists. Choose another name.";
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
 "已檢查 %@ 個檔案，%@ 份可搜尋內文，%@ 份未完成，%@ 個未支援格式" = "Checked %@ files: %@ with searchable text, %@ unfinished, %@ unsupported formats";
+"已清除 Han 文件索引" = "Han document index cleared";
 "已移至「%@」" = "Moved to “%@”";
 "已複製" = "Copied";
 "已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
@@ -202,6 +227,7 @@
 "已達內文總量 32 MB 上限" = "Reached the 32 MB total-text limit";
 "已達摘要讀取上限；可開啟文件查看" = "Preview limit reached; open the document to view content";
 "已釘選" = "Pinned";
+"建立 Han 索引" = "Build Han index";
 "建立所選分類" = "Create selected categories";
 "建立日期無法取得" = "Creation date unavailable";
 "建立日期：%@" = "Created: %@";
@@ -238,6 +264,7 @@
 "捷徑 ⌘3" = "Shortcuts ⌘3";
 "捷徑已執行" = "Shortcut finished";
 "捷徑未完成：%@" = "Shortcut did not finish: %@";
+"掃描或圖片文件需要先做 OCR；空白文件沒有內文可索引。" = "Run OCR on scanned or image documents first. Blank documents have no text to index.";
 "授權有效時安靜更新，不會反覆詢問。行事曆／提醒事項每5分鐘及收到變更後更新；其他已連接來源與文件索引每15分鐘更新。權限失效會暫停並顯示狀態，等你主動重新連接。" = "Refreshes silently while permission is valid. Calendar and Reminders refresh every 5 minutes and after change notifications; other connected sources and document indexes refresh every 15 minutes. If permission is lost, refresh pauses until you reconnect.";
 "授權未完成，已停止後續連接，避免繼續疊加系統提示。" = "Permission did not finish. Remaining connections were stopped to avoid overlapping prompts.";
 "提前 %@ 分鐘" = "%@ minutes before";
@@ -263,6 +290,8 @@
 "文件內容・系統索引" = "Contents · System index";
 "文件內文符合超過 2,000 筆，請增加關鍵字。" = "Over 2,000 document matches. Add more keywords.";
 "文件或搜尋輸出過大，請縮小搜尋範圍。" = "Document or search output is too large. Narrow the scope.";
+"文件資料夾授權無法恢復，請重新選擇；未顯示快取內文" = "Document folder access could not be restored. Reselect the folders; cached text is not shown.";
+"文件頁數或讀取時間超過 Han 索引上限" = "Document pages or reading time exceed the Han index limit";
 "新增分類" = "New category";
 "新增提醒事項" = "New reminder";
 "新增提醒事項：%@" = "Create reminder: %@";
@@ -278,10 +307,12 @@
 "時間尚未完整辨識，請簡化成一個日期與時間。" = "The time is incomplete. Simplify it to one date and time.";
 "時間已經過去，請調整後再建立。" = "This time has passed. Adjust it before creating.";
 "時間解析暫時無法使用，請重新開啟 Han。" = "Date parsing is unavailable. Please reopen Han.";
+"暫停索引" = "Pause indexing";
 "暫無可用匯率" = "No exchange rates available";
 "更改分類" = "Change Category";
 "更新 App 清單" = "Refresh App List";
 "更新檔名清單" = "Refresh file index";
+"更新索引" = "Update index";
 "最近開啟" = "Recently Opened";
 "有 %@ 個資料夾尚無法恢復存取；已保留原有選擇，請重新選擇相同資料夾。" = "Access to %@ folders could not be restored. Previous selections were kept; select the same folders again.";
 "有新版本可下載" = "An update is available";
@@ -319,9 +350,11 @@
 "正在取得每日參考匯率…" = "Fetching daily exchange rates…";
 "正在建立…" = "Creating…";
 "正在掃描檔名（不讀取影片內容）…" = "Scanning filenames (not video content)…";
+"正在搜尋 Han 文件索引與已連接資料…" = "Searching the Han document index and connected sources…";
 "正在搜尋…" = "Searching…";
 "正在搜尋應用程式…" = "Searching applications…";
 "正在搜尋整台 Mac 的文件內文…" = "Searching document contents across this Mac…";
+"正在更新 Han 文件索引；既有結果仍可搜尋…" = "Updating the Han document index; existing results remain searchable…";
 "正在查詢全機文件內文；可先使用已出現的結果。" = "Searching document contents across this Mac. You can use results already shown.";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
 "正在核對文件內文，已確認的結果會先顯示…" = "Checking document content; confirmed matches appear first…";
@@ -351,6 +384,7 @@
 "沒有可擷取的文字（空白或圖片）" = "No extractable text (empty or image-only)";
 "沒有符合的 App" = "No matching apps";
 "清單" = "List";
+"清除並重建索引" = "Clear and rebuild index";
 "清除學習紀錄" = "Clear learned choices";
 "清除搜尋，瀏覽全部" = "Clear Search and Browse All";
 "清除記錄" = "Clear history";
@@ -364,6 +398,7 @@
 "無法保存文件資料夾授權：%@" = "Could not save document folder access: %@";
 "無法儲存搜尋習慣；本次仍可使用。" = "Could not save search habits; available for this session.";
 "無法取得內文摘要：%@" = "Content preview unavailable: %@";
+"無法恢復授權：%@" = "Could not restore folder access: %@";
 "無法檢查更新，請稍後再試" = "Could not check for updates. Try again later.";
 "無法記住資料夾授權：%@" = "Could not save folder access: %@";
 "無法開啟 App；可能已移動或刪除，請更新清單。" = "Could not open the app. It may have moved or been deleted; refresh the list.";
@@ -385,7 +420,10 @@
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";
 "移除" = "Remove";
+"移除並清除索引" = "Remove and clear indexed text";
+"移除所有文件範圍並清除索引" = "Remove all document scopes and clear index";
 "稍後" = "Later";
+"空間或掃描範圍達限，尚有文件未收錄；請調整範圍或容量後更新索引。" = "Storage or scan limit reached. Some files are not indexed. Adjust scope or capacity and update the index.";
 "等待前一個來源完成…" = "Waiting for the previous source…";
 "等待授權" = "Waiting for permission";
 "等待系統授權；請在系統視窗選擇允許或不允許…" = "Waiting for system consent. Choose Allow or Don't Allow in the system dialog.";
@@ -411,6 +449,9 @@
 "系統限制存取" = "Access restricted by the system";
 "系統預設提醒事項清單（確認後授權）" = "System default reminder list (permission after confirmation)";
 "系統預設行事曆（確認後授權）" = "System default calendar (permission after confirmation)";
+"索引占用：%@" = "Index storage: %@";
+"索引含文件文字，僅保存在這台 Mac，不上傳，也不複製原始文件。預設略過 Library、快取、隱藏與部分開發資料夾；不跟隨符號連結。單檔 20 MB、可擷取文字 8 MB；首次建立較慢，之後只重新擷取有變動的文件。掃描 PDF 尚無 OCR。" = "The index contains document text and stays on this Mac. No uploads or copies of original files. Library, caches, hidden and some developer folders are excluded; symlinks are not followed. Limits: 20 MB per file, 8 MB extracted text. Initial indexing takes time; unchanged text is reused. No OCR for scanned PDFs.";
+"索引容量上限" = "Index storage limit";
 "結束" = "End";
 "結束 Spotlight Han" = "Quit Spotlight Han";
 "結束日期（含當天）" = "Last day (inclusive)";
@@ -419,6 +460,7 @@
 "網路或匯率服務暫不可用，稍後再試。" = "Network or rate service unavailable. Try again later.";
 "編輯分類名稱與圖示" = "Edit category name and icon";
 "縮寫未儲存：每項最多32字、最多8項，總共最多2,000個項目。" = "Aliases were not saved: up to 8 aliases of 32 characters each, for at most 2,000 items.";
+"繼續索引" = "Resume indexing";
 "缺少時間解析元件，請重新安裝 Han。" = "The date parser is missing. Please reinstall Han.";
 "翻譯" = "Translation";
 "翻譯暫時無法完成" = "Translation temporarily unavailable";
@@ -463,9 +505,11 @@
 "語言已準備完成：%@。之後會在搜尋結果上方自動翻譯。" = "Languages ready: %@. Future translations appear above search results.";
 "語言與地區" = "Language & Region";
 "請先核對系統時鐘" = "Check Apple Clock first";
+"請先用密碼開啟 PDF，另存可讀取的副本，再更新索引。" = "Unlock the PDF and save a readable copy, then update the index.";
 "請加上明確時間，才能設定時長或提前通知。" = "Add a specific time to set a duration or advance notification.";
 "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。" = "Choose Add Shortcut in the system window, then return to Han. Setup is needed only once.";
 "請搭配 ⌘、⌃ 或 ⌥" = "Include ⌘, ⌃ or ⌥";
+"請縮小資料夾範圍，或改用 Han 持久文件索引。" = "Choose a smaller folder scope, or use the persistent Han document index.";
 "請縮短關鍵字，或在設定中加入檔案所在資料夾。" = "Try a shorter query or add the file's folder in Settings.";
 "請補上事項名稱。" = "Please add a title.";
 "請補上事項名稱，例如「明天下午3點開會」。" = "Add a task title, such as “tomorrow at 3pm meeting”.";
@@ -505,6 +549,7 @@
 "進行中" = "Ongoing";
 "遊戲" = "Games";
 "選擇搜尋資料夾…" = "Choose search folders…";
+"選擇要保存在本機搜尋索引的文件資料夾。只讀取支援的文字文件，不複製原始檔；可一次選擇多個資料夾。" = "Select document folders for the persistent local search index. Only supported document text is read; originals are not copied. You can select multiple folders.";
 "選擇資料夾…" = "Choose folders…";
 "部分資料讀取於：%@" = "Partial data read: %@";
 "郵件" = "Mail";
@@ -536,6 +581,8 @@
 "預覽與調整 ↵" = "Review and adjust ↵";
 "預設換算目標（至少選一種，可多選）" = "Default target currencies (choose at least one)";
 "預設關閉。啟用後只在記憶體保留最近 50 筆、每筆最多 2,000 字；略過標示為隱藏／暫存的內容及常見密碼管理器。其他 App 未標示的敏感文字仍可能被記錄。" = "Off by default. Stores the latest 50 text entries in memory, up to 2,000 characters each. Skips marked hidden or temporary content and common password managers. Unmarked sensitive text may still be captured.";
+"預設關閉。補充結果受 macOS 系統索引與權限限制；不會把未選的文件加入 Han 索引。" = "Off by default. Supplementary results depend on macOS indexing and permissions. Unselected documents are not added to the Han index.";
+"額外使用 Spotlight 補充全機文件結果" = "Supplement with system-wide Spotlight document results";
 "顯示前 200 筆，請增加關鍵字" = "Showing the first 200 results. Refine your query.";
 "顯示器" = "Displays";
 "顯示方式" = "View";
@@ -545,3 +592,4 @@
 "首次集中選擇搜尋範圍，之後使用已保存的資料夾書籤；不會在啟動時自動探查未選的下載或文件資料夾。選擇使用者資料夾可涵蓋下載、影片、文件。只讀取檔名、不依賴 Spotlight，更新間隔至少 30 秒。" = "Choose folders once to save access. Unselected protected folders are not scanned. Choosing your home folder indexes Downloads, Movies and Documents. Filename indexing is independent of Spotlight and refreshes at intervals of at least 30 seconds.";
 "首次需準備語言 · 選取後 ↵ 開啟語言設定 · 下方照常搜尋" = "Prepare languages once · Select and press ↵ for setup · Search continues below";
 "鬧鐘" = "Alarms";
+"；空間或掃描範圍達限，尚有文件未收錄" = "; storage or scan limit reached, some files are not indexed";

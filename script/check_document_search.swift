@@ -52,6 +52,7 @@ private final class IndexFixture: @unchecked Sendable {
     @MainActor static func main() async throws {
         let suite = "HanDocumentChecks." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(true, forKey: "spotlightSupplement.v1")
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(suite)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let written = root.appendingPathComponent("unrelated-name.txt")
@@ -68,7 +69,7 @@ private final class IndexFixture: @unchecked Sendable {
         precondition(missingDate == nil, "Unavailable metadata must not invent a date")
         defer { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
         let fixture = IndexFixture(local: local)
-        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults, contentSearcher: { fixture.search($0, $1) })
+        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults, contentSearcher: { fixture.search($0, $1) }, documentIndexURL: root.appendingPathComponent("Index/test.sqlite"))
         func wait(line: UInt = #line, _ condition: @escaping @MainActor () -> Bool) async throws {
             for _ in 0..<500 { if condition() { return }; try await Task.sleep(for: .milliseconds(10)) }
             preconditionFailure("Document wait at line \(line): searching=\(store.searching), indexing=\(store.indexing), results=\(store.results.count), calls=\(fixture.count)")
@@ -189,6 +190,26 @@ private final class IndexFixture: @unchecked Sendable {
         dated.fileSort = .relevance
         precondition(!dated.readingFileDates && defaults.string(forKey: "fileResultSort.v1") == "relevance")
         print("PASS: file creation-date ordering in both directions, missing dates last, App slots, stable selection, stale metadata rejection and sort preference persistence")
+        let ownDefaults = UserDefaults(suiteName: suite + ".independent")!
+        defer { ownDefaults.removePersistentDomain(forName: suite + ".independent") }
+        let proof = root.appendingPathComponent("local-proof.txt")
+        try "索引重启验证词：只在 Han 自建索引里。".write(to: proof, atomically: true, encoding: .utf8)
+        let noSystem = IndexFixture(local: proof)
+        let ownURL = root.appendingPathComponent("Index/persistent-proof.sqlite")
+        let independent = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: ownDefaults), taskPreferences: ownDefaults, sourcePreferences: ownDefaults, contentSearcher: { noSystem.search($0, $1) }, documentIndexURL: ownURL)
+        independent.autoRefreshEnabled = false
+        try independent.addDocumentRoots([root]); try await wait { !independent.indexing }
+        independent.query = "索引重啟驗證詞"; independent.search(); try await wait { !independent.searching }
+        precondition(independent.results.contains { $0.url == proof && $0.excerpt.contains("重启验证") } && noSystem.count == 0 && !independent.spotlightSupplement)
+        let resumed = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: ownDefaults), taskPreferences: ownDefaults, sourcePreferences: ownDefaults, contentSearcher: { noSystem.search($0, $1) }, documentIndexURL: ownURL)
+        precondition(resumed.documentRoots.map(\.path) == [root.path] && !resumed.spotlightSupplement)
+        resumed.query = "索引重啟驗證詞"; resumed.search(); try await wait { !resumed.searching }
+        precondition(resumed.results.contains { $0.url == proof } && noSystem.count == 0, "A new Store must query persisted content without scanning or calling Spotlight")
+        resumed.removeDocumentRoot(root); try await wait { !resumed.indexing && !resumed.searching }
+        precondition(resumed.results.isEmpty && resumed.documentRoots.isEmpty)
+        let removed = try resumed.documentIndex.statistics(roots: [root])
+        precondition(removed.files == 0, "Removing a scope must delete its persistent text")
+        print("PASS: All searches independent persistent contents, restores authorized roots across Store restarts, makes no native index calls, and removes scoped text on request")
         print("PASS: model filename/body evidence and history stay in relevance tiers; Excel participates in All with cell excerpts")
         print("PASS: literal content evidence outranks unrelated index matches and habits, candidates verified without scrolling, collapsed fallback, bounded concurrency and late-preview rejection")
         print("PASS: bounded document previews, cancellation, ephemeral cache and original-text highlighting; All includes system-wide and local contents, fast partial results, selection preservation, deduplication/snippets, quiet cache reuse, stale-response rejection, visible failure with local results, utility/mode isolation and persisted opt-out; fixture index and temporary files only")

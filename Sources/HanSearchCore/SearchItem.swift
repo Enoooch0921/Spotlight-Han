@@ -10,7 +10,7 @@ public struct SearchItem: Identifiable, Hashable, Sendable {
     public var isApplication: Bool { url.pathExtension.lowercased() == "app" }
 
     public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil) {
-        self.url = url
+        self.url = url.isFileURL ? url.standardizedFileURL.resolvingSymlinksInPath() : url
         self.name = name ?? url.lastPathComponent
         self.source = source
         self.excerpt = excerpt
@@ -26,7 +26,7 @@ public struct IndexedDocument: Sendable {
     public let normalizedText: String
 
     public init(url: URL, text: String) {
-        self.url = url
+        self.url = url.standardizedFileURL.resolvingSymlinksInPath()
         self.name = url.lastPathComponent
         self.text = text
         self.normalizedName = ChineseSearch.normalized(name)

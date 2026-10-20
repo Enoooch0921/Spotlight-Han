@@ -35,3 +35,8 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_document_search.swift -o "$BUILD_DIR/HanDocumentSearchChecks"
 "$BUILD_DIR/HanDocumentSearchChecks"
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_persistent_index.swift -o "$BUILD_DIR/HanPersistentIndexChecks"
+"$BUILD_DIR/HanPersistentIndexChecks"

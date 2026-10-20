@@ -9,7 +9,7 @@ public struct CatalogEntry: Codable, Sendable {
     public let phonetics: PhoneticSearch
 
     public init(url: URL, directory: Bool = false) {
-        path = url.path
+        path = url.standardizedFileURL.resolvingSymlinksInPath().path
         name = url.lastPathComponent
         foldedName = ChineseSearch.normalized(name)
         ext = url.pathExtension.lowercased()

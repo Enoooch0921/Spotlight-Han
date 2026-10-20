@@ -30,6 +30,7 @@ struct CheckRunner {
             print("PASS: relocated local date parser, Chinese/English drafts, ranges and validation")
             return
         }
+        if CommandLine.arguments.contains("--persistent-index-only") { try tests.testPersistentDocumentIndex(); return }
         try tests.testApplicationCatalog()
         try tests.testPhoneticTitles()
         tests.testAppAndFilenameAcrossScripts()
@@ -39,6 +40,7 @@ struct CheckRunner {
         try tests.testRealDocxExtractionAndCrossScriptContent()
         try tests.testPresentationContents()
         try tests.testSpreadsheetContents()
+        try tests.testPersistentDocumentIndex()
         try tests.testRealSpotlightQueryDoesNotError()
         try tests.testCalculator()
         tests.testConversions()
@@ -61,7 +63,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 31 check groups — Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 32 check groups — Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 

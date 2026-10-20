@@ -12,7 +12,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese m
 
 An app is named `红果短剧`, but you type `紅果短劇`. A Word document contains `教会活动`, but you search for `教會活動`. Or you need a video urgently and want to search the folders you actually use.
 
-Han matches both Chinese scripts while keeping original filenames and text. Filename and video search uses its own index of folders you select. Supported document content can be read locally in an explicitly selected folder; content search outside that scope still uses Spotlight.
+Han matches both Chinese scripts while keeping original filenames and text. Filename and video search uses its own index of folders you select. Document text is indexed locally in selected folders and persisted across launches. Spotlight is an optional supplement, disabled by default.
 
 This is script matching, not synonym search: `影片` and `視頻` are not automatically treated as the same word.
 
@@ -46,7 +46,7 @@ Private sources require macOS permissions. Valid grants are reused; revoked acce
 
 ## Privacy and current limits
 
-Search data stays on the Mac. Personal-source and document-content copies stay in memory. Filename metadata is cached locally. There is no analytics service or automatic query upload. Currency conversion downloads a public daily USD rate table; amounts and query text are not sent. Optional web search only runs when selected. Apple translation requires its language resources and macOS 15+.
+Search data stays on the Mac. Personal-source copies stay in memory; selected document text is persisted in the local Han index. Filename metadata is cached locally. There is no analytics service or automatic query upload. Currency conversion downloads a public daily USD rate table; amounts and query text are not sent. Optional web search only runs when selected. Apple translation requires its language resources and macOS 15+.
 
 Han is an early independent launcher and does not yet match all Spotlight features. There is no OCR, no fuzzy synonym search, no realtime exchange-rate feed and no Siri/Apple Intelligence integration. Calendar/Reminders confirmation and EventKit object mapping are tested with a fake writer; real-account writes are not performed by automated tests.
 
@@ -68,6 +68,6 @@ App searches such as `logicpro` now match **Logic Pro**; `fcp` / `fcpx` match **
 
 Chinese names support full Pinyin and Zhuyin; only apps automatically match initials (`hgdj` / `ㄏㄍㄉㄐ`). Search `zdj` for Terminal even with English system app names. Right-click a result to set local custom aliases. Initials are App-only; filenames and personal titles require full phonetic input or an explicit custom alias. Model queries such as dl32 keep their digits.
 
-All now includes system-wide indexed Word, PDF, PowerPoint and Excel contents with Chinese script variants. Fast results appear first; content matches merge afterward without losing selection. Optional folder extraction supports PPTX slide/notes text, XLSX cells and per-file failure details. System index coverage and access restrictions still apply.
+All searches Han's independent persistent full-text index for selected Word, PDF, PowerPoint, Excel and text files. Background reconciliation reuses unchanged content and removes deleted entries after complete scans. Storage controls, scope removal and per-file failures are visible. Spotlight supplementation is optional and disabled by default. This feature is currently local development work and has not been released.
 
 File results show filesystem creation dates and times, read in the background. Choose relevance, newest first or oldest first; the preference is remembered. Unavailable dates are labelled explicitly and sorted last.
