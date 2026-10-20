@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingWelcomePage: View {
     @State private var example = 0
-    private let queries = ["會議記錄", "台北出差", "jsj"]
+    private let queries = ["會議記錄", "台北出差", OnboardingAppInput.pinyin.query, OnboardingAppInput.zhuyin.query]
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(spacing: 0) {
@@ -13,7 +13,7 @@ struct OnboardingWelcomePage: View {
                 }.padding(20)
                 Divider().padding(.horizontal, 20)
                 HStack(spacing: 16) {
-                    Image(systemName: example == 2 ? "plus.forwardslash.minus" : "doc.text")
+                    Image(systemName: example >= 2 ? "plus.forwardslash.minus" : "doc.text")
                         .font(.system(size: 28, weight: .light)).frame(width: 44, height: 44)
                     VStack(alignment: .leading, spacing: 5) {
                         HighlightedText(text: example == 0 ? "会议记录.docx" : (example == 1 ? "出差計畫.docx" : "計算機"), query: queries[example]).font(.headline)
@@ -21,7 +21,7 @@ struct OnboardingWelcomePage: View {
                             HighlightedText(text: "下週到台北出差，記得預訂車票與住宿。", query: queries[example])
                                 .font(.callout).foregroundStyle(.secondary)
                         } else {
-                            Text(L.text(example == 0 ? "輸入繁體「會議記錄」，也能找到簡體檔名。" : "輸入「計算機」的拼音首字母 jsj，也能找到 App。"))
+                            Text(L.text(example == 0 ? "輸入繁體「會議記錄」，也能找到簡體檔名。" : (example == 2 ? OnboardingAppInput.pinyin.explanation : OnboardingAppInput.zhuyin.explanation)))
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                     }
@@ -37,8 +37,9 @@ struct OnboardingWelcomePage: View {
                 Picker(L.text("預覽範例"), selection: $example) {
                     Text(L.text("繁簡")).tag(0)
                     Text(L.text("內文")).tag(1)
-                    Text(L.text("App 首字母")).tag(2)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 250)
+                    Text(L.text("App 拼音")).tag(2)
+                    Text(L.text("App 注音")).tag(3)
+                }.pickerStyle(.segmented).labelsHidden().frame(width: 360)
             }.padding(.top, -12)
             HStack(alignment: .top, spacing: 28) {
                 OnboardingFeatureLine(title: "保留原樣", detail: "以你習慣的字搜尋，不改動原始檔名與文字。", symbol: "character.book.closed")

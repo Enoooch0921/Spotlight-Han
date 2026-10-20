@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingToolsPage: View {
     let settings: (SettingsPage) -> Void
     @State private var tool = 0
+    @State private var appInput: OnboardingAppInput = .pinyin
     private let examples = ["36 * 24", "3000nt = 馬來西亞", "明天下午3點開會30分鐘", "hello", "jsj"]
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -13,12 +14,19 @@ struct OnboardingToolsPage: View {
                 Text(L.text("翻譯")).tag(3)
                 Text(L.text("縮寫")).tag(4)
             }.pickerStyle(.segmented).labelsHidden()
+            if tool == 4 {
+                Picker(L.text("App 縮寫輸入方式"), selection: $appInput) {
+                    ForEach(OnboardingAppInput.allCases, id: \.self) { input in
+                        Text(L.text(input.title)).tag(input)
+                    }
+                }.pickerStyle(.segmented).frame(maxWidth: 340)
+            }
             GroupBox {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 10) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         if tool == 2 { OnboardingKey(text: "cal ⇥") }
-                        Text(examples[tool]).font(.system(size: 19, weight: .medium)).textSelection(.enabled)
+                        Text(tool == 4 ? appInput.query : examples[tool]).font(.system(size: 19, weight: .medium)).textSelection(.enabled)
                     }
                     Divider()
                     VStack(alignment: .leading, spacing: 8) {
@@ -49,7 +57,7 @@ struct OnboardingToolsPage: View {
         case 1: return "可輸入國家名稱，不用先知道貨幣代碼。結果會標示每日參考匯率的資料日期。"
         case 2: return "預覽中可核對時間、內容與目的行事曆；確認後才寫入。"
         case 3: return "使用 Apple 本機翻譯，需要先準備所選語言模型。"
-        default: return "首字母只套用 App；文件標題與內文維持文字比對。"
+        default: return "拼音首字母與注音首符號只套用 App；文件標題與內文維持文字比對。"
         }
     }
     private var instructionTitle: String {
@@ -61,7 +69,7 @@ struct OnboardingToolsPage: View {
         case 1: return "3000tb rmb、nt3000 = usd 都可以；設定裡可勾選多個預設目標。免費匯率每日更新，並非銀行成交價。"
         case 2: return "輸入自然語言時間與事項，再按 Return 看預覽。提醒也可用 rem；系統鬧鐘需先連接時鐘捷徑。"
         case 3: return "下載語言可能需要一些時間；翻譯顯示在搜尋結果下方，原本的檔案與 App 搜尋不受影響。"
-        default: return "例如「計算機」可用 jsj、jisuanji 或 ㄐㄧㄙㄨㄢㄐㄧ 搜尋。右鍵點結果，還能自訂縮寫。"
+        default: return appInput.instruction
         }
     }
 }

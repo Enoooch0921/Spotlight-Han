@@ -1,5 +1,21 @@
 import SwiftUI
 
+enum OnboardingAppInput: String, CaseIterable {
+    case pinyin, zhuyin
+    var title: String { self == .pinyin ? "拼音首字母" : "注音首符號" }
+    var query: String { self == .pinyin ? "jsj" : "ㄐㄙㄐ" }
+    var explanation: String {
+        self == .pinyin
+            ? "輸入「計算機」的拼音首字母 jsj，也能找到 App。"
+            : "輸入「計算機」每個字的第一個注音符號 ㄐㄙㄐ，也能找到 App。"
+    }
+    var instruction: String {
+        self == .pinyin
+            ? "計算機 → ji suan ji → jsj。也支援完整拼音 jisuanji；右鍵點結果可自訂縮寫。"
+            : "計算機 → ㄐㄧˋ ㄙㄨㄢˋ ㄐㄧ → ㄐㄙㄐ。也支援完整注音；右鍵點結果可自訂縮寫。"
+    }
+}
+
 struct OnboardingNote: View {
     let text: String
     var symbol = "info.circle"

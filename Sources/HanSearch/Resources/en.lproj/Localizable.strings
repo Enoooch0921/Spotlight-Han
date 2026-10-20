@@ -26,6 +26,9 @@
 "5 分鐘" = "5 minutes";
 "App 可用 hgdj、完整拼音或注音搜尋。右鍵點結果，還能自訂自己熟悉的縮寫。" = "Find apps with initials such as hgdj, full Pinyin or Zhuyin. Right-click a result to add your own aliases.";
 "App 可直接搜尋；文件內文與個人資料，需要先選範圍或連接來源。" = "App search works immediately. Choose folders or connect sources to search documents and personal information.";
+"App 拼音" = "App Pinyin";
+"App 注音" = "App Zhuyin";
+"App 縮寫輸入方式" = "App abbreviation input";
 "App 首字母" = "App initials";
 "Apple 本機翻譯 · 選取後 ↵ 複製" = "Apple on-device translation · Select then ↵ to copy";
 "Apple 本機翻譯 · 選取後按 Return 複製" = "Apple on-device translation · Select and press Return to copy";
@@ -330,6 +333,8 @@
 "拖動 App 到左側分類；分類可拖動排序，自訂分類可右鍵編輯。" = "Drag apps to sidebar categories. Drag any category to reorder; right-click custom categories to edit.";
 "拼音、注音與搜尋縮寫" = "Pinyin, Zhuyin and Search Aliases";
 "拼音、注音，也可以自訂" = "Pinyin, Zhuyin and your own aliases";
+"拼音首字母" = "Pinyin initials";
+"拼音首字母與注音首符號只套用 App；文件標題與內文維持文字比對。" = "Pinyin and Zhuyin initials apply only to apps. Document names and contents use text matching.";
 "按 Return 進入確認預覽，可調整日期與內容。" = "Press Return to review and adjust the date and content.";
 "按 Tab 新增提醒事項" = "Press Tab to create a reminder";
 "按 Tab 新增行事曆行程" = "Press Tab to create a calendar event";
@@ -489,6 +494,7 @@
 "沒有可擷取的文字（空白或圖片）" = "No extractable text (empty or image-only)";
 "沒有符合的 App" = "No matching apps";
 "沿用檔名搜尋範圍" = "Use filename folders";
+"注音首符號" = "Zhuyin initials";
 "清單" = "List";
 "清除並重建索引" = "Clear and rebuild index";
 "清除學習紀錄" = "Clear learned choices";
@@ -627,6 +633,8 @@
 "觸控式軌跡板" = "Trackpad";
 "計算" = "Calculate";
 "計算、每日匯率、翻譯，以及預覽後建立行程與提醒。" = "Calculate, convert currencies with daily rates, translate, and preview events or reminders before creating them.";
+"計算機 → ji suan ji → jsj。也支援完整拼音 jisuanji；右鍵點結果可自訂縮寫。" = "計算機 → ji suan ji → jsj. Full Pinyin jisuanji also works. Right-click a result to customize aliases.";
+"計算機 → ㄐㄧˋ ㄙㄨㄢˋ ㄐㄧ → ㄐㄙㄐ。也支援完整注音；右鍵點結果可自訂縮寫。" = "計算機 → ㄐㄧˋ ㄙㄨㄢˋ ㄐㄧ → ㄐㄙㄐ. Full Zhuyin also works. Right-click a result to customize aliases.";
 "記得什麼，就搜什麼。" = "Search what you remember.";
 "記錄剪貼板文字" = "Remember clipboard text";
 "記錄預設關閉；啟用後只保留本次執行期間的文字。" = "History is off by default and only retained during this session.";
@@ -680,6 +688,7 @@
 "軟體更新" = "Software updates";
 "輔助使用" = "Accessibility";
 "輸入「紅果短劇」，也能找到已安裝的「红果短剧」。" = "Type Traditional Chinese 紅果短劇 to find an installed app named 红果短剧 in Simplified Chinese.";
+"輸入「計算機」每個字的第一個注音符號 ㄐㄙㄐ，也能找到 App。" = "Type ㄐㄙㄐ, the first Zhuyin symbol of each character in 計算機, to find Calculator.";
 "輸入「計算機」的拼音首字母 jsj，也能找到 App。" = "Type jsj, the Pinyin initials of 計算機, to find the Calculator app.";
 "輸入「設定30分鐘後的鬧鐘」，先預覽時間，按 Return 交給系統時鐘新增。" = "Type a Chinese alarm command, review the time, then press Return to create it in Apple Clock.";
 "輸入後先看解析結果，再按 Return 檢查預覽。" = "Check the parsed result, then press Return to review.";
