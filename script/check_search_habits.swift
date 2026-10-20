@@ -7,13 +7,20 @@ actor NoteFixture {
     func succeed() { fails = false }
     func open(_ id: String) async throws {
         calls += 1
-        try await Task.sleep(for: .milliseconds(30))
+        try await Task.sleep(for: .milliseconds(120))
         if fails { throw URLError(.cannotOpenFile) }
     }
 }
 
 @main struct HabitChecks {
     @MainActor static func main() async throws {
+        func waitUntil(_ message: String, _ condition: () -> Bool) async throws {
+            for _ in 0..<500 {
+                if condition() { return }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            preconditionFailure(message)
+        }
         let now = Date()
         let app = HabitCandidate(id: "app-row", identity: "app:fixture.logic", title: "Logic Pro", kind: .app)
         let note = HabitCandidate(id: "note-row", identity: "quick:note:private-id", title: "工作筆記", kind: .note)
@@ -70,14 +77,14 @@ actor NoteFixture {
         accepts = true; store.openSelection(); precondition(store.habits.history.entries.count == 1 && opened == 2)
         let quickNote = QuickResult(id:"note:fixture",title:"工作筆記",subtitle:"",symbol:"note",action:.note("fixture"))
         store.quickResults = [quickNote]; store.selection = quickNote.id
-        store.openSelection(); try await Task.sleep(for:.milliseconds(80))
+        store.openSelection(); try await waitUntil("Failed Note open did not finish") { store.notice.hasPrefix("無法開啟備忘錄") }
         precondition(store.habits.history.entries.count == 1, "Failed note openings must not teach")
         await notes.succeed()
         store.openSelection(); store.query = "changed while opening"
-        try await Task.sleep(for:.milliseconds(80))
+        try await waitUntil("Successful Note open did not record the original query") { store.habits.history.entries.count == 2 }
         precondition(store.habits.history.entries.count == 2)
         store.query = "logicpro"; store.selection = quickNote.id; store.openSelection()
-        try await Task.sleep(for:.milliseconds(80))
+        try await waitUntil("Repeated Note opening did not affect ranking") { store.allIDs.first == quickNote.id }
         precondition(store.allIDs.first == quickNote.id, "Learned Notes must cross the App/file section boundary")
         let calculator = QuickResult(id:"calculator",title:"2",subtitle:"",symbol:"equal",action:.details("fixture"))
         store.quickResults.insert(calculator,at:0)
