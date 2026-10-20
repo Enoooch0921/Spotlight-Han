@@ -7,9 +7,12 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     private var completed: (() -> Void)?
     init(store: SearchStore) {
         self.store = store
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 740, height: 650), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 680), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = L.text("歡迎使用 Spotlight Han")
         window.isReleasedWhenClosed = false
+        window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
+        window.contentMinSize = NSSize(width: 980, height: 680)
+        window.contentMaxSize = NSSize(width: 980, height: 680)
         super.init(window: window)
         window.delegate = self
         window.center()
@@ -17,7 +20,10 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func present(completed: @escaping () -> Void) {
         self.completed = completed
-        window?.contentView = NSHostingView(rootView: OnboardingView(store: store, finish: { [weak self] in self?.finish() }))
+        let hosting = NSHostingView(rootView: OnboardingView(store: store, finish: { [weak self] in self?.finish() }).frame(width: 980, height: 680))
+        hosting.sizingOptions = []
+        window?.contentView = hosting
+        window?.setContentSize(NSSize(width: 980, height: 680))
         store.onboardingPresented = true; store.settingsVisibilityChanged?(true)
         showWindow(nil); NSApp.activate(ignoringOtherApps: true)
     }

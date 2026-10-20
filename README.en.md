@@ -16,7 +16,7 @@ Han matches both Chinese scripts while keeping original filenames and text. File
 
 This is script matching, not synonym search: `影片` and `視頻` are not automatically treated as the same word.
 
-New users get an optional three-step in-app guide for shortcuts, search retention and document folders. Replay it from the menu or Updates & About.
+New users get an optional in-app guide. Published v0.8.3 has three steps; the unreleased local revision expands it to six, covering search examples, shortcuts and resume behavior, file scopes, personal sources, everyday tools and a real setup summary. Replay it from the menu or Updates & About.
 
 ## What it does
 
