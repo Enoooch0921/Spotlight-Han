@@ -12,17 +12,25 @@ struct HanSearchApp: App {
         MenuBarExtra("Spotlight Han", systemImage: "magnifyingglass") {
             HanMenuView(store: delegate.store, open: { delegate.showSearch() })
         }
-        Settings { SettingsView(store: delegate.store).frame(width: 650, height: 650) }
+        Settings { SettingsView(store: delegate.store).frame(minWidth: 820, idealWidth: 880, minHeight: 600, idealHeight: 680) }
+        usageGuide
+    }
+    private var usageGuide: some Scene {
+        Window("Spotlight Han 使用說明", id: "usage-guide") {
+            UsageGuideView(store: delegate.store).frame(minWidth: 720, idealWidth: 820, minHeight: 540, idealHeight: 640)
+        }.defaultSize(width: 820, height: 640)
     }
 }
 
 private struct HanMenuView: View {
     @ObservedObject var store: SearchStore
+    @Environment(\.openWindow) private var openWindow
     let open: () -> Void
     var body: some View {
         Group {
             Button(L.text("開啟 Spotlight Han"), action: open)
             SettingsLink { Text(L.text("設定與資料來源…")) }
+            Button(L.text("使用說明…")) { openWindow(id: "usage-guide") }
             AppUpdateMenu(updater: store.appUpdater)
             Link(L.text("GitHub 專案與原始碼"), destination: URL(string: "https://github.com/Enoooch0921/Spotlight-Han")!)
             Divider()
@@ -68,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.panel = panel
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
-        store.showLauncher = { [weak self] in self?.showSearch() }
+        store.showLauncher = { [weak self] in self?.showSearch(continuingFlow: true) }
         store.settingsVisibilityChanged = { [weak self] visible in
             if visible {
                 self?.hideSearch(animated: false)
@@ -94,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.translationWindow?.close()
                 let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 460), styleMask: [.titled, .closable], backing: .buffered, defer: false)
                 window.title = "Spotlight Han · 本機翻譯語言"; window.isReleasedWhenClosed = false
-                window.contentView = NSHostingView(rootView: TranslationSetupView(store: self.store, source: source, query: self.store.query.trimmingCharacters(in: .whitespacesAndNewlines), close: { [weak self, weak window] in window?.close(); self?.showSearch() }))
+                window.contentView = NSHostingView(rootView: TranslationSetupView(store: self.store, source: source, query: self.store.query.trimmingCharacters(in: .whitespacesAndNewlines), close: { [weak self, weak window] in window?.close(); self?.showSearch(continuingFlow: true) }))
                 self.translationWindow = window
                 window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
             }
@@ -185,6 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if action == .hide { hideSearch() } else { showSearch() }
     }
     private func hideSearch(animated: Bool = true) {
+        store.launcherDidHide()
         presentation.hide(); fadeGeneration += 1
         guard let panel else { return }
         let generation = fadeGeneration
@@ -196,8 +205,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel?.orderOut(nil); panel?.alphaValue = 1
         }
     }
-    func showSearch() {
+    func showSearch(continuingFlow: Bool = false) {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
+        store.prepareLauncherForOpening(continuingFlow: continuingFlow)
         fadeGeneration += 1
         let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden
         // Resize offscreen on entry; later structural expansions retarget the native window animation.

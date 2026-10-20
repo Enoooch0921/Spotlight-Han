@@ -40,3 +40,8 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_persistent_index.swift -o "$BUILD_DIR/HanPersistentIndexChecks"
 "$BUILD_DIR/HanPersistentIndexChecks"
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_launcher_reopen.swift -o "$BUILD_DIR/HanLauncherReopenChecks"
+"$BUILD_DIR/HanLauncherReopenChecks"

@@ -8,6 +8,17 @@ import Combine
 final class SearchStore: ObservableObject {
     @Published var query = ""
     @Published var mode: SearchMode = .all
+    @Published var reopenBehavior: SearchReopenBehavior = .timed {
+        didSet { taskPreferences.set(reopenBehavior.rawValue, forKey: "searchReopenBehavior.v1") }
+    }
+    @Published var reopenRetention: TimeInterval = 300 {
+        didSet { taskPreferences.set(reopenRetention, forKey: "searchReopenRetention.v1") }
+    }
+    @Published var defaultSearchMode: SearchMode = .all {
+        didSet { taskPreferences.set(defaultSearchMode.rawValue, forKey: "defaultSearchMode.v1") }
+    }
+    var launcherSessionOpen = false
+    var launcherLastDismissed: Date?
     @Published var results: [SearchItem] = [] { didSet { cacheDocumentFilenameMatches(); refreshFileDates() } }
     @Published var fileSort: FileResultSort = .relevance {
         didSet { taskPreferences.set(fileSort.rawValue, forKey: "fileResultSort.v1"); refreshFileDates(); onLayoutChanged?() }
@@ -144,6 +155,7 @@ final class SearchStore: ObservableObject {
     @Published var calendarSelectionBusy = false
     @Published var calendarSelectionError = ""
     var settingsPresented = false
+    var helpPresented = false
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
@@ -209,6 +221,10 @@ final class SearchStore: ObservableObject {
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.reopenBehavior = SearchReopenBehavior(rawValue: taskPreferences.string(forKey: "searchReopenBehavior.v1") ?? "") ?? .timed
+        let retention = taskPreferences.double(forKey: "searchReopenRetention.v1")
+        self.reopenRetention = [30.0, 60, 300, 900, 3600].contains(retention) ? retention : 300
+        self.defaultSearchMode = SearchMode(rawValue: taskPreferences.string(forKey: "defaultSearchMode.v1") ?? "") ?? .all
         self.indexStorageMB = [100, 500, 1000, 2000].contains(taskPreferences.integer(forKey: "documentIndexStorageMB.v1")) ? taskPreferences.integer(forKey: "documentIndexStorageMB.v1") : 500
         self.spotlightSupplement = taskPreferences.object(forKey: "spotlightSupplement.v1") as? Bool ?? false
         self.fileSort = FileResultSort(rawValue: taskPreferences.string(forKey: "fileResultSort.v1") ?? "") ?? .relevance
