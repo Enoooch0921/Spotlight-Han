@@ -329,6 +329,7 @@
 "日期由舊到新" = "Event date: oldest first";
 "日期與時間" = "Date & Time";
 "明細顯示前 200 份，分類數量包含全部未完成文件。" = "Showing the first 200 files. Reason counts include all unfinished files.";
+"時間單位" = "Time unit";
 "時間尚未完整辨識，請簡化成一個日期與時間。" = "The time is incomplete. Simplify it to one date and time.";
 "時間已經過去，請調整後再建立。" = "This time has passed. Adjust it before creating.";
 "時間解析暫時無法使用，請重新開啟 Han。" = "Date parsing is unavailable. Please reopen Han.";
@@ -449,6 +450,7 @@
 "確認建立" = "Confirm creation";
 "確認建立 ⌘Return" = "Confirm creation ⌘Return";
 "確認預覽" = "Review before creating";
+"秒" = "seconds";
 "移除" = "Remove";
 "移除並清除索引" = "Remove and clear indexed text";
 "移除所有文件範圍並清除索引" = "Remove all document scopes and clear index";
@@ -508,8 +510,10 @@
 "背景自動更新已連接來源" = "Refresh connected sources in the background";
 "自動偵測" = "Detect automatically";
 "自動檢查新版本" = "Automatically check for updates";
+"自訂保留時長" = "Custom search retention";
 "自訂搜尋縮寫" = "Custom Search Aliases";
 "自訂搜尋縮寫…" = "Custom Search Aliases…";
+"自訂時長" = "Custom duration";
 "自訂：%@" = "Custom: %@";
 "舊版 PPT 尚無可讀文字，需系統完成索引或轉存為 PPTX。" = "No readable text is available for this legacy PPT. Wait for system indexing or save it as PPTX.";
 "舊版 PPT 尚無系統文字索引" = "Legacy PPT has no system text index";
@@ -550,6 +554,7 @@
 "請補上事項名稱，例如「明天下午3點開會」。" = "Add a task title, such as “tomorrow at 3pm meeting”.";
 "請補上明確時間，例如「明天下午3點」。" = "Add a specific time, such as “tomorrow at 3pm”.";
 "請輸入時間和事項，最多 200 字。" = "Enter a time and task, up to 200 characters.";
+"請輸入至少 1 秒的有效時長；目前仍沿用上次設定。" = "Enter a valid duration of at least 1 second. Your previous setting is still in use.";
 "讀取不完整（部分資料）" = "Incomplete read (partial data)";
 "讀取可寫入的行事曆…" = "Load writable calendars…";
 "讀取失敗（仍顯示舊／部分資料）" = "Read failed (showing old/partial data)";

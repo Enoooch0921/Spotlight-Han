@@ -11,7 +11,7 @@ final class SearchStore: ObservableObject {
     @Published var reopenBehavior: SearchReopenBehavior = .timed {
         didSet { taskPreferences.set(reopenBehavior.rawValue, forKey: "searchReopenBehavior.v1") }
     }
-    @Published var reopenRetention: TimeInterval = 300 {
+    @Published var reopenRetention: TimeInterval = 180 {
         didSet { taskPreferences.set(reopenRetention, forKey: "searchReopenRetention.v1") }
     }
     @Published var defaultSearchMode: SearchMode = .all {
@@ -223,7 +223,7 @@ final class SearchStore: ObservableObject {
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.reopenBehavior = SearchReopenBehavior(rawValue: taskPreferences.string(forKey: "searchReopenBehavior.v1") ?? "") ?? .timed
         let retention = taskPreferences.double(forKey: "searchReopenRetention.v1")
-        self.reopenRetention = [30.0, 60, 300, 900, 3600].contains(retention) ? retention : 300
+        self.reopenRetention = retention.isFinite && retention >= 1 ? retention : 180
         self.defaultSearchMode = SearchMode(rawValue: taskPreferences.string(forKey: "defaultSearchMode.v1") ?? "") ?? .all
         self.indexStorageMB = [100, 500, 1000, 2000].contains(taskPreferences.integer(forKey: "documentIndexStorageMB.v1")) ? taskPreferences.integer(forKey: "documentIndexStorageMB.v1") : 500
         self.spotlightSupplement = taskPreferences.object(forKey: "spotlightSupplement.v1") as? Bool ?? false

@@ -633,5 +633,10 @@
   "請到「資料來源」集中連接備忘錄、聯絡人、行事曆、提醒事項等。授權由 macOS 管理；「全部重新讀取」只更新已連接來源。": "Connect Notes, Contacts, Calendar, Reminders and other apps in Data Sources. macOS manages permissions. Reload All updates connected sources only.",
   "每次重新開啟時清空搜尋文字，並回到預設頁；正在使用的搜尋不受影響。": "Each reopening clears the query and returns to the default page. An active search is unaffected.",
   "重新開啟時接續上次的搜尋文字與頁面；預設頁只用於重新啟動 App。": "Resume the previous query and page. The default page is used when restarting the app.",
-  "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再到 Han「搜尋與快捷鍵」按「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。": "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight. In Han, go to Search & Shortcuts and choose Use ⌘Space. Conflicts keep the previous shortcut."
+  "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再到 Han「搜尋與快捷鍵」按「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。": "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight. In Han, go to Search & Shortcuts and choose Use ⌘Space. Conflicts keep the previous shortcut.",
+  "自訂時長": "Custom duration",
+  "自訂保留時長": "Custom search retention",
+  "時間單位": "Time unit",
+  "秒": "seconds",
+  "請輸入至少 1 秒的有效時長；目前仍沿用上次設定。": "Enter a valid duration of at least 1 second. Your previous setting is still in use."
 }

@@ -9,13 +9,7 @@ struct SearchReopenSettingsView: View {
                 ForEach(SearchReopenBehavior.allCases, id: \.rawValue) { behavior in Text(L.text(behavior.title)).tag(behavior) }
             }
             if store.reopenBehavior == .timed {
-                Picker(L.text("保留上次搜尋多久"), selection: $store.reopenRetention) {
-                    Text(L.text("30 秒")).tag(30.0)
-                    Text(L.text("1 分鐘")).tag(60.0)
-                    Text(L.text("5 分鐘")).tag(300.0)
-                    Text(L.text("15 分鐘")).tag(900.0)
-                    Text(L.text("1 小時")).tag(3600.0)
-                }
+                SearchRetentionEditor(store: store)
             }
             Picker(L.text("預設搜尋頁"), selection: $store.defaultSearchMode) {
                 ForEach(SearchMode.allCases, id: \.rawValue) { mode in Text(L.text(mode == .apps ? "應用程式" : mode.rawValue)).tag(mode) }
