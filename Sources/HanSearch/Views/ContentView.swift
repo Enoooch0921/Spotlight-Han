@@ -56,7 +56,7 @@ struct ContentView: View {
                         .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
                         .disabled(store.actionInFlight || store.composerCreated != nil)
                         .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
-                    if store.showsSearchProgress || store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
+                    if store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
                     if store.composerMode != nil {
                         Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
                             .buttonStyle(.plain).disabled(store.actionInFlight).help(L.text("返回搜尋"))
@@ -132,11 +132,6 @@ struct ContentView: View {
                     ForEach(CalendarResultSort.allCases, id: \.self) { order in Text(L.text(order.title)).tag(order) }
                 }.controlSize(.small).padding(.horizontal, 18).padding(.vertical, 8)
             }
-            if store.showsSearchProgress {
-                SearchActivityView(store: store)
-                Divider().padding(.horizontal, 18)
-            }
-            SearchSourceHealthBanner(store: store)
             if !store.hotkeyError.isEmpty {
                 HStack(alignment: .top, spacing: 8) {
                     Label(L.text(store.hotkeyError), systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
@@ -154,19 +149,19 @@ struct ContentView: View {
                 }.padding(22).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if store.mode == .alarms && store.allQuickResults.isEmpty {
                 AlarmListView { store.connect(.alarms) }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.allIDs.isEmpty {
+            } else if store.primaryResultIDs.isEmpty {
                 emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 3) {
-                            ForEach(store.allIDs, id: \.self) { id in
+                            ForEach(store.primaryResultIDs, id: \.self) { id in
                                 if let item = store.allQuickResults.first(where: { $0.id == id }) { quickRow(item).id(id) }
                                 else if let item = store.results.first(where: { $0.id == id }) { fileRow(item).id(id) }
                             }
                         }.padding(10)
                     }
-                    .onChange(of: store.selection) { _, selected in if let selected { proxy.scrollTo(selected) } }
+                    .onChange(of: store.selection) { _, selected in if let selected, store.primaryResultIDs.contains(selected) { proxy.scrollTo(selected) } }
                 }
             }
             if store.otherIndexedResultCount > 0 {
@@ -177,6 +172,15 @@ struct ContentView: View {
                         .help(L.text("尚未確認完整內文命中，可能只有檔名、中繼資料或系統分詞符合；預設收起。"))
                     Spacer()
                 }.padding(.horizontal, 18).padding(.vertical, 8)
+            }
+            SearchSourceHealthBanner(store: store)
+            if let translation = store.translationResult, store.details == nil {
+                Divider().padding(.horizontal, 18)
+                SearchTranslationAccessory(store: store, item: translation)
+            }
+            if store.showsSearchProgress {
+                Divider().padding(.horizontal, 18)
+                SearchActivityView(store: store)
             }
             Divider().padding(.horizontal, 18)
             HStack(spacing: 8) {

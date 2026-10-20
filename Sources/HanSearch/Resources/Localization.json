@@ -534,5 +534,16 @@
   "相關度": "Relevance",
   "建立日期：新到舊": "Created: newest first",
   "建立日期：舊到新": "Created: oldest first",
-  "正在讀取建立日期…": "Reading creation dates…"
+  "正在讀取建立日期…": "Reading creation dates…",
+  "翻譯": "Translation",
+  "翻譯語言尚未準備": "Translation languages not ready",
+  "準備語言…": "Set up languages…",
+  "收起完整翻譯": "Collapse full translation",
+  "展開完整翻譯": "Expand full translation",
+  "複製翻譯": "Copy translation",
+  "Apple 本機翻譯 · 選取後按 Return 複製": "Apple on-device translation · Select and press Return to copy",
+  "翻譯語言尚未就緒": "Translation languages not ready",
+  "翻譯暫時無法完成": "Translation temporarily unavailable",
+  "檢查翻譯…": "Check translation…",
+  "檢查語言…": "Check languages…"
 }

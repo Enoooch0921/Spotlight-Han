@@ -19,6 +19,7 @@
 "1 %@ ≈ %@ %@ · 資料 %@ · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Daily update · Reference rate";
 "1 %@ ≈ %@ %@ · 資料 %@ · 過期快取 · 每日更新 · 參考匯率" = "1 %@ ≈ %@ %@ · As of %@ · Stale cache · Daily update · Reference rate";
 "Apple 本機翻譯 · 選取後 ↵ 複製" = "Apple on-device translation · Select then ↵ to copy";
+"Apple 本機翻譯 · 選取後按 Return 複製" = "Apple on-device translation · Select and press Return to copy";
 "Apple 系統時鐘橋接捷徑；首次加入一次，之後輸入指令即可" = "Apple Clock bridge. Add it once, then enter alarm commands.";
 "App、檔名與已連接資料" = "apps, filenames and connected sources";
 "Excel 結構或文字超過讀取上限" = "Excel structure or text exceeds the reading limit";
@@ -156,6 +157,7 @@
 "尚無可寫入的預設提醒事項清單" = "No writable default reminder list";
 "尚無可寫入的預設行事曆" = "No writable default calendar";
 "尚無完整更新記錄" = "No complete refresh yet";
+"展開完整翻譯" = "Expand full translation";
 "工作與學習" = "Work & Learning";
 "已停止連接；已載入的結果仍可搜尋。系統授權視窗若仍開著，請自行處理或關閉。" = "Stopped. Loaded results remain searchable. Handle or close any remaining system consent dialog yourself.";
 "已停止（仍顯示舊／部分資料）" = "Stopped (showing old/partial data)";
@@ -253,6 +255,7 @@
 "搜尋習慣" = "Search habits";
 "搜尋需要完整存取" = "Search requires full access";
 "收起其他系統索引結果（%@）" = "Hide other system-index results (%@)";
+"收起完整翻譯" = "Collapse full translation";
 "文件・內文命中" = "Document · content match";
 "文件・檔名命中" = "Document · name match";
 "文件・系統索引" = "Document · System index";
@@ -308,6 +311,8 @@
 "檔案排序" = "File sorting";
 "檢查更新…" = "Check for updates…";
 "檢查狀態" = "Check status";
+"檢查翻譯…" = "Check translation…";
+"檢查語言…" = "Check languages…";
 "檢查連接" = "Check connection";
 "正在取得公開匯率。" = "Fetching public exchange rates.";
 "正在取得匯率…" = "Fetching exchange rates…";
@@ -352,6 +357,7 @@
 "準備所選翻譯語言…" = "Prepare selected languages…";
 "準備本機翻譯語言" = "Prepare translation languages";
 "準備檔名清單…" = "Preparing file index…";
+"準備語言…" = "Set up languages…";
 "滑鼠" = "Mouse";
 "瀏覽器" = "Browsers";
 "無法使用 %@，可能已被系統或其他 App 占用。原快捷鍵仍可使用；⌘Space 請先關閉 Spotlight 的同名快捷鍵。" = "Cannot use %@; macOS or another app may own it. Your previous shortcut still works. Disable Spotlight before using ⌘Space.";
@@ -414,7 +420,11 @@
 "編輯分類名稱與圖示" = "Edit category name and icon";
 "縮寫未儲存：每項最多32字、最多8項，總共最多2,000個項目。" = "Aliases were not saved: up to 8 aliases of 32 characters each, for at most 2,000 items.";
 "缺少時間解析元件，請重新安裝 Han。" = "The date parser is missing. Please reinstall Han.";
+"翻譯" = "Translation";
+"翻譯暫時無法完成" = "Translation temporarily unavailable";
 "翻譯與貨幣換算" = "Translation and currencies";
+"翻譯語言尚未就緒" = "Translation languages not ready";
+"翻譯語言尚未準備" = "Translation languages not ready";
 "翻譯選單列出系統支援的語言；實際翻譯仍需下載所選語言模型。" = "Languages supported by macOS. Download the selected models before translating.";
 "聯絡人" = "Contacts";
 "聲音" = "Sound";
@@ -436,6 +446,7 @@
 "行程時長必須大於 0，且不超過 7 天。" = "Event duration must be positive and no more than 7 days.";
 "行程與提醒：輸入 cal／行事曆或提醒／rem，按 Tab 後輸入時間和事項。Return 進入確認預覽，按「確認建立」或 ⌘Return 才寫入。行程可選擇 Han 預設行事曆及當次目的地；提醒使用系統預設清單。系統鬧鐘仍按 Return 建立，首次需連接內附捷徑。" = "Events and reminders: type cal/calendar or rem/reminder, press Tab, then enter a time and task. Return opens review; Confirm creation or ⌘Return saves it. Choose a Han default or a per-event calendar. Reminders use the system default list. Clock alarms still use Return and require the bundled shortcut once.";
 "複製內容" = "Copy content";
+"複製翻譯" = "Copy translation";
 "觸控式軌跡板" = "Trackpad";
 "記錄剪貼板文字" = "Remember clipboard text";
 "記錄預設關閉；啟用後只保留本次執行期間的文字。" = "History is off by default and only retained during this session.";

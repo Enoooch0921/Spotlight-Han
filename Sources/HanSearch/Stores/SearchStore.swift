@@ -258,6 +258,7 @@ final class SearchStore: ObservableObject {
         return completedMode == .apps && completedQuery == term ? quickResults : []
     }
     var allIDs: [String] { orderedSearchIDs }
+    var primaryResultIDs: [String] { allIDs.filter { $0 != translationResult?.id } }
     var showsSearchProgress: Bool { showSearchActivity || verifyingDocumentContents }
     var activityDescription: String? {
         if showSearchActivity { return searchPhase.isEmpty ? "正在搜尋…" : searchPhase }

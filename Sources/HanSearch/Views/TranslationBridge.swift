@@ -12,11 +12,15 @@ struct TranslationBridge: View {
     @State private var sourceID = ""
     @State private var token = UUID()
     @State private var configuredRequest = ""
+    @State private var availabilityRevision = UUID()
     private var target: Locale.Language { Locale.Language(identifier: store.translationTarget) }
-    private var requestID: String { store.query + "|" + store.mode.rawValue + "|" + String(store.translationEnabled) + "|" + store.translationSource + "|" + store.translationTarget + "|" + (store.composerMode?.rawValue ?? "") }
+    private var requestID: String { store.query + "|" + store.mode.rawValue + "|" + String(store.translationEnabled) + "|" + store.translationSource + "|" + store.translationTarget + "|" + (store.composerMode?.rawValue ?? "") + "|" + availabilityRevision.uuidString }
     var body: some View {
         Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
             .task(id: requestID) { await translateAutomatic() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                availabilityRevision = UUID()
+            }
             .translationTask(configuration) { session in
                 let capturedText = text, capturedToken = token, source = sourceID, request = configuredRequest
                 do {
@@ -25,7 +29,7 @@ struct TranslationBridge: View {
                     publish(result.targetText)
                 } catch {
                     guard !Task.isCancelled, capturedToken == token, request == requestID, currentQuery == capturedText else { return }
-                    needsSetup(source)
+                    translationFailed(error, source: source)
                 }
             }
     }
@@ -37,7 +41,18 @@ struct TranslationBridge: View {
         store.setTranslation(QuickResult(id: "translation", title: value, subtitle: "\(name)翻譯 · Apple 本機翻譯 · 選取後 ↵ 複製", symbol: "translate", action: .copy(value)))
     }
     @MainActor private func needsSetup(_ source: String) {
-        store.setTranslation(QuickResult(id: "translation", title: "準備本機翻譯語言", subtitle: "首次需準備語言 · 選取後 ↵ 開啟語言設定 · 下方照常搜尋", symbol: "translate", action: .prepareTranslation(source)))
+        store.setTranslation(QuickResult(id: "translation", title: "翻譯語言尚未就緒", subtitle: languagePair(source), symbol: "translate", action: .prepareTranslation(source)))
+    }
+    @MainActor private func translationFailed(_ error: Error, source: String) {
+        if #available(macOS 26.0, *), case TranslationError.notInstalled = error {
+            needsSetup(source)
+        } else {
+            store.setTranslation(QuickResult(id: "translation", title: "翻譯暫時無法完成", subtitle: languagePair(source) + " · " + error.localizedDescription, symbol: "translate", action: .prepareTranslation(source)))
+        }
+    }
+    private func languagePair(_ source: String) -> String {
+        let locale = store.interfaceLanguage.locale
+        return (locale.localizedString(forIdentifier: source) ?? source) + " → " + (locale.localizedString(forIdentifier: store.translationTarget) ?? store.translationTarget)
     }
     @MainActor private func translateAutomatic() async {
         token = UUID(); configuration = nil; store.setTranslation(nil)
@@ -45,13 +60,24 @@ struct TranslationBridge: View {
         guard store.composerMode == nil, store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
               query.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 2,
               !CurrencyQuery.isCurrencyQuery(query), TaskCommandParser.parse(query) == nil, SystemSettingsCatalog.results(query: query).isEmpty,
+              !ModelSearch.Query(query).isIdentifier,
               !Calculator.looksLikeExpression(query), UnitConverter.convert(query) == nil,
               !query.contains("://"), !query.hasPrefix("define "), !query.hasPrefix("查 ") else { return }
         let language = store.translationSource == "auto" ? NLLanguageRecognizer.dominantLanguage(for: query) : NLLanguage(rawValue: store.translationSource)
         guard let language, Locale.Language(identifier: language.rawValue).languageCode != target.languageCode else { return }
         do { try await Task.sleep(for: .milliseconds(450)) } catch { return }
         let source = Locale.Language(identifier: language.rawValue)
-        let status = await LocalTranslationSupport.availability().status(from: source, to: target)
+        var status = await LocalTranslationSupport.availability().status(from: source, to: target)
+        // Downloads may finish while System Settings is open. Recheck briefly before
+        // declaring the pair unavailable; foreground activation also retries this query.
+        if status == .supported {
+            for _ in 0..<2 {
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                guard request == requestID, currentQuery == query else { return }
+                status = await LocalTranslationSupport.availability().status(from: source, to: target)
+                if status != .supported { break }
+            }
+        }
         guard !Task.isCancelled, request == requestID, currentQuery == query else { return }
         switch status {
         case .unsupported: return
@@ -66,7 +92,7 @@ struct TranslationBridge: View {
                     publish(result.targetText)
                 } catch {
                     guard !Task.isCancelled, request == requestID, currentQuery == query else { return }
-                    needsSetup(language.rawValue)
+                    translationFailed(error, source: language.rawValue)
                 }
             } else {
                 var next = LocalTranslationSupport.configuration(source: source, target: target)

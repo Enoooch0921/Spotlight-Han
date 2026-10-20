@@ -12,12 +12,14 @@ extension SearchStore {
         return HabitCandidate(id: item.id, identity: item.id, title: item.title, kind: kind, aliases: aliases.aliases(for: item.id))
     }
     var orderedSearchIDs: [String] {
-        let original = allQuickResults.map(\.id) + results.map(\.id)
+        let primaryQuickResults = allQuickResults.filter { $0.id != translationResult?.id }
+        let translationIDs = translationResult.map { [$0.id] } ?? []
+        let original = primaryQuickResults.map(\.id) + results.map(\.id) + translationIDs
         // Explicit calendar chronology and clipboard order remain authoritative.
         guard mode != .calendar && mode != .clipboard else { return original }
-        let candidates = allQuickResults.compactMap { habitCandidate($0) } + results.map { habitCandidate($0) }
+        let candidates = primaryQuickResults.compactMap { habitCandidate($0) } + results.map { habitCandidate($0) }
         let eligible = Set(candidates.map(\.id))
-        let fixed = allQuickResults.filter { !eligible.contains($0.id) }.map(\.id)
+        let fixed = primaryQuickResults.filter { !eligible.contains($0.id) }.map(\.id)
         var ranked = habits.ordered(candidates, query: query)
         let model = ModelSearch.Query(query)
         if model.isIdentifier {
@@ -40,7 +42,7 @@ extension SearchStore {
         let otherIndexed = Set(results.filter { isOtherIndexedResult($0) }.map(\.id))
         let confirmed = fileDateOrder(ranked.filter { !otherIndexed.contains($0) })
         ranked = confirmed + (showOtherIndexedResults ? fileDateOrder(ranked.filter { otherIndexed.contains($0) }) : [])
-        return fixed + ranked
+        return fixed + ranked + translationIDs
     }
     func recordHabit(_ candidate: HabitCandidate?, query: String) {
         guard let candidate else { return }

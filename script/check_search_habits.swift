@@ -82,6 +82,24 @@ actor NoteFixture {
         let calculator = QuickResult(id:"calculator",title:"2",subtitle:"",symbol:"equal",action:.details("fixture"))
         store.quickResults.insert(calculator,at:0)
         precondition(store.allIDs.first == calculator.id)
+        let translation = QuickResult(id:"translation",title:"測試翻譯",subtitle:"",symbol:"translate",action:.copy("測試翻譯"))
+        let primaryBeforeTranslation = store.allIDs
+        store.setTranslation(translation)
+        precondition(store.primaryResultIDs == primaryBeforeTranslation && store.allIDs == primaryBeforeTranslation + [translation.id], "Translation must stay after primary results in keyboard order, outside the main list")
+        store.selection = primaryBeforeTranslation.last; store.moveSelection(1)
+        precondition(store.selection == translation.id)
+        store.moveSelection(-1); precondition(store.selection == primaryBeforeTranslation.last)
+        store.selection = translation.id; store.setTranslation(nil)
+        precondition(store.selection == primaryBeforeTranslation.first && store.allIDs == primaryBeforeTranslation, "Removing translation must restore a valid primary selection")
+        let translationOnly = SearchStore(loadSources:false,taskPreferences:defaults,sourcePreferences:defaults)
+        var preparedSource: String?
+        translationOnly.prepareTranslation = { preparedSource = $0 }
+        let setup = QuickResult(id:"translation",title:"準備本機翻譯語言",subtitle:"",symbol:"translate",action:.prepareTranslation("en"))
+        translationOnly.setTranslation(setup)
+        precondition(translationOnly.primaryResultIDs.isEmpty && translationOnly.allIDs == [setup.id], "Translation-only queries still expose an accessible footer action")
+        translationOnly.moveSelection(1); translationOnly.openSelection()
+        precondition(preparedSource == "en", "Footer Return must preserve the language preparation action")
+        print("PASS: translation accessory keyboard order, primary-list isolation, selection removal and language setup action; no clipboard or personal data changed")
         store.mode = .calendar
         precondition(store.allIDs == store.allQuickResults.map(\.id) + store.results.map(\.id))
         store.habits.clear(); precondition(store.habits.history.entries.isEmpty)
