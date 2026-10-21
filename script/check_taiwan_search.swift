@@ -30,7 +30,8 @@ import HanSearchCore
         let now = Date()
         let records = (0..<55).map { i in
             PersonalRecord(id: "event:related\(i)", title: "打印教學 \(i)", subtitle: "fixture", text: "打印", symbol: "calendar", mode: .calendar, action: .details("original fixture"), startDate: now.addingTimeInterval(Double(i+1)*3600))
-        } + [PersonalRecord(id: "event:direct", title: "列印", subtitle: "fixture", text: "原始內容", symbol: "calendar", mode: .calendar, action: .details("原始內容"), startDate: now.addingTimeInterval(100*3600))]
+        } + [PersonalRecord(id: "event:direct", title: "列印", subtitle: "fixture", text: "原始內容", symbol: "calendar", mode: .calendar, action: .details("原始內容"), startDate: now.addingTimeInterval(100*3600)),
+             PersonalRecord(id: "event:temperature", title: "37度實驗", subtitle: "fixture", text: "測試文字", symbol: "calendar", mode: .calendar, action: .details("fixture"))]
         let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults,
             sourceAccessCheck: { _ in true }, eventSourceLoader: { _ in PersonalLoad(records: records, status: "fixture loaded") }, eventCalendarLoader: { [] },
             contentSearcher: { _, _ in SearchResponse(items: []) }, fileCreationDateLoader: { _ in nil }, documentIndexURL: root.appendingPathComponent("Index/test.sqlite"))
@@ -62,5 +63,16 @@ import HanSearchCore
         store.results.append(native); store.showOtherIndexedResults = true
         precondition(store.allIDs.last == native.id, "Unverified native-index candidates remain after verified supplemental hits")
         print("PASS: App primary/custom-alias partitions, All/calendar result caps, learned preferences, date sorting and unverified-index boundaries; fake sources and isolated defaults only")
+        precondition(store.temperaturePreference == .system, "New installs follow the macOS temperature preference")
+        store.temperaturePreference = .celsius; store.query = "37度"; store.search()
+        try await wait("Celsius temperature inference did not appear") { !store.searching && store.quickResults.contains { $0.id == "quick:temperature" && $0.title == "98.6 °F" } }
+        precondition(store.quickResults.contains { $0.id == "quick:event:temperature" }, "Automatic temperature must preserve original-query personal/file search")
+        store.temperaturePreference = .fahrenheit
+        try await wait("Preference change did not update the conversion") { !store.searching && store.quickResults.contains { $0.id == "quick:temperature" && $0.subtitle.contains("37 °F") } }
+        let restored = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults, documentIndexURL: root.appendingPathComponent("Index/test.sqlite"))
+        precondition(restored.temperaturePreference == .fahrenheit, "Manual override persists across launches")
+        store.query = "37攝氏度"; store.search()
+        try await wait("Explicit scale was overridden by preferences") { !store.searching && store.quickResults.contains { $0.id == "quick:temperature" && $0.title == "98.6 °F" } }
+        print("PASS: system-default temperature preference, persisted C/F override, immediate recalculation, explicit-scale precedence and normal search beside automatic conversion")
     }
 }

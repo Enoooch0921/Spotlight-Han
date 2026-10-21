@@ -37,6 +37,7 @@ private struct GuideTopic: Identifiable {
         GuideTopic(id: 4, title: "翻譯與工具", symbol: "character.bubble", paragraphs: [
             "設定30分鐘後的鬧鐘\n提醒我明天上午9點交報告\n明天下午3點開會30分鐘",
             "使用 Apple 本機翻譯（macOS 15 以上）。語言已下載時自動顯示；缺少語言時，選取翻譯結果按 Return 開啟語言視窗，再進入系統語言下載設定。下載後可跨 App 共用。原查詢的檔案與 App 結果仍保留。",
+            "例如：3公斤換成磅、5公里多少公尺、32°F=°C。溫度可只輸入37攝氏度或37度，自動顯示另一種溫標。",
             "貨幣可輸入 3000tb=rmb、3000tb rmb、nt3000 = rmb。只輸入 3000tb 或 3000台幣，會顯示下方選取的目標；也可明寫 3000tb=rmb,usd,jpy。參考匯率每日更新，結果標示資料時間及過期快取，非銀行成交價。",
             "也可用國名：3000NT=馬來西亞、3000NT 馬來、3000NT=Malaysia；New Zealand、South Korea 等英文國名也支援。",
             "行程與提醒：輸入 cal／行事曆或提醒／rem，按 Tab 後輸入時間和事項。Return 進入確認預覽，按「確認建立」或 ⌘Return 才寫入。行程可選擇 Han 預設行事曆及當次目的地；提醒使用系統預設清單。系統鬧鐘仍按 Return 建立，首次需連接內附捷徑。"

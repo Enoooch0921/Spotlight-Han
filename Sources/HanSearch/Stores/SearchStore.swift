@@ -40,6 +40,9 @@ final class SearchStore: ObservableObject {
     @Published var quickResults: [QuickResult] = []
     @Published var translationResult: QuickResult?
     @Published var currencyResults: [QuickResult] = []
+    @Published var temperaturePreference: TemperaturePreference = .system {
+        didSet { taskPreferences.set(temperaturePreference.rawValue, forKey: "temperaturePreference.v1"); search() }
+    }
     @Published var currencyTargets: [String] = {
         let saved = CurrencyQuery.cleanTargets(UserDefaults.standard.stringArray(forKey: "currencyTargets.v1") ?? CurrencyQuery.defaultTargets)
         return saved.isEmpty ? CurrencyQuery.defaultTargets : saved
@@ -125,6 +128,7 @@ final class SearchStore: ObservableObject {
     private var eventChangeStore: EKEventStore?
     private var eventChangeObserver: AnyCancellable?
     private var activationObserver: AnyCancellable?
+    private var localeObserver: AnyCancellable?
     private var backgroundRefreshTask: Task<Void, Never>?
     private var eventRefreshTask: Task<Void, Never>?
     @Published var autoRefreshEnabled = true {
@@ -226,6 +230,7 @@ final class SearchStore: ObservableObject {
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.temperaturePreference = TemperaturePreference(rawValue: taskPreferences.string(forKey: "temperaturePreference.v1") ?? "") ?? .system
         self.reopenBehavior = SearchReopenBehavior(rawValue: taskPreferences.string(forKey: "searchReopenBehavior.v1") ?? "") ?? .timed
         let retention = taskPreferences.double(forKey: "searchReopenRetention.v1")
         self.reopenRetention = retention.isFinite && retention >= 1 ? retention : 180
@@ -256,7 +261,15 @@ final class SearchStore: ObservableObject {
         folder = documentRoots.first
         guard loadSources else { return }
         activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
-            Task { @MainActor in self?.reconcileSourcePermissions() }
+            Task { @MainActor in
+                self?.reconcileSourcePermissions()
+                if self?.temperaturePreference == .system { self?.search(silent: true) }
+            }
+        }
+        localeObserver = NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification).sink { [weak self] _ in
+            Task { @MainActor in
+                if self?.temperaturePreference == .system { self?.search(silent: true) }
+            }
         }
         eventChangeStore = EventKitAccess.store
         eventChangeObserver = NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: eventChangeStore).receive(on: DispatchQueue.main).sink { [weak self] _ in
@@ -372,6 +385,7 @@ final class SearchStore: ObservableObject {
         let spotlightSupplement = spotlightSupplement
         let cachedContents = cachedGlobalQuery == term ? cachedGlobalContents : []
         let fullTextInAll = fullTextInAll, contentSearcher = contentSearcher
+        let temperatureScale = temperaturePreference.resolved()
         let aliasTargets = aliases.matchingTargets(term)
         let aliasPaths = Set(aliasTargets.filter { $0.hasPrefix("file:") }.map { String($0.dropFirst(5)) })
         let processCancellation = ProcessCancellation()
@@ -382,7 +396,7 @@ final class SearchStore: ObservableObject {
                 let start = Date()
                 var files: [SearchItem] = [], quick: [QuickResult] = []
                 var localWarning: String?
-                let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
+                let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term, defaultTemperatureScale: temperatureScale).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
                     files += FileCatalog.search(entries, query: term, mode: mode, aliasPaths: aliasPaths)

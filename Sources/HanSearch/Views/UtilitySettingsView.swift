@@ -5,6 +5,15 @@ struct UtilitySettingsView: View {
     @ObservedObject var store: SearchStore
     var body: some View {
         Form {
+            Section(L.text("單位與溫度換算")) {
+                Picker(L.text("未寫明溫標時"), selection: $store.temperaturePreference) {
+                    ForEach(TemperaturePreference.allCases, id: \.rawValue) { preference in Text(L.text(preference.title)).tag(preference) }
+                }
+                Text(L.format("目前按 %@ 解讀「37度」；明寫攝氏或華氏時，以輸入為準。", store.temperaturePreference.resolved().symbol))
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("例如：3公斤換成磅、5公里多少公尺、32°F=°C。溫度可只輸入37攝氏度或37度，自動顯示另一種溫標。"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section(L.text("翻譯與貨幣換算")) {
                 if #available(macOS 15.0, *) { TranslationLanguageSettingsView(store: store) }
                 Toggle(L.text("顯示查詢翻譯"), isOn: $store.translationEnabled)

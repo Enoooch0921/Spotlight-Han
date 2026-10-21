@@ -69,7 +69,7 @@ public struct PersonalRecord: Sendable {
 }
 
 public enum QuickProvider {
-    public static func results(query: String) -> [QuickResult] {
+    public static func results(query: String, defaultTemperatureScale: TemperatureScale = .celsius) -> [QuickResult] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
         var items: [QuickResult] = SystemSettingsCatalog.results(query: query)
@@ -91,8 +91,8 @@ public enum QuickProvider {
             let result = Calculator.format(value)
             items.append(QuickResult(id: "calculator", title: result, subtitle: query + "　↵ 複製答案", symbol: "equal", action: .copy(result)))
         }
-        if let result = UnitConverter.convert(query) {
-            items.append(QuickResult(id: "conversion", title: result, subtitle: query + "　↵ 複製結果", symbol: "arrow.left.arrow.right", action: .copy(result)))
+        if let result = UnitConverter.result(query, defaultTemperatureScale: defaultTemperatureScale) {
+            items.append(QuickResult(id: result.automaticTemperature ? "temperature" : "conversion", title: result.text, subtitle: (result.automaticTemperature ? query + " → " + result.source : query) + "　↵ 複製結果", symbol: "arrow.left.arrow.right", action: .copy(result.text)))
         }
         if let url = URL(string: query), ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil {
             items.append(QuickResult(id: "url", title: query, subtitle: "在預設瀏覽器開啟", symbol: "globe", action: .open(url)))
