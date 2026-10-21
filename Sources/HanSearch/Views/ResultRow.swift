@@ -9,6 +9,7 @@ struct ResultRow: View {
     @State private var creationDate: Date?
     @State private var datedPath: String?
     private var needsPreview: Bool { item.excerpt.isEmpty && item.source == "文件・系統索引" }
+    private var indexOnlyMatch: Bool { needsPreview && preview == .noLiteralMatch }
     private var matchingQuery: String { item.supplement?.query ?? query }
     private var sourceLabel: String {
         if needsPreview, case .match = preview { return "文件・內文命中" }
@@ -23,7 +24,14 @@ struct ResultRow: View {
                 HStack {
                     HighlightedText(text: item.name, query: matchingQuery).font(.body.weight(.medium)).lineLimit(1)
                     Spacer()
-                    Text(L.text(sourceLabel)).font(.caption2).foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(L.text(sourceLabel))
+                        if indexOnlyMatch {
+                            Image(systemName: "info.circle")
+                                .accessibilityLabel(L.text(previewStatus))
+                        }
+                    }.font(.caption2).foregroundStyle(.secondary)
+                        .help(indexOnlyMatch ? L.text(previewStatus) : L.text(sourceLabel))
                 }
                 if let match = item.supplement { SearchSupplementLabel(match: match) }
                 if !item.matchPages.isEmpty {
@@ -39,7 +47,7 @@ struct ResultRow: View {
                 }
                 if !item.excerpt.isEmpty {
                     HighlightedText(text: item.excerpt, query: matchingQuery).font(.callout).foregroundStyle(.secondary).lineLimit(3)
-                } else if needsPreview {
+                } else if needsPreview && !indexOnlyMatch {
                     if case let .match(snippet) = preview {
                         HighlightedText(text: snippet, query: query).font(.callout).foregroundStyle(.secondary).lineLimit(3)
                     } else {
