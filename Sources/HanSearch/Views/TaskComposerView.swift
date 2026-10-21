@@ -23,6 +23,7 @@ struct TaskComposerView: View {
                         TextField(L.text("事項名稱"), text: draftBinding(\.title)).textFieldStyle(.roundedBorder).accessibilityLabel(L.text("事項名稱"))
                         Toggle(L.text(event ? "全天" : "只設定日期（不指定通知時間）"), isOn: allDayBinding)
                         DatePicker(L.text(event ? "開始" : "提醒時間"), selection: startBinding, displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
+                        TaskRecurrencePicker(recurrence: draftBinding(\.recurrence), start: draft.start)
                         if event {
                             DatePicker(L.text(draft.isAllDay ? "結束日期（含當天）" : "結束"), selection: endBinding, displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
                             if !draft.isAllDay {
@@ -41,7 +42,8 @@ struct TaskComposerView: View {
                         Text(L.text("可調整預覽欄位；修改上方文字會重新解析。")).font(.caption).foregroundStyle(.secondary)
                     } else if let draft = store.composerDraft {
                         Text(draft.title).font(.title2.weight(.medium))
-                        Label(dateDescription(draft.start, allDay: draft.isAllDay), systemImage: draft.isAllDay ? "sun.max" : "clock")
+                        Label((draft.recurrence == nil ? "" : L.text("首次") + "：") + dateDescription(draft.start, allDay: draft.isAllDay), systemImage: draft.isAllDay ? "sun.max" : "clock")
+                        if let rule = draft.recurrence { TaskRecurrenceSummary(rule: rule, start: draft.start) }
                         if event {
                             Text(L.text("結束") + "：" + dateDescription(draft.isAllDay ? Calendar.current.date(byAdding: .day, value: -1, to: draft.end)! : draft.end, allDay: draft.isAllDay)).foregroundStyle(.secondary)
                             if let offset = draft.alarmOffset { Text(L.format("提前 %@ 分鐘", String(Int(-offset / 60)))).foregroundStyle(.secondary) }
@@ -53,6 +55,11 @@ struct TaskComposerView: View {
                         Text(L.text(event ? "也可以輸入「下下週一上午10點開會30分鐘」。只填日期會建立全天行程。" : "也可以輸入「明天上午9點交報告」。只填日期會建立不指定時間的提醒事項。"))
                             .font(.callout).foregroundStyle(.secondary)
                         Text(L.text("輸入後先看解析結果，再按 Return 檢查預覽。")).font(.caption).foregroundStyle(.secondary)
+                        Text(L.text(event ? "重複範例：每週三晚上七點上課。也可輸入民國116年1月5日上午9點開會。" : "重複範例：每月5號提醒繳房租、每天上午9點喝水。"))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    if !event, store.composerDraft?.recurrence != nil {
+                        Text(L.text("重複提醒完成本次後，系統才會產生下一筆。")).font(.caption).foregroundStyle(.secondary)
                     }
                     if !store.composerError.isEmpty {
                         Label(L.text(store.composerError), systemImage: "exclamationmark.circle").foregroundStyle(.orange).font(.callout)

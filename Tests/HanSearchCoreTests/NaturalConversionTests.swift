@@ -15,6 +15,19 @@ extension ChineseSearchTests {
             expect(query, 3 / 0.45359237, suffix: suffix)
         }
         for query in ["5公里多少公尺", "5公里是多少公尺", "5公里有多少公尺", "5公里有幾公尺", "5公里換算成公尺", "５公里＝公尺"] { expect(query, 5000, suffix: "公尺") }
+        expect("20坪換平方公尺", 20 * 400.0 / 121.0, suffix: "平方公尺")
+        expect("20坪=平方米", 20 * 400.0 / 121.0, suffix: "平方米")
+        expect("100平方米換坪", 30.25, suffix: "坪")
+        expect("100m²=坪", 30.25, suffix: "坪")
+        expect("100m2 to 坪", 30.25, suffix: "坪")
+        for query in ["3台斤換公斤", "3臺斤換公斤", "3台斤转公斤"] { expect(query, 1.8, suffix: "公斤") }
+        expect("1公斤換台斤", 1 / 0.6, suffix: "台斤")
+        expect("3市斤換公斤", 1.5, suffix: "公斤")
+        precondition(UnitConverter.result("3台斤換公斤")?.note == "台斤：1 台斤 = 0.6 公斤")
+        precondition(QuickProvider.results(query: "3台斤換公斤").contains { $0.subtitle.contains("0.6 公斤") })
+        precondition(UnitConverter.convert("3斤換公斤") == nil)
+        precondition(QuickProvider.results(query: "3斤換公斤").contains { $0.id == "quick:ambiguous-jin" })
+        precondition(UnitConverter.convert("20坪換公斤") == nil)
         expect("10cmininch", 10 / 2.54, suffix: "inch")
         expect("1,000公克到公斤", 1, suffix: "公斤")
         expect(".5公斤=公克", 500, suffix: "公克")

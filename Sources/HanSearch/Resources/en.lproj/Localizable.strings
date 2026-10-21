@@ -71,6 +71,7 @@
 "「全部」加入全機文件搜尋（含內文）" = "Search system-wide documents in All (including contents)";
 "「全部」包含文件內文" = "Include document contents in All";
 "「全部」搜尋 Han 文件內文索引" = "Include Han document contents in All";
+"「斤」有地區差異，請指定台斤（600 公克）或市斤（500 公克）。" = "The catty varies by region. Specify 台斤 (Taiwanese, 600 g) or 市斤 (mainland Chinese, 500 g).";
 "「讀取不完整」仍可搜尋成功讀取的文件。展開未完成明細查看處理建議：雲端檔先下載、掃描 PDF 先做 OCR、舊格式轉成 PPTX／XLSX、損壞檔修復或重新匯出。" = "Partial reads still let you search successfully indexed documents. Expand failure details for remedies: download cloud files, run OCR on scans, convert older formats to PPTX/XLSX, or repair and re-export damaged documents.";
 "一個快捷鍵，回到手邊的事。" = "One shortcut. Back to your flow.";
 "一個搜尋框，找回你要的東西" = "One search box. Find what you need.";
@@ -86,6 +87,7 @@
 "下載語言可能需要一些時間；翻譯顯示在搜尋結果下方，原本的檔案與 App 搜尋不受影響。" = "Language downloads may take time. Translation appears below search results while app and file search remains available.";
 "不另設通知" = "No event notification";
 "不用猜檔名是繁體還是簡體，也不用再翻好幾層資料夾。" = "Stop guessing which Chinese script a filename uses, or digging through folder after folder.";
+"不重複" = "Never";
 "中文 App 名稱、檔名與已連接資料的標題可用拼音或注音搜尋，例如 hongguo／hg、ㄏㄨㄥˊ ㄍㄨㄛˇ／ㄏㄍ。多音字依系統轉寫，可能有不同讀法；可用自訂縮寫補上。" = "Search Chinese app names, filenames and connected record titles using Pinyin or Zhuyin, such as hongguo / hg or ㄏㄨㄥˊ ㄍㄨㄛˇ / ㄏㄍ. System transliteration may choose a different pronunciation for polyphonic characters; custom aliases can add alternatives.";
 "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如 hgdj／ㄏㄍㄉㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 hong2 guo3。" = "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as hgdj or ㄏㄍㄉㄐ apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example hong2 guo3.";
 "中文名稱可用完整拼音／注音搜尋；只有 App 會自動比對首字母或注音首符號，例如計算機 jsj／ㄐㄙㄐ。檔名與個人資料標題不套用首字母，手動設定的縮寫仍有效。dl32 這類型號保留數字；聲調拼音請分開音節，例如 ji4 suan4 ji1。" = "Search Chinese names with full Pinyin or Zhuyin. Automatic initials such as jsj or ㄐㄙㄐ for Calculator apply only to apps, not filenames or personal titles. Custom aliases still work. Model names such as dl32 retain their digits; separate tonal Pinyin syllables, for example ji4 suan4 ji1.";
@@ -98,6 +100,7 @@
 "介面語言" = "Interface language";
 "以下原因分類僅統計前 200 份明細；未完成總數請見上方。" = "Reason counts below cover only the first 200 entries; see the total unfinished count above.";
 "以你習慣的字搜尋，不改動原始檔名與文字。" = "Search in your preferred script. Original names and text stay unchanged.";
+"以開始日期的日數重複；沒有該日期的月份會略過。" = "Repeats on the start date’s day of the month; months without that day are skipped.";
 "任何時候，按下它就能叫出 Han。" = "Press it whenever you need Han.";
 "你允許取用的聯絡人姓名、電話與電子郵件" = "Names, phone numbers and email addresses you permit";
 "你好" = "Hello";
@@ -118,6 +121,7 @@
 "例如「計算機」可用 jsj、jisuanji 或 ㄐㄧㄙㄨㄢㄐㄧ 搜尋。右鍵點結果，還能自訂縮寫。" = "Find Calculator with jsj, jisuanji or ㄐㄧㄙㄨㄢㄐㄧ. Right-click a result to add your own aliases.";
 "例如：30分鐘後喝水" = "Example: in 30 minutes drink water";
 "例如：3公斤換成磅、5公里多少公尺、32°F=°C。溫度可只輸入37攝氏度或37度，自動顯示另一種溫標。" = "Try 3公斤換成磅, 5公里多少公尺 or 32°F=°C. Enter 37攝氏度 or 37度 to see the opposite temperature scale.";
+"例如：3台斤換公斤" = "Example: 3台斤換公斤";
 "例如：明天下午3點到4點和鼎達叔叔開會" = "Example: tomorrow from 3pm to 4pm meeting with Uncle Dingda";
 "依 macOS 27 Spotlight 官方參考重做的獨立啟動器。目前在 macOS 26 驗證；不包含 Siri／Apple Intelligence 或所有系統 App 動作。" = "An independent launcher inspired by Spotlight. Tested on macOS 26. Siri, Apple Intelligence and full system-action parity are not included.";
 "依名稱排列" = "Sorted by name";
@@ -202,6 +206,9 @@
 "可自訂組合，也可使用 ⌘Space。若原 Spotlight 仍占用，設定會提示並提供系統設定入口。" = "Choose your own shortcut or use ⌘Space. If Spotlight still uses it, settings will explain the conflict and link to macOS settings.";
 "可調整預覽欄位；修改上方文字會重新解析。" = "Adjust these fields, or edit the text above to parse it again.";
 "可輸入國家名稱，不用先知道貨幣代碼。結果會標示每日參考匯率的資料日期。" = "Use a country name without knowing its currency code. Results show the date of the daily reference rate.";
+"台斤：1 台斤 = 0.6 公斤" = "Taiwanese catty: 1 台斤 = 0.6 kg";
+"台灣單位與年份可輸入20坪換平方公尺、3台斤換公斤、115年；年份結果保留一般搜尋。只寫「斤」不猜地區，需指定台斤或市斤。" = "Enter 20坪換平方公尺, 3台斤換公斤, or 115年 for Taiwan units and era years. Year conversions keep regular search results. Specify 台斤 or 市斤 instead of ambiguous 斤.";
+"台灣常用：20坪換平方公尺、3台斤換公斤、115年。台斤採600公克；只寫「斤」會請你指定台斤或市斤。" = "Taiwan examples: 20坪換平方公尺, 3台斤換公斤, 115年. A Taiwanese catty is 600 g. Specify Taiwanese or mainland Chinese catty when entering 斤.";
 "右鍵 App 即可釘選常用項目" = "Right-click an app to pin it here";
 "右鍵點 App、檔案或個人資料結果，選「自訂搜尋縮寫…」。縮寫與項目識別資料只存在這台 Mac；不會上傳。刪除縮寫請在同一視窗留空儲存。計算器與新增事項指令仍優先。" = "Right-click an app, file or personal result and choose Custom Search Aliases. Aliases and item identifiers stay on this Mac. Save an empty field to remove them. Calculator and task commands keep priority.";
 "右鍵點搜尋結果可設定自訂縮寫。應用程式頁可以新增分類、拖動 App 到分類、修改圖示與拖動分類順序。固定與最近開啟提供其他入口。" = "Right-click a result to add custom aliases. In Apps, create categories, drag apps into them, change category icons and reorder categories. Pinned and Recent offer additional entry points.";
@@ -294,11 +301,13 @@
 "已達摘要讀取上限；可開啟文件查看" = "Preview limit reached; open the document to view content";
 "已選 %@ 個資料夾" = "%@ folders selected";
 "已釘選" = "Pinned";
+"市斤：1 市斤 = 0.5 公斤" = "Mainland Chinese catty: 1 市斤 = 0.5 kg";
 "常用小事，順手完成" = "Handle everyday tasks";
 "常用結果會優先；學習紀錄只存在這台 Mac。" = "Frequently opened results rank higher. Learning history stays on this Mac.";
 "常用詞互搜限於隨身碟／U盤、列印／打印、印表機／打印機、滑鼠／鼠標、軟體／軟件、硬體／硬件。補充結果標示實際比對詞，使用習慣與日期排序不會把它們移到原始命中之前。" = "Related wording is limited to six curated Taiwan/Mainland pairs for USB drives, printing, printers, mice, software and hardware. Supplemental results show the matched wording and stay below original-query matches, including when learning or date sorting is enabled.";
 "常用詞補充：%@" = "Related wording: %@";
 "建立 Han 索引" = "Build Han index";
+"建立事項請補上完整日期，例如「民國115年12月5日開會」。" = "Provide a complete date, such as 民國115年12月5日開會 (meeting on December 5, 2026).";
 "建立所選分類" = "Create selected categories";
 "建立日期無法取得" = "Creation date unavailable";
 "建立日期：%@" = "Created: %@";
@@ -340,6 +349,7 @@
 "拼音、注音，也可以自訂" = "Pinyin, Zhuyin and your own aliases";
 "拼音首字母" = "Pinyin initials";
 "拼音首字母與注音首符號只套用 App；文件標題與內文維持文字比對。" = "Pinyin and Zhuyin initials apply only to apps. Document names and contents use text matching.";
+"持續重複，未設定結束日期。" = "Repeats indefinitely; no end date is set.";
 "按 Return 進入確認預覽，可調整日期與內容。" = "Press Return to review and adjust the date and content.";
 "按 Tab 新增提醒事項" = "Press Tab to create a reminder";
 "按 Tab 新增行事曆行程" = "Press Tab to create a calendar event";
@@ -494,10 +504,20 @@
 "此捷徑會執行你在捷徑 App 中設定的動作。請確認內容後執行。" = "This runs the actions defined in Shortcuts. Review them before continuing.";
 "此時間無法建立系統鬧鐘" = "Cannot create a Clock alarm at this time";
 "此模式僅支援行事曆與提醒事項。" = "This mode supports Calendar and Reminders only.";
+"每 %@ 個月：%@ 號" = "Every %@ months: day %@";
+"每 %@ 天" = "Every %@ days";
+"每 %@ 週：%@" = "Every %@ weeks: %@";
 "每一步都可以略過。" = "Every step is optional.";
+"每天" = "Every day";
 "每天最多自動檢查一次 GitHub 公開版本；只讀取版本資訊，不傳送搜尋內容或 App 清單。更新由你下載與安裝。" = "Automatically checks public GitHub releases at most once a day. Search text and installed apps are not sent. You download and install updates.";
+"每月" = "Every month";
 "每次回到預設搜尋" = "Always start with default search";
 "每次重新開啟時清空搜尋文字，並回到預設頁；正在使用的搜尋不受影響。" = "Each reopening clears the query and returns to the default page. An active search is unaffected.";
+"每週" = "Every week";
+"民國 %@ 年" = "ROC year %@";
+"民國 %@ 年 %@ 月" = "ROC year %@, month %@";
+"民國 %@ 年 %@ 月 %@ 日" = "ROC year %@, month %@, day %@";
+"民國年份請填 1 到 8088。" = "Enter a Republic of China era year from 1 to 8088.";
 "沒有可擷取的文字（空白或圖片）" = "No extractable text (empty or image-only)";
 "沒有符合的 App" = "No matching apps";
 "沿用檔名搜尋範圍" = "Use filename folders";
@@ -535,6 +555,8 @@
 "目前已關閉搜尋習慣學習，可在「搜尋與快捷鍵」更改。" = "Search learning is currently off. Change it in Search & Shortcuts.";
 "目前快捷鍵：%@" = "Current shortcut: %@";
 "目前按 %@ 解讀「37度」；明寫攝氏或華氏時，以輸入為準。" = "“37 degrees” currently means %@. An explicitly written Celsius or Fahrenheit takes precedence.";
+"目前支援每天、每週一個星期幾、每月一個日期；其他重複規則請在系統 App 設定。" = "Daily, one weekday per week, and one date per month are supported. Configure other patterns in the system app.";
+"目前支援每天、每週一個星期幾、每月一個日期；結束條件請在系統 App 調整。" = "Daily, one weekday per week, and one date per month are supported. Edit end conditions in the system app.";
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目標語言" = "Target language";
 "直接在「全部」搜尋整台 Mac 已索引的 Word、PDF、PPT／PPTX 及文字文件，不必切換頁面。App 與檔名先顯示，文件內文結果隨後補上；只關閉 Spotlight 快捷鍵不影響此功能。" = "Search indexed Word, PDF, PPT/PPTX and text files across this Mac in All. App and filename results appear first, followed by document matches. Disabling the Spotlight shortcut does not disable its index.";
@@ -640,6 +662,9 @@
 "行程與提醒：輸入 cal／行事曆或提醒／rem，按 Tab 後輸入時間和事項。Return 進入確認預覽，按「確認建立」或 ⌘Return 才寫入。行程可選擇 Han 預設行事曆及當次目的地；提醒使用系統預設清單。系統鬧鐘仍按 Return 建立，首次需連接內附捷徑。" = "Events and reminders: type cal/calendar or rem/reminder, press Tab, then enter a time and task. Return opens review; Confirm creation or ⌘Return saves it. Choose a Han default or a per-event calendar. Reminders use the system default list. Clock alarms still use Return and require the bundled shortcut once.";
 "複製內容" = "Copy content";
 "複製翻譯" = "Copy translation";
+"西元 %@ 年" = "AD %@";
+"西元 %@ 年 %@ 月" = "AD %@, month %@";
+"西元 %@ 年 %@ 月 %@ 日" = "AD %@, month %@, day %@";
 "觸控式軌跡板" = "Trackpad";
 "計算" = "Calculate";
 "計算、每日匯率、翻譯，以及預覽後建立行程與提醒。" = "Calculate, convert currencies with daily rates, translate, and preview events or reminders before creating them.";
@@ -668,6 +693,8 @@
 "請到「資料來源」集中連接備忘錄、聯絡人、行事曆、提醒事項等。授權由 macOS 管理；「全部重新讀取」只更新已連接來源。" = "Connect Notes, Contacts, Calendar, Reminders and other apps in Data Sources. macOS manages permissions. Reload All updates connected sources only.";
 "請加上明確時間，才能設定時長或提前通知。" = "Add a specific time to set a duration or advance notification.";
 "請在系統視窗按「加入捷徑」，完成後回到 App 會自動檢查；只需一次。" = "Choose Add Shortcut in the system window, then return to Han. Setup is needed only once.";
+"請指定每月 1 到 31 號，例如「每月5號提醒繳房租」。" = "Specify a day from 1 to 31, such as 每月5號提醒繳房租 (rent reminder on the 5th).";
+"請指定每週的星期幾，例如「每週三晚上7點上課」。" = "Specify a weekday, such as 每週三晚上7點上課 (class every Wednesday at 7 pm).";
 "請搭配 ⌘、⌃ 或 ⌥" = "Include ⌘, ⌃ or ⌥";
 "請縮小資料夾範圍，或改用 Han 持久文件索引。" = "Choose a smaller folder scope, or use the persistent Han document index.";
 "請縮短關鍵字，或在設定中加入檔案所在資料夾。" = "Try a shorter query or add the file's folder in Settings.";
@@ -707,6 +734,7 @@
 "輸入繁體「會議記錄」，也能找到簡體檔名。" = "Type Traditional Chinese 會議記錄 to find a filename in Simplified Chinese.";
 "輸入自然語言時間與事項，再按 Return 看預覽。提醒也可用 rem；系統鬧鐘需先連接時鐘捷徑。" = "Enter a time and task in natural language, then press Return to preview. Use rem for reminders. System alarms require the Clock companion shortcut.";
 "輸入關鍵字，繁體與簡體一起比對。" = "Type a keyword to match Traditional and Simplified Chinese.";
+"農曆日期尚未支援，請改用國曆日期。" = "Lunar calendar dates are not supported yet. Use a Gregorian date.";
 "返回 App" = "Back to apps";
 "返回搜尋" = "Back to search";
 "這版先支援單次事項；重複規則請在系統 App 設定。" = "This version supports one-time items. Set recurrence in the system app.";
@@ -738,6 +766,13 @@
 "重新讀取" = "Reload";
 "重新讀取行事曆清單" = "Reload calendar list";
 "重新開啟時接續上次的搜尋文字與頁面；預設頁只用於重新啟動 App。" = "Resume the previous query and page. The default page is used when restarting the app.";
+"重複" = "Repeat";
+"重複事項：cal或提醒＋Tab，輸入每週三晚上七點上課、每月5號提醒繳房租；預覽可改成每天、每週、每月或不重複，並調整間隔。未設定結束日期；每月沒有該日會略過。" = "For recurring items, enter cal or 提醒 and press Tab, then 每週三晚上七點上課 or 每月5號提醒繳房租. In preview, choose daily, weekly, monthly, or never and adjust the interval. No end date is set; months without the requested day are skipped.";
+"重複提醒完成本次後，系統才會產生下一筆。" = "The system makes the next recurring reminder available after you complete the current one.";
+"重複範例：每月5號提醒繳房租、每天上午9點喝水。" = "Examples: 每月5號提醒繳房租 (rent reminder on the 5th of each month), or 每天上午9點喝水 (drink water daily at 9 am).";
+"重複範例：每週三晚上七點上課。也可輸入民國116年1月5日上午9點開會。" = "Examples: 每週三晚上七點上課 (class every Wednesday at 7 pm), or 民國116年1月5日上午9點開會 (meeting on January 5, 2027 at 9 am).";
+"重複間隔請填 1 到 52。" = "Enter a repeat interval from 1 to 52.";
+"重複間隔：%@" = "Repeat interval: %@";
 "釘選 App" = "Pin App";
 "鍵盤" = "Keyboard";
 "開啟" = "Open";
@@ -782,6 +817,7 @@
 "顯示方式" = "View";
 "顯示查詢翻譯" = "Translate search queries";
 "首字母只套用 App；文件標題與內文維持文字比對。" = "Initials apply to apps only. Document names and contents use text matching.";
+"首次" = "First occurrence";
 "首次不會自動掃描整個 Mac，也不會一次要求所有隱私權限。" = "Han does not automatically scan your entire Mac or ask for every privacy permission at startup.";
 "首次只需加入一個預先做好的捷徑，不用自己編輯。鬧鐘以分鐘為精度，會向上取整；支援下一次的指定時分，更晚日期請用提醒事項。鬧鐘由系統時鐘管理，這裡不顯示或儲存鬧鐘清單。" = "Add the bundled shortcut once. Alarms round up to the next minute and support the next occurrence only. Use Reminders for later dates. Apple Clock manages the alarms.";
 "首次索引可能較久；完成後會保存在本機，背景只重新讀取有變動的文件。" = "The first index may take longer. It stays on your Mac, and background updates reuse unchanged documents.";

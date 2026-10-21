@@ -27,6 +27,7 @@ enum TaskService {
     }
     static func create(_ plan: TaskPlan) async throws -> String {
         let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = plan.isAllDay ? .none : .short
+        let recurrence = plan.recurrence.map { "\n" + TaskRecurrenceText.description($0, start: plan.start) + " · " + L.text("持續重複，未設定結束日期。") } ?? ""
         switch plan.kind {
         case .event:
             try EventKitAccess.require(.event)
@@ -41,14 +42,14 @@ enum TaskService {
             let event = makeEvent(plan, store: store)
             event.calendar = calendar
             try store.save(event, span: .thisEvent, commit: true)
-            return L.format("已新增行程「%@」", plan.title) + "\n" + formatter.string(from: plan.start) + (plan.isAllDay ? " · " + L.text("全天") : " · \(Int(plan.duration / 60)) " + L.text("分鐘")) + "\n" + L.text("行事曆") + "：" + calendar.title
+            return L.format("已新增行程「%@」", plan.title) + "\n" + formatter.string(from: plan.start) + (plan.isAllDay ? " · " + L.text("全天") : " · \(Int(plan.duration / 60)) " + L.text("分鐘")) + "\n" + L.text("行事曆") + "：" + calendar.title + recurrence
         case .reminder:
             try EventKitAccess.require(.reminder)
             guard let calendar = store.defaultCalendarForNewReminders(), calendar.allowsContentModifications else { throw ProcessFailure.failed("沒有可寫入的預設提醒事項清單，請先在提醒事項 App 建立清單。") }
             let reminder = makeReminder(plan, store: store)
             reminder.calendar = calendar
             try store.save(reminder, commit: true)
-            return L.format("已新增提醒「%@」", plan.title) + "\n" + formatter.string(from: plan.start) + "\n" + L.text("清單") + "：" + calendar.title
+            return L.format("已新增提醒「%@」", plan.title) + "\n" + formatter.string(from: plan.start) + "\n" + L.text("清單") + "：" + calendar.title + recurrence
         case .alarm: throw ProcessFailure.failed("鬧鐘應交由 Apple 系統時鐘捷徑處理。")
         }
     }
@@ -59,18 +60,32 @@ enum TaskService {
         event.title = plan.title; event.startDate = plan.start; event.endDate = plan.start.addingTimeInterval(plan.duration)
         event.isAllDay = plan.isAllDay
         if let offset = plan.alarmOffset { event.addAlarm(EKAlarm(relativeOffset: offset)) }
+        if let rule = recurrenceRule(plan) { event.addRecurrenceRule(rule) }
         return event
     }
     static func makeReminder(_ plan: TaskPlan, store: EKEventStore) -> EKReminder {
         let reminder = EKReminder(eventStore: store)
         reminder.title = plan.title
-        var calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
         let fields: Set<Calendar.Component> = plan.isAllDay ? [.year,.month,.day] : [.year,.month,.day,.hour,.minute,.second]
         var components = calendar.dateComponents(fields, from: plan.start)
+        components.calendar = calendar
         components.timeZone = calendar.timeZone
         reminder.dueDateComponents = components
         if !plan.isAllDay { reminder.addAlarm(EKAlarm(absoluteDate: plan.start)) }
+        if let rule = recurrenceRule(plan) { reminder.addRecurrenceRule(rule) }
         return reminder
+    }
+    private static func recurrenceRule(_ plan: TaskPlan) -> EKRecurrenceRule? {
+        guard let rule = plan.recurrence, rule.isValid else { return nil }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .current
+        let frequency: EKRecurrenceFrequency
+        switch rule.frequency { case .daily: frequency = .daily; case .weekly: frequency = .weekly; case .monthly: frequency = .monthly }
+        let weekday = EKWeekday(rawValue: calendar.component(.weekday, from: plan.start))!
+        return EKRecurrenceRule(recurrenceWith: frequency, interval: rule.interval,
+            daysOfTheWeek: rule.frequency == .weekly ? [EKRecurrenceDayOfWeek(weekday)] : nil,
+            daysOfTheMonth: rule.frequency == .monthly ? [NSNumber(value: calendar.component(.day, from: plan.start))] : nil,
+            monthsOfTheYear: nil, weeksOfTheYear: nil, daysOfTheYear: nil, setPositions: nil, end: nil)
     }
 }

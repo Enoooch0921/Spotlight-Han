@@ -13,7 +13,7 @@ Commit both the adapter source and generated `Sources/HanSearchCore/Resources/Na
 
 `entry.js` extracts dates through Chrono, preserves original text for titles, and adds Han-specific week/range/duration rules. `NaturalTaskParser.swift` converts wall-clock components using the user's calendar/time zone, rejects invalid/past dates and emits a reviewable draft. `TaskComposerView` and `SearchStore+TaskComposer` own the explicit confirmation flow. `TaskService` maps approved values to EventKit objects and commits once.
 
-The bundled parser is not a general language model. This version supports one-time calendar events and reminders; recurrence, multiple independent time clauses and vague times need rewriting or editing in the system app. Do not infer unsupported rules silently.
+The bundled parser is not a general language model. The local 1.0.1-dev build adds bounded Chinese daily/weekly/monthly recurrence and ROC-era dates through `RecurringTaskInput` / `TaiwanYearConverter` before Chrono. `TaskRecurrence` selects the next occurrence, skips missing month-days, and is preserved through the reviewed draft into one EventKit recurrence rule. The preview can change frequency/interval or remove recurrence. There is no end condition; yearly/lunar/multi-weekday patterns, multiple independent time clauses and vague times need rewriting or editing in the system app. Reminder recurrence follows the system behavior: the next occurrence becomes available after the current one is completed. The legacy quick-command parser rejects recurrence/ROC input to avoid silently producing a one-time item or losing the era. Do not infer unsupported rules silently.
 
 Verification:
 

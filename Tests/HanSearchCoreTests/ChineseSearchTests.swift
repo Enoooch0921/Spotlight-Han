@@ -26,6 +26,7 @@ struct CheckRunner {
         }
         let tests = ChineseSearchTests()
         tests.testNaturalConversions()
+        if CommandLine.arguments.contains("--taiwan-dates-only") { try await tests.testTaiwanDates(); return }
         if CommandLine.arguments.contains("--conversions-only") { return }
         try tests.testTaiwanSearchSupplements()
         if CommandLine.arguments.contains("--taiwan-search-only") { return }
@@ -54,6 +55,7 @@ struct CheckRunner {
         tests.testSafeQuickActions()
         try tests.testTaskCommands()
         try await tests.testNaturalTaskComposer()
+        try await tests.testTaiwanDates()
         tests.testCurrencyQueries()
         tests.testCurrencyCountryNames()
         tests.testSearchHighlights()
@@ -68,7 +70,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 35 check groups — natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 36 check groups — Taiwan era years and recurring tasks, natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -346,7 +348,7 @@ final class ChineseSearchTests {
         XCTAssertNotNil(relative.validationError(at: now.addingTimeInterval(1900), calendar: calendar))
         var invalid = lead; invalid.title = " "; XCTAssertNotNil(invalid.validationError(at: now, calendar: calendar))
         invalid = lead; invalid.end = invalid.start; XCTAssertNotNil(invalid.validationError(at: now, calendar: calendar))
-        for input in ["", "開會", "明天下午開會", "每週一上午九點開會", "每個星期一上午9點開會", "每兩週一下午3點開會", "明天下午3點", "昨天上午9點交報告", "明天下午3點開會200小時", "明天上午9點開會 後天上午10點吃飯", "明天25:99開會", String(repeating: "字", count: 201)] {
+        for input in ["", "開會", "明天下午開會", "明天下午3點", "昨天上午9點交報告", "明天下午3點開會200小時", "明天上午9點開會 後天上午10點吃飯", "明天25:99開會", String(repeating: "字", count: 201)] {
             do { _ = try await parser.parse(input, mode: .event, now: now, calendar: calendar); preconditionFailure("Should reject: \(input)") }
             catch is NaturalTaskFailure { }
         }

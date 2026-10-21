@@ -17,6 +17,8 @@ public enum UnitConverter {
         add("mi,mile,miles,英里", 0, 1609.344); add("yd,yard,yards,碼", 0, 0.9144)
         add("kg,kilogram,kilograms,公斤,千克", 1, 1); add("g,gram,grams,克,公克", 1, 0.001); add("mg,milligram,milligrams,毫克", 1, 0.000001)
         add("lb,lbs,pound,pounds,磅", 1, 0.45359237); add("oz,ounce,ounces,盎司", 1, 0.028349523125)
+        add("台斤,臺斤", 1, 0.6); add("市斤", 1, 0.5)
+        add("坪", 5, 400.0 / 121.0); add("平方公尺,平方米,m²,m2,sqm", 5, 1)
         add("s,sec,secs,second,seconds,秒", 2, 1); add("min,mins,minute,minutes,分鐘,分", 2, 60)
         add("h,hr,hrs,hour,hours,小時", 2, 3600); add("day,days,天,日", 2, 86400)
         add("b,byte,bytes", 3, 1); add("kb", 3, 1000); add("mb", 3, 1e6); add("gb", 3, 1e9); add("tb", 3, 1e12)
@@ -30,6 +32,7 @@ public enum UnitConverter {
         public let text: String
         public let source: String
         public let automaticTemperature: Bool
+        public var note: String = ""
     }
     private static func key(_ value: String) -> String { value.precomposedStringWithCompatibilityMapping.lowercased() }
     private static let number = #"([+-]?(?:[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?|\.[0-9]+))"#
@@ -58,7 +61,9 @@ public enum UnitConverter {
         if let parts = groups(explicit), let amount = value(parts[0]) {
             let from = parts[1] == "度" || parts[1] == "°" ? defaultTemperatureScale.symbol : parts[1]
             if let text = converted(amount, from: from, to: parts[2]) {
-                return Result(text: text, source: Calculator.format(amount) + " " + from, automaticTemperature: false)
+                let pair = key(from) + " " + key(parts[2])
+                let note = pair.contains("台斤") || pair.contains("臺斤") ? "台斤：1 台斤 = 0.6 公斤" : (pair.contains("市斤") ? "市斤：1 市斤 = 0.5 公斤" : "")
+                return Result(text: text, source: Calculator.format(amount) + " " + from, automaticTemperature: false, note: note)
             }
         }
         let amount: Double, source: Unit

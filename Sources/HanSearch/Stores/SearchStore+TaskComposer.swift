@@ -56,7 +56,7 @@ extension SearchStore {
         refreshEventCalendars()
         composerInput = query
         let resolved = plan.resolved(at: Date())
-        composerDraft = TaskDraft(kind: plan.kind, title: plan.title, start: resolved.start, end: resolved.start.addingTimeInterval(plan.duration), isAllDay: plan.isAllDay, alarmOffset: plan.alarmOffset, calendarID: plan.kind == .event && !defaultEventCalendarID.isEmpty ? defaultEventCalendarID : nil)
+        composerDraft = TaskDraft(kind: plan.kind, title: plan.title, start: resolved.start, end: resolved.start.addingTimeInterval(plan.duration), isAllDay: plan.isAllDay, alarmOffset: plan.alarmOffset, calendarID: plan.kind == .event && !defaultEventCalendarID.isEmpty ? defaultEventCalendarID : nil, recurrence: plan.recurrence)
         composerReviewing = true; composerParsing = false; composerCreated = nil; composerError = ""
         results = []; quickResults = []; translationResult = nil; currencyResults = []; selection = nil
         onLayoutChanged?()

@@ -31,6 +31,7 @@ import HanSearchCore
         let records = (0..<55).map { i in
             PersonalRecord(id: "event:related\(i)", title: "打印教學 \(i)", subtitle: "fixture", text: "打印", symbol: "calendar", mode: .calendar, action: .details("original fixture"), startDate: now.addingTimeInterval(Double(i+1)*3600))
         } + [PersonalRecord(id: "event:direct", title: "列印", subtitle: "fixture", text: "原始內容", symbol: "calendar", mode: .calendar, action: .details("原始內容"), startDate: now.addingTimeInterval(100*3600)),
+             PersonalRecord(id: "event:year", title: "115年報告", subtitle: "fixture", text: "測試文字", symbol: "calendar", mode: .calendar, action: .details("fixture")),
              PersonalRecord(id: "event:temperature", title: "37度實驗", subtitle: "fixture", text: "測試文字", symbol: "calendar", mode: .calendar, action: .details("fixture"))]
         let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, sourcePreferences: defaults,
             sourceAccessCheck: { _ in true }, eventSourceLoader: { _ in PersonalLoad(records: records, status: "fixture loaded") }, eventCalendarLoader: { [] },
@@ -73,6 +74,9 @@ import HanSearchCore
         precondition(restored.temperaturePreference == .fahrenheit, "Manual override persists across launches")
         store.query = "37攝氏度"; store.search()
         try await wait("Explicit scale was overridden by preferences") { !store.searching && store.quickResults.contains { $0.id == "quick:temperature" && $0.title == "98.6 °F" } }
+        store.query = "115年"; store.search()
+        try await wait("Year conversion did not appear") { !store.searching && store.quickResults.contains { $0.id == "quick:year-conversion" && $0.title == "西元 2026 年" } }
+        precondition(store.quickResults.contains { $0.id == "quick:event:year" }, "Year conversion must preserve matching search results")
         print("PASS: system-default temperature preference, persisted C/F override, immediate recalculation, explicit-scale precedence and normal search beside automatic conversion")
     }
 }

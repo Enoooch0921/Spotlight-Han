@@ -73,6 +73,13 @@ public enum QuickProvider {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
         var items: [QuickResult] = SystemSettingsCatalog.results(query: query)
+        if let year = TaiwanYearConverter.result(query) {
+            items.append(QuickResult(id: "year-conversion", title: year.text, subtitle: year.source + "　↵ 複製結果", symbol: "calendar", action: .copy(year.text)))
+        }
+        if query.range(of: #"^\s*[0-9]+(?:\.[0-9]+)?\s*斤\s*(?:換|换|轉|转|到|=|to|in|多少|幾|几)"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            let message = "「斤」有地區差異，請指定台斤（600 公克）或市斤（500 公克）。"
+            items.append(QuickResult(id: "ambiguous-jin", title: message, subtitle: "例如：3台斤換公斤", symbol: "questionmark.circle", action: .details(message)))
+        }
         if let plan = TaskCommandParser.parse(query) {
             let formatter = DateFormatter(); formatter.dateStyle = .medium; formatter.timeStyle = .short
             let displayDate: Date
@@ -92,7 +99,7 @@ public enum QuickProvider {
             items.append(QuickResult(id: "calculator", title: result, subtitle: query + "　↵ 複製答案", symbol: "equal", action: .copy(result)))
         }
         if let result = UnitConverter.result(query, defaultTemperatureScale: defaultTemperatureScale) {
-            items.append(QuickResult(id: result.automaticTemperature ? "temperature" : "conversion", title: result.text, subtitle: (result.automaticTemperature ? query + " → " + result.source : query) + "　↵ 複製結果", symbol: "arrow.left.arrow.right", action: .copy(result.text)))
+            items.append(QuickResult(id: result.automaticTemperature ? "temperature" : "conversion", title: result.text, subtitle: (result.automaticTemperature ? query + " → " + result.source : query) + (result.note.isEmpty ? "" : " · " + result.note) + "　↵ 複製結果", symbol: "arrow.left.arrow.right", action: .copy(result.text)))
         }
         if let url = URL(string: query), ["https", "http"].contains(url.scheme?.lowercased() ?? ""), url.host != nil {
             items.append(QuickResult(id: "url", title: query, subtitle: "在預設瀏覽器開啟", symbol: "globe", action: .open(url)))

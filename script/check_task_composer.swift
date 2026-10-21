@@ -24,11 +24,11 @@ struct TaskComposerChecks {
         store.defaultEventCalendarID = "thumb"
         precondition(defaults.string(forKey: "defaultEventCalendarID.v1") == "thumb")
         store.query = "cal"; precondition(store.enterComposer()); precondition(store.query.isEmpty)
-        store.query = "明天下午3點到4點開會"; store.search(); store.reviewComposer()
+        store.query = "每週三下午3點到4點開會"; store.search(); store.reviewComposer()
         try await waitForPreview()
         precondition(store.composerReviewing && store.composerDraft?.title == "開會")
         precondition(plans.isEmpty, "Preview must never write")
-        precondition(store.composerDraft?.calendarID == "thumb")
+        precondition(store.composerDraft?.calendarID == "thumb" && store.composerDraft?.recurrence == TaskRecurrence(.weekly))
         store.composerDraft?.calendarID = "missing"
         store.confirmComposer(); precondition(plans.isEmpty && store.composerCalendarError != nil)
         store.composerDraft?.calendarID = "toe"
@@ -42,7 +42,7 @@ struct TaskComposerChecks {
         store.connecting.insert(.notes) // A background read must not block a separate task consent.
         store.confirmComposer(); store.confirmComposer()
         for _ in 0..<20 { if finishWrite != nil { break }; await Task.yield() }
-        precondition(plans.count == 1 && plans[0].title == "調整後的事項" && plans[0].calendarID == "toe", "Confirmation writes the reviewed item exactly once")
+        precondition(plans.count == 1 && plans[0].title == "調整後的事項" && plans[0].calendarID == "toe" && plans[0].recurrence == TaskRecurrence(.weekly), "Confirmation writes the reviewed item exactly once")
         store.cancelComposer(); precondition(store.composerMode != nil, "Cannot discard an in-flight write")
         store.connecting.remove(.notes)
         finishWrite?.resume(returning: "已建立測試事項"); finishWrite = nil
@@ -68,15 +68,19 @@ struct TaskComposerChecks {
         precondition(store.composerMode == nil && store.composerDraft == nil, "Cancelled parse cannot restore a draft")
         // Verify EventKit object mapping without permissions, calendars, or save calls.
         let eventStore = EKEventStore(), future = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970 + 86400))
-        let eventPlan = TaskPlan(kind: .event, title: "測試行程", start: future, duration: 1800, alarmOffset: -600)
+        let eventPlan = TaskPlan(kind: .event, title: "測試行程", start: future, duration: 1800, alarmOffset: -600, recurrence: TaskRecurrence(.weekly, interval: 2))
         let event = TaskService.makeEvent(eventPlan, store: eventStore)
         precondition(event.title == eventPlan.title && event.startDate == future && event.endDate == future.addingTimeInterval(1800))
+        precondition(event.recurrenceRules?.count == 1 && event.recurrenceRules?.first?.frequency == .weekly && event.recurrenceRules?.first?.interval == 2)
+        precondition(event.recurrenceRules?.first?.daysOfTheWeek?.first?.dayOfTheWeek.rawValue == Calendar.current.component(.weekday, from: future))
         precondition(!event.isAllDay && event.alarms?.first?.relativeOffset == -600)
-        let reminderPlan = TaskPlan(kind: .reminder, title: "喝水", start: future)
+        let reminderPlan = TaskPlan(kind: .reminder, title: "喝水", start: future, recurrence: TaskRecurrence(.monthly))
         let reminder = TaskService.makeReminder(reminderPlan, store: eventStore)
+        precondition(reminder.recurrenceRules?.first?.frequency == .monthly && reminder.recurrenceRules?.first?.daysOfTheMonth?.first?.intValue == Calendar.current.component(.day, from: future))
         precondition(reminder.title == "喝水" && reminder.alarms?.first?.absoluteDate == future && reminder.dueDateComponents?.hour != nil)
-        let dayPlan = TaskPlan(kind: .reminder, title: "交報告", start: future, isAllDay: true)
+        let dayPlan = TaskPlan(kind: .reminder, title: "交報告", start: future, isAllDay: true, recurrence: TaskRecurrence(.daily))
         let day = TaskService.makeReminder(dayPlan, store: eventStore)
+        precondition(day.recurrenceRules?.first?.frequency == .daily)
         precondition(day.dueDateComponents?.hour == nil && (day.alarms ?? []).isEmpty)
         let reopened = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: defaults), taskPreferences: defaults, eventCalendarLoader: { calendars }, contentSearcher: { _, _ in SearchResponse(items: []) })
         precondition(reopened.defaultEventCalendarID == "thumb")

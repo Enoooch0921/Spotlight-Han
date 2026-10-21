@@ -39,7 +39,7 @@ function blank(text, index, length) { return text.slice(0,index)+' '.repeat(leng
 
 export function parse(original, kind, reference) {
   if (!original.trim() || original.length>500) return fail('請輸入時間和事項，最多 200 字。');
-  if (/(?:每(?:(?:隔)?[0-9一二兩两三四五六七八九十]+)?(?:個|个)?(?:天|日|週|周|星期|禮拜|礼拜|月|年)|每逢|重複|重复|\bevery\b|\brepeat(?:ing)?\b)/i.test(original)) return fail('這版先支援單次事項；重複規則請在系統 App 設定。');
+  if (/(?:每(?:(?:隔)?[0-9一二兩两三四五六七八九十]+)?(?:個|个)?(?:天|日|週|周|星期|禮拜|礼拜|月|年)|每逢|重複|重复|\bevery\b|\brepeat(?:ing)?\b)/i.test(original)) return fail('目前支援每天、每週一個星期幾、每月一個日期；其他重複規則請在系統 App 設定。');
   let text=original, duration=null, alarmOffset=null;
   const removed=[];
   const lead = new RegExp('(?:提前|提早)\\s*('+numeral+')\\s*('+unit+')\\s*(?:('+numeral+')\\s*('+unit+'))?\\s*(?:提醒|通知)', 'i').exec(text);
@@ -61,7 +61,9 @@ export function parse(original, kind, reference) {
   if (allDay && /上午|下午|早上|晚上|中午|凌晨|\b(?:morning|afternoon|evening|night)\b/i.test(result.text)) return fail('請補上明確時間，例如「明天下午3點」。');
   const start=components(result.start);
   let end=result.end ? components(result.end):null;
-  if (end && !allDay && /[\u3400-\u9fff]/.test(result.text) && !result.end.isCertain('meridiem') && !result.end.isCertain('day') && /下午|晚上|中午/.test(result.text) && start.hour>=12 && end.hour<12) {
+  const endText=result.text.split(/到|至|~|～|–|—/).slice(1).join(' ');
+  const explicitEndDate=/(?:明天|後天|后天|今天|[0-9]{1,2}月|[0-9]{4}年|[0-9]{1,2}[/-][0-9]{1,2})/.test(endText);
+  if (end && !allDay && /[\u3400-\u9fff]/.test(result.text) && !result.end.isCertain('meridiem') && !explicitEndDate && /下午|晚上|中午/.test(result.text) && start.hour>=12 && end.hour<12 && end.hour+12>start.hour) {
     // Chrono otherwise interprets 下午三點到四點 as 15:00 → next day 04:00.
     end.hour+=12; end.year=start.year;end.month=start.month;end.day=start.day;
   }

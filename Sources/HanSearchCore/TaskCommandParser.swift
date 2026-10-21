@@ -10,14 +10,16 @@ public struct TaskPlan: Hashable, Sendable {
     public let isAllDay: Bool
     public let alarmOffset: TimeInterval?
     public let calendarID: String?
+    public let recurrence: TaskRecurrence?
 
-    public init(kind: Kind, title: String, start: Date, duration: TimeInterval = 3600, relativeDelay: TimeInterval? = nil, isAllDay: Bool = false, alarmOffset: TimeInterval? = nil, calendarID: String? = nil) {
+    public init(kind: Kind, title: String, start: Date, duration: TimeInterval = 3600, relativeDelay: TimeInterval? = nil, isAllDay: Bool = false, alarmOffset: TimeInterval? = nil, calendarID: String? = nil, recurrence: TaskRecurrence? = nil) {
         self.kind = kind; self.title = title; self.start = start; self.duration = duration; self.relativeDelay = relativeDelay
         self.isAllDay = isAllDay; self.alarmOffset = alarmOffset
         self.calendarID = calendarID
+        self.recurrence = recurrence
     }
     public func resolved(at now: Date) -> TaskPlan {
-        TaskPlan(kind: kind, title: title, start: relativeDelay.map { now.addingTimeInterval($0) } ?? start, duration: duration, relativeDelay: relativeDelay, isAllDay: isAllDay, alarmOffset: alarmOffset, calendarID: calendarID)
+        TaskPlan(kind: kind, title: title, start: relativeDelay.map { now.addingTimeInterval($0) } ?? start, duration: duration, relativeDelay: relativeDelay, isAllDay: isAllDay, alarmOffset: alarmOffset, calendarID: calendarID, recurrence: recurrence)
     }
 }
 
@@ -27,6 +29,9 @@ public enum TaskCommandParser {
     public static func parse(_ original: String, now: Date = Date(), calendar: Calendar = .current) -> TaskPlan? {
         guard original.count <= 200 else { return nil }
         let text = ChineseSearch.simplified(original).trimmingCharacters(in: .whitespacesAndNewlines)
+        // Rich recurrence/era commands belong to the reviewed natural-language composer.
+        // The legacy quick parser must never turn them into a one-time item or a current-year date.
+        guard text.range(of: #"每(?:隔|个|[0-9零〇一二两三四五六七八九十])*(?:天|日|周|星期|礼拜|月|年)|民国\s*[0-9]+\s*年|农历|阴历"#, options: .regularExpression) == nil else { return nil }
         // Relative timers: "設定30分鐘後的鬧鐘", "倒數半小時", "提醒我10分鐘後喝水".
         let relativePattern = "(" + numberPattern + #")\s*(小时|分钟|分|秒钟|秒|天)\s*(?:之后|以后|后)?"#
         if let relative = capture(relativePattern, in: text), String(text[..<relative.range.lowerBound]).range(of: #"^(?:(?:请|帮我|设定|设置|新增|添加|一个|闹钟|倒数|倒计时|计时器|计时|提醒我|提醒|启动|开始|在)\s*)*$"#, options: .regularExpression) != nil, let value = number(relative.parts[0]), value > 0 {

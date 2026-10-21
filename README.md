@@ -58,7 +58,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 行程預覽可調整標題、日期、開始／結束時間、全天與提前通知。在 Han 設定選擇預設行事曆（例如「大拇指」），每次確認預覽仍能改到其他可寫入的行事曆（例如「大腳趾」），只影響當次新增。
 
-自然語言日期使用內附 [Chrono](https://github.com/wanasit/chrono) 加上 Han 的中文補強，透過 JavaScriptCore 在本機處理；使用 App 不需 Node.js、API Key 或下載模型。這版支援單次事項，無法完整辨識或包含重複規則時會提示調整。
+自然語言日期使用內附 [Chrono](https://github.com/wanasit/chrono) 加上 Han 的中文補強，透過 JavaScriptCore 在本機處理；使用 App 不需 Node.js、API Key 或下載模型。公開1.0.0支援單次事項；本機1.0.1-dev另加入每天／每週／每月重複、民國日期與台灣單位換算，尚未發布，詳見[本機測試版說明](docs/guide.zh-Hant.md#本機測試版-101-dev尚未發布)。未支援或無法完整辨識的規則會提示調整。
 
 行事曆搜尋預設依時間排序：進行中／即將到來的行程在前，過去行程由近到遠，也能切換日期新到舊或舊到新。已授權來源會背景更新：行事曆／提醒事項每 5 分鐘及系統變更後重讀，其他來源與文件索引每 15 分鐘更新。來源狀態會標示上次完整更新、失敗、部分資料與舊副本；權限失效時暫停並提示，不在背景要求授權。
 

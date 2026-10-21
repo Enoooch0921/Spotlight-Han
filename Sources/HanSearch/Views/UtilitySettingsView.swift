@@ -13,6 +13,8 @@ struct UtilitySettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Text(L.text("例如：3公斤換成磅、5公里多少公尺、32°F=°C。溫度可只輸入37攝氏度或37度，自動顯示另一種溫標。"))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(L.text("台灣常用：20坪換平方公尺、3台斤換公斤、115年。台斤採600公克；只寫「斤」會請你指定台斤或市斤。"))
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section(L.text("翻譯與貨幣換算")) {
                 if #available(macOS 15.0, *) { TranslationLanguageSettingsView(store: store) }

@@ -22,16 +22,19 @@ public struct TaskDraft: Equatable, Sendable {
     public var isAllDay: Bool
     public var alarmOffset: TimeInterval?
     public var calendarID: String?
+    public var recurrence: TaskRecurrence?
 
-    public init(kind: TaskPlan.Kind, title: String, start: Date, end: Date, isAllDay: Bool = false, alarmOffset: TimeInterval? = nil, calendarID: String? = nil) {
+    public init(kind: TaskPlan.Kind, title: String, start: Date, end: Date, isAllDay: Bool = false, alarmOffset: TimeInterval? = nil, calendarID: String? = nil, recurrence: TaskRecurrence? = nil) {
         self.kind = kind; self.title = title; self.start = start; self.end = end; self.isAllDay = isAllDay; self.alarmOffset = alarmOffset
         self.calendarID = calendarID
+        self.recurrence = recurrence
     }
 
     public func validationError(at now: Date = Date(), calendar: Calendar = .current) -> String? {
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "請補上事項名稱。" }
         if title.count > 200 { return "事項名稱最多 200 字。" }
         if kind == .alarm { return "此模式僅支援行事曆與提醒事項。" }
+        if let recurrence, !recurrence.isValid { return "重複間隔請填 1 到 52。" }
         if isAllDay ? calendar.startOfDay(for: start) < calendar.startOfDay(for: now) : start <= now { return "時間已經過去，請調整後再建立。" }
         if kind == .event && (end <= start || end.timeIntervalSince(start) > 7 * 86400 + 3600) { return "結束時間必須晚於開始時間，且不超過 7 天。" }
         if let alarmOffset, !alarmOffset.isFinite || alarmOffset > 0 || alarmOffset < -31 * 86400 { return "提前通知時間超出範圍。" }
@@ -39,7 +42,7 @@ public struct TaskDraft: Equatable, Sendable {
     }
     /// The reviewed date stays fixed; waiting on a preview never reanchors a relative command.
     public var plan: TaskPlan {
-        TaskPlan(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), start: start, duration: end.timeIntervalSince(start), isAllDay: isAllDay, alarmOffset: isAllDay ? nil : alarmOffset, calendarID: calendarID)
+        TaskPlan(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), start: start, duration: end.timeIntervalSince(start), isAllDay: isAllDay, alarmOffset: isAllDay ? nil : alarmOffset, calendarID: calendarID, recurrence: recurrence)
     }
 }
 
@@ -56,6 +59,12 @@ public actor NaturalTaskParser {
 
     public func parse(_ input: String, mode: TaskComposerMode, now: Date = Date(), calendar: Calendar = .current) throws -> TaskDraft {
         guard !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, input.count <= 200 else { throw NaturalTaskFailure.invalid("請輸入時間和事項，最多 200 字。") }
+        // Era conversion is explicit; a user's display calendar must not change Chrono's Gregorian components.
+        var solar = Calendar(identifier: .gregorian); solar.timeZone = calendar.timeZone
+        let calendar = solar
+        let prepared = try RecurringTaskInput.prepare(input.precomposedStringWithCompatibilityMapping, now: now, calendar: calendar)
+        let input = try TaiwanYearConverter.taskInput(prepared?.text ?? input)
+        if input.range(of: "農曆|农历|陰曆|阴历", options: .regularExpression) != nil { throw NaturalTaskFailure.invalid("農曆日期尚未支援，請改用國曆日期。") }
         let context = try loadedContext()
         let ref = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
         let reference = ["year": ref.year!, "month": ref.month!, "day": ref.day!, "hour": ref.hour!, "minute": ref.minute!, "second": ref.second!]
@@ -72,7 +81,16 @@ public actor NaturalTaskParser {
             end = allDay ? calendar.date(byAdding: .day, value: 1, to: parsedEnd)! : parsedEnd
         } else if allDay { end = calendar.date(byAdding: .day, value: 1, to: start)! }
         else { end = start.addingTimeInterval(result.duration ?? 3600) }
-        let draft = TaskDraft(kind: mode.kind, title: title, start: start, end: end, isAllDay: allDay, alarmOffset: result.alarmOffset)
+        var draft = TaskDraft(kind: mode.kind, title: title, start: start, end: end, isAllDay: allDay, alarmOffset: result.alarmOffset, recurrence: prepared?.recurrence)
+        if let rule = prepared?.recurrence {
+            let duration = draft.end.timeIntervalSince(draft.start)
+            let days = calendar.dateComponents([.day], from: draft.start, to: draft.end).day ?? 1
+            if draft.start < calendar.startOfDay(for: now) || (!allDay && draft.start <= now) {
+                guard let next = rule.next(after: draft.start, calendar: calendar) else { throw NaturalTaskFailure.invalid("日期或時間無效，請重新輸入。") }
+                draft.start = next
+                draft.end = allDay ? calendar.date(byAdding: .day, value: days, to: next)! : next.addingTimeInterval(duration)
+            }
+        }
         if let error = draft.validationError(at: now, calendar: calendar) { throw NaturalTaskFailure.invalid(error) }
         return draft
     }
