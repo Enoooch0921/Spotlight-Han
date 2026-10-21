@@ -64,3 +64,9 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_ocr_work_protection.swift -o "$BUILD_DIR/HanOCRWorkProtectionChecks"
 "$BUILD_DIR/HanOCRWorkProtectionChecks"
+
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_quick_preview.swift -o "$BUILD_DIR/HanQuickPreviewChecks"
+"$BUILD_DIR/HanQuickPreviewChecks"

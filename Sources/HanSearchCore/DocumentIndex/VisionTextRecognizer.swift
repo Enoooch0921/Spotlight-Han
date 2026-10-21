@@ -15,6 +15,10 @@ enum VisionTextRecognizer {
         return image
     }
     static func recognize(_ image: CGImage, cancellation: ProcessCancellation, shouldDefer: @escaping @Sendable () -> Bool = { false }) throws -> String {
+        try observations(image, cancellation: cancellation, shouldDefer: shouldDefer)
+            .compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+    }
+    static func observations(_ image: CGImage, cancellation: ProcessCancellation, shouldDefer: @escaping @Sendable () -> Bool = { false }) throws -> [VNRecognizedTextObservation] {
         guard !cancellation.isCancelled else { throw CancellationError() }
         let request = VNRecognizeTextRequest()
         request.preferBackgroundProcessing = true
@@ -42,6 +46,6 @@ enum VisionTextRecognizer {
         guard !cancellation.isCancelled else { throw CancellationError() }
         guard !deferred.isCancelled && !shouldDefer() else { throw DocumentReadReason.ocrDeferred }
         guard Date() < deadline else { throw DocumentReadReason.ocrTimedOut }
-        return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        return request.results ?? []
     }
 }

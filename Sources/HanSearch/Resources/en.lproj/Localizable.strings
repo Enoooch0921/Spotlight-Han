@@ -58,6 +58,7 @@
 "Mail、捷徑與系統時鐘，也能在設定中連接。" = "Mail, Shortcuts and Clock can also be connected in settings.";
 "Microsoft Office" = "Microsoft Office";
 "OCR 分批辨識中，已完成部分可搜尋" = "OCR is processing batches; completed portions are searchable";
+"OCR 定位已暫停，工作保護或節能條件解除後可重新預覽。" = "OCR positioning is paused. Preview again after work protection or energy restrictions clear.";
 "OCR 已處理 %@ 頁，涵蓋 %@ 份檔案" = "OCR processed %@ pages across %@ files";
 "OCR 效能與電池" = "OCR performance and battery";
 "OCR 會增加耗電與溫度，預設僅接電時辨識；使用中降低頻率，閒置後加快。低耗電或溫度升高會等待，可在索引設定暫停或調整。" = "OCR increases energy use and temperature. By default it runs only on external power, slower while in use and faster while idle. Low Power Mode or elevated temperatures defer it. Pause or adjust it in index settings.";
@@ -68,6 +69,8 @@
 "OCR 辨識" = "OCR recognition";
 "OCR 辨識未完成" = "OCR recognition did not finish";
 "PDF 受密碼保護" = "PDF is password protected";
+"PDF 已加密，請使用原本的 App 解鎖後查看。" = "This PDF is encrypted. Unlock it in its default app.";
+"PDF 超過 200 MB，請使用原本的 App 開啟。" = "This PDF exceeds 200 MB. Open it in its default app.";
 "Rates by ExchangeRate-API · 每日更新" = "Rates by ExchangeRate-API · Updated daily";
 "Spotlight Han %@ · 繁簡中文搜尋" = "Spotlight Han %@ · Traditional/Simplified Chinese search";
 "Spotlight Han %@ 可更新" = "Spotlight Han %@ is available";
@@ -94,11 +97,13 @@
 "一個搜尋框，找回你要的東西" = "One search box. Find what you need.";
 "一次設定所有資料來源" = "Connect all sources";
 "一般" = "General";
+"上一個命中頁" = "Previous matching page";
 "上一步" = "Back";
 "上次完整更新：%@" = "Last complete refresh: %@";
 "上次搜尋僅在本次執行期間保留；重新啟動 App 會開啟空白的預設頁。未確認的新增事項草稿會保留。" = "The previous search is kept for this app session only. Restarting opens a blank default page. Unconfirmed task drafts are preserved.";
 "上次檢查：%@" = "Last checked: %@";
 "上次檢查：%@ · 系統未提供下載百分比" = "Last checked: %@ · Download percentage is not provided by macOS";
+"下一個命中頁" = "Next matching page";
 "下載" = "Downloads";
 "下載 DMG" = "Download DMG";
 "下載新版本 %@" = "Download update %@";
@@ -162,10 +167,12 @@
 "允許並建立索引" = "Allow and index";
 "允許使用電池辨識（僅閒置且電量高於 30%）" = "Allow OCR on battery (only while idle and above 30%)";
 "先在 Finder 下載並保留在本機，再更新索引。" = "Download and keep the file locally in Finder, then update the index.";
+"先用方向鍵或滑鼠選取檔案，再按空白鍵快速預覽；再次按空白鍵或 Esc 返回。PDF 優先開到命中頁，並標示繁簡相符文字；掃描 PDF 僅定位目前命中頁的 OCR 文字，不改原檔。" = "Select a file with the arrow keys or mouse, then press Space for Quick Preview. Space or Esc returns to search. PDFs open at a matching page and highlight matching Traditional/Simplified Chinese text. Scanned PDFs locate OCR text only on the current matching page without modifying the file.";
 "先看幾個實際輸入方式，之後就能直接在搜尋框使用。" = "Explore a few practical examples, then use them in the search box.";
 "先確認原檔能正常開啟；若權限不足，重新選取資料夾；若檔案損壞，請修復或重新匯出。" = "Check that the original opens normally. Reselect the folder if access is denied; repair or re-export damaged files.";
 "先輸入 cal 或提醒，再按 Tab" = "Type cal or rem, then press Tab";
 "先輸入，再按 Return" = "Type, then press Return";
+"先選取檔案，再按空白鍵預覽；輸入搜尋詞時仍可打空格。" = "Select a file, then press Space to preview. Spaces still work while typing a search.";
 "先選常用資料夾" = "Choose common folders first";
 "先選常用資料夾即可。需要備忘錄或行事曆時，再連接對應來源。" = "Start with frequently used folders. Connect Notes or Calendar whenever you need them.";
 "先選擇搜尋範圍，之後會記住資料夾授權。App、計算與換算仍可使用。" = "Choose search folders to save access. Apps, calculations and conversions work without them.";
@@ -174,6 +181,7 @@
 "內文" = "Contents";
 "內文尚未確認" = "Content match unconfirmed";
 "內文摘要已取消" = "Content preview cancelled";
+"內文標示未完成，仍可翻閱 PDF。" = "Highlighting did not finish. You can still browse the PDF.";
 "內文索引預設上限 500 MB，含擷取文字，僅存本機且未額外加密。移除索引不會刪除原始文件。" = "The local text index has a 500 MB default limit and no additional encryption. Removing it does not delete original documents.";
 "全天" = "All day";
 "全機內文使用系統索引；未索引、被排除、未下載或沒有權限的文件可能找不到。加入資料夾可用 Han 直接讀取來補強繁簡比對與 PPTX 文字；「全部」仍保留全機搜尋。舊版 PPT 取決於系統索引。" = "System-wide contents use the macOS index. Unindexed, excluded, unavailable or inaccessible files may be missing. Add a folder for direct Chinese script matching and PPTX extraction; All still searches the system index. Legacy PPT depends on system indexing.";
@@ -266,6 +274,7 @@
 "在 Finder 顯示" = "Show in Finder";
 "在 Finder 顯示索引" = "Reveal index in Finder";
 "在「一般」設定再次開啟時的行為與預設頁。可每次清空、一直保留，或在指定時間內接續搜尋。計時從收起面板開始，重新啟動 App 不會還原上次的搜尋文字。" = "In General, choose your default page and whether to clear, keep or briefly resume searches. Retention starts when the panel is dismissed. Restarting the app does not restore the last query.";
+"在原本的 App 開啟" = "Open in Default App";
 "在本機背景辨識繁簡中文與英文，結果標示 OCR、片段及 PDF 頁碼；不修改原檔、不保存辨識圖片。" = "Recognizes Traditional/Simplified Chinese and English on device in the background. Results show OCR, excerpts, and PDF page numbers. Originals are unchanged; rendered images are not stored.";
 "在本機辨識文字，搜尋結果顯示命中片段與 PDF 頁碼。" = "Recognize text on this Mac, with matching excerpts and PDF page numbers in results.";
 "在索引設定開啟 Apple Vision OCR，再更新索引。" = "Enable Apple Vision OCR in index settings, then update the index.";
@@ -302,6 +311,7 @@
 "展開完整翻譯" = "Expand full translation";
 "工作保護" = "Work protection";
 "工作保護會在 Logic Pro／Final Cut Pro 開啟，或偵測到音訊輸入／播放時暫停 OCR；退出軟體且音訊停止後會自動接續。可在「OCR 效能與電池」調整。" = "Work protection pauses OCR while Logic Pro / Final Cut Pro is open or audio input / playback is active. It resumes after the app closes and audio stops. Adjust it in OCR performance and battery.";
+"工作保護會在 Logic Pro／Final Cut Pro 開啟，或偵測到音訊輸入／播放時暫停 OCR；退出軟體且音訊停止後會自動接續。可在「檔案與索引 → 背景辨識」調整。" = "Work protection pauses OCR while Logic Pro or Final Cut Pro is open or audio input/playback is active. It resumes after the apps quit and audio stops. Adjust it in Files & Index > Background Recognition.";
 "工作保護解除，且符合電源、閒置與溫度條件後自動接續，毋須重新授權。" = "Resumes automatically after work protection clears and power, idle and thermal conditions allow. No new permission is required.";
 "工作保護（Logic Pro／Final Cut Pro 開啟時暫停 OCR）" = "Work protection (pause OCR while Logic Pro / Final Cut Pro is open)";
 "工作保護：偵測到音訊播放活動，暫停 OCR" = "Work protection: OCR paused for active audio output";
@@ -330,6 +340,9 @@
 "已暫停排隊，請先處理前一個來源的授權，再重新連接。" = "Queue paused. Finish the previous source's permission before reconnecting.";
 "已有同名分類，請換個名稱" = "This category name already exists. Choose another name.";
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
+"已標示 OCR 文字位置（辨識可能有誤差）" = "OCR text positions are highlighted (recognition may be imperfect)";
+"已標示繁簡相符的搜尋文字" = "Matching Traditional/Simplified Chinese text is highlighted";
+"已標示部分命中；大型 PDF 的預覽搜尋有讀取上限。" = "Some matches are highlighted. Preview search has limits for large PDFs.";
 "已檢查 %@ 個檔案，%@ 份可搜尋內文，%@ 份未完成，%@ 個未支援格式" = "Checked %@ files: %@ with searchable text, %@ unfinished, %@ unsupported formats";
 "已清除 Han 文件索引" = "Han document index cleared";
 "已確認內文命中" = "Content match confirmed";
@@ -343,6 +356,8 @@
 "已讀取 %@ 個檔案" = "Read %@ documents";
 "已讀取 %@ 個檔案 · %@ 份內容未完整讀取" = "Read %@ documents · %@ contents incomplete";
 "已讀取 %@ 個檔案 · 10,000 檔案上限" = "Read %@ documents · 10,000-file limit";
+"已跳到索引命中頁；OCR 定位未完成。" = "Opened the indexed matching page. OCR positioning did not finish.";
+"已跳到索引命中頁；這次未能定位 OCR 文字。" = "Opened the indexed matching page, but OCR text could not be located this time.";
 "已載入 %@ 筆檔名，正在更新" = "Loaded %@ filenames; refreshing";
 "已送出設定，請到系統「登入項目」允許啟動。" = "Registered. Allow Han in System Settings > Login Items.";
 "已連接 %@ 位聯絡人" = "Connected %@ contacts";
@@ -395,6 +410,7 @@
 "快速檔名清單找名稱與影片，Han 全文索引找文件與圖片文字；常用範圍可一次授權建立兩種索引，也可各自管理。「全部」合併兩種結果。" = "Filename search finds names and videos; Han full text finds document and image text. Common folders can be approved once for both indexes, or managed separately. All combines both.";
 "快速檔名清單用來找檔名與影片；Han 文件全文索引用來找文件內文。兩者需要各自選取搜尋範圍，「全部」會合併結果。" = "The filename catalog finds files and videos by name. The Han full-text index searches document contents. Select folders for each; All combines their results.";
 "快速開始" = "Getting started";
+"快速預覽" = "Quick Preview";
 "恢復預設" = "Restore default";
 "想搜尋哪一類，就連接哪一類。其餘可以留到需要時。" = "Connect the sources you want to search. Leave the rest until you need them.";
 "想用 ⌘Space，可在設定中直接前往 macOS 關閉原 Spotlight 快捷鍵，再指定給 Han。" = "To use ⌘Space, settings can take you to macOS to disable the original Spotlight shortcut before assigning it to Han.";
@@ -510,6 +526,7 @@
 "有新版本可下載" = "An update is available";
 "未完成提醒事項，最多 10,000 筆；亦可依輸入指令新增" = "Incomplete reminders, up to 10,000. Chinese commands can create new reminders.";
 "未寫明溫標時" = "When the scale is omitted";
+"未找到可標示的文字；可繼續翻頁查看。" = "No text could be highlighted. You can still browse the PDF.";
 "未指定資料夾：文件內容模式使用 Spotlight 索引" = "No folder selected: content search uses Spotlight";
 "未連接" = "Not connected";
 "本機翻譯目前無法完成；請檢查語言下載狀態後重試。" = "Translation could not finish. Check language downloads and try again.";
@@ -540,6 +557,7 @@
 "檔名與內文符合" = "Filename and content match";
 "檔名與影片" = "Filenames & Videos";
 "檔案 ⌘2" = "Files ⌘2";
+"檔案尚未下載，請先在 Finder 下載後再預覽。" = "This file is not downloaded. Download it in Finder before previewing.";
 "檔案已移動或刪除，請更新檔名清單" = "The file moved or was deleted. Refresh the index.";
 "檔案排序" = "File sorting";
 "檔案與內文" = "Files & Contents";
@@ -555,6 +573,7 @@
 "正在取得公開匯率。" = "Fetching public exchange rates.";
 "正在取得匯率…" = "Fetching exchange rates…";
 "正在取得每日參考匯率…" = "Fetching daily exchange rates…";
+"正在定位這一頁的 OCR 文字…" = "Locating OCR text on this page…";
 "正在建立…" = "Creating…";
 "正在掃描檔名（不讀取影片內容）…" = "Scanning filenames (not video content)…";
 "正在搜尋 Han 文件索引與已連接資料…" = "Searching the Han document index and connected sources…";
@@ -565,6 +584,7 @@
 "正在查詢全機文件內文；可先使用已出現的結果。" = "Searching document contents across this Mac. You can use results already shown.";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
 "正在核對文件內文，已確認的結果會先顯示…" = "Checking document content; confirmed matches appear first…";
+"正在標示命中文字…" = "Highlighting matching text…";
 "正在檢查授權…" = "Checking permission…";
 "正在檢查更新…" = "Checking for updates…";
 "正在檢查本機語言…" = "Checking local languages…";
@@ -584,6 +604,8 @@
 "正在讀取文件內容…" = "Reading document content…";
 "正在讀取文件文字…" = "Reading document text…";
 "正在讀取（已有部分資料）" = "Reading (partial data available)";
+"正在載入 PDF…" = "Loading PDF…";
+"正在載入預覽…" = "Loading preview…";
 "正在辨識圖片文字…" = "Recognizing image text…";
 "正在連接%@；可隨時停止" = "Connecting %@; you can stop at any time";
 "此幣別目前沒有可用匯率。" = "No rate available for this currency.";
@@ -630,6 +652,7 @@
 "無法恢復授權：%@" = "Could not restore folder access: %@";
 "無法檢查更新，請稍後再試" = "Could not check for updates. Try again later.";
 "無法記住資料夾授權：%@" = "Could not save folder access: %@";
+"無法讀取預覽，檔案可能已移動或沒有取用權限。" = "Cannot load the preview. The file may have moved or access may be unavailable.";
 "無法開啟 App；可能已移動或刪除，請更新清單。" = "Could not open the app. It may have moved or been deleted; refresh the list.";
 "無法開啟備忘錄，請檢查自動化授權。" = "Cannot open Notes. Check Automation permission.";
 "無法開啟檔案" = "Cannot open file";
@@ -669,8 +692,11 @@
 "移除範圍：%@" = "Remove folder: %@";
 "稍後" = "Later";
 "稍後設定" = "Set up later";
+"空白鍵 預覽" = "Space Preview";
+"空白鍵或 Esc 返回搜尋" = "Space or Esc returns to search";
 "空間或掃描範圍達限，尚有文件未收錄；請調整範圍或容量後更新索引。" = "Storage or scan limit reached. Some files are not indexed. Adjust scope or capacity and update the index.";
 "符合電源、閒置與溫度條件後自動接續，毋須重新授權。" = "Resumes automatically when power, idle and thermal conditions allow. No new permission is required.";
+"第 %@／%@ 頁" = "Page %@ of %@";
 "第 %@／3 步" = "Step %@ of 3";
 "等待前一個來源完成…" = "Waiting for the previous source…";
 "等待授權" = "Waiting for permission";
@@ -696,6 +722,7 @@
 "系統 Mail 收件匣前 200 封，內文每封前 16,000 字；不是所有信箱" = "First 200 messages in Mail's inbox, up to 16,000 characters each; not all mailboxes";
 "系統內建 App" = "Built-in macOS apps";
 "系統尚未提供所需的繁簡中文 OCR" = "Required Traditional/Simplified Chinese OCR is unavailable";
+"系統快速預覽 · 空白鍵或 Esc 返回搜尋" = "System Quick Look · Space or Esc returns to search";
 "系統找不到 App，請確認 App 仍在原本位置。" = "macOS cannot find the app. Check its location.";
 "系統文件搜尋與原生 Spotlight 相同，也可能依檔名或中繼資料命中；直接讀取的資料夾結果則會顯示命中文字附近的摘要。" = "Like native Spotlight, system document search may also match filenames or metadata. Directly indexed folders show snippets around matching text.";
 "系統文件索引 · 可在設定加入資料夾加強全文比對" = "System content index · Add a folder for direct content matching";

@@ -194,6 +194,11 @@ struct ContentView: View {
                 }
                 Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
                 SettingsEntryButton(store: store) { Image(systemName: "gearshape") }.buttonStyle(.plain).help(L.text("設定與資料來源"))
+                if store.selectedPreviewItem != nil {
+                    Button(L.text("空白鍵 預覽")) { if let item = store.selectedPreviewItem { store.previewFile(item) } }
+                        .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.secondary)
+                        .help(L.text("先選取檔案，再按空白鍵預覽；輸入搜尋詞時仍可打空格。"))
+                }
                 Text(L.text("↵ 開啟")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
@@ -204,8 +209,9 @@ struct ContentView: View {
             .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
-            .onTapGesture { store.selection = item.id }
+            .onTapGesture { store.selection = item.id; store.previewSelectionArmed = true }
             .contextMenu {
+                if !item.isApplication { Button(L.text("快速預覽")) { store.previewFile(item) } }
                 Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: store.habitCandidate(item).identity, title: item.name) }
                 Button(L.text("開啟")) { store.selection = item.id; store.openSelection() }
                 Button(L.text("在 Finder 顯示")) { store.selection = item.id; store.revealSelection() }

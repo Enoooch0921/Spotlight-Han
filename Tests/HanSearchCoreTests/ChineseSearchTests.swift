@@ -25,6 +25,7 @@ struct CheckRunner {
             return
         }
         let tests = ChineseSearchTests()
+        if CommandLine.arguments.contains("--pdf-preview-only") { try tests.testPDFPreviewSearch(); return }
         try tests.testOCRScheduling()
         if CommandLine.arguments.contains("--ocr-energy-only") { return }
         if CommandLine.arguments.contains("--ocr-only") { try tests.testOCRIndex(); return }
@@ -51,6 +52,7 @@ struct CheckRunner {
         try tests.testSpreadsheetContents()
         try tests.testPersistentDocumentIndex()
         try tests.testOCRIndex()
+        try tests.testPDFPreviewSearch()
         try tests.testRealSpotlightQueryDoesNotError()
         try tests.testCalculator()
         tests.testConversions()

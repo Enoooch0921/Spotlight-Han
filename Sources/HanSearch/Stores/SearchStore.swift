@@ -6,8 +6,8 @@ import Combine
 
 @MainActor
 final class SearchStore: ObservableObject {
-    @Published var query = ""
-    @Published var mode: SearchMode = .all
+    @Published var query = "" { didSet { if query != oldValue { previewSelectionArmed = false; dismissFilePreview?() } } }
+    @Published var mode: SearchMode = .all { didSet { if mode != oldValue { previewSelectionArmed = false; dismissFilePreview?() } } }
     @Published var reopenBehavior: SearchReopenBehavior = .timed {
         didSet { taskPreferences.set(reopenBehavior.rawValue, forKey: "searchReopenBehavior.v1") }
     }
@@ -54,7 +54,11 @@ final class SearchStore: ObservableObject {
     var allQuickResults: [QuickResult] { currencyResults + [translationResult].compactMap { $0 } + quickResults }
     private var currencyTask: Task<Void, Never>?
     private var currencyQuery = ""
-    @Published var selection: String?
+    @Published var selection: String? { didSet { if selection != oldValue { previewSelectionChanged?() } } }
+    @Published var previewSelectionArmed = false
+    var toggleFilePreview: (() -> Void)?
+    var dismissFilePreview: (() -> Void)?
+    var previewSelectionChanged: (() -> Void)?
     @Published var searching = false
     @Published var showSearchActivity = false
     @Published var searchPhase = ""
@@ -1031,5 +1035,6 @@ final class SearchStore: ObservableObject {
         let ids = allIDs; guard !ids.isEmpty else { return }
         let position = ids.firstIndex(of: selection ?? "") ?? 0
         selection = ids[min(max(position + offset, 0), ids.count - 1)]
+        previewSelectionArmed = selectedPreviewItem != nil
     }
 }

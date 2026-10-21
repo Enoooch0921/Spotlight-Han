@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkey = HotKey()
     private var panel: LauncherPanel?
     private var translationWindow: NSWindow?
+    private lazy var quickPreview = FileQuickPreviewController()
     private var onboardingWindow: OnboardingWindowController?
     private var keyMonitor: Any?
     private var lastToggle = Date.distantPast
@@ -79,6 +80,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.showOnboarding = { [weak self] in self?.showOnboarding() }
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
+        store.toggleFilePreview = { [weak self] in self?.toggleFilePreview() }
+        store.dismissFilePreview = { [weak self] in self?.quickPreview.dismiss(restoreFocus: false) }
+        store.previewSelectionChanged = { [weak self] in
+            guard let self, self.quickPreview.isPresented else { return }
+            if let item = self.store.selectedPreviewItem {
+                self.quickPreview.present(FilePreviewRequest(item: item, query: self.store.query), relativeTo: self.panel)
+            } else { self.quickPreview.dismiss() }
+        }
+        quickPreview.didClose = { [weak self] in
+            guard let self, NSApp.isActive, self.panel?.isVisible == true else { return }
+            self.panel?.makeKeyAndOrderFront(nil); self.store.focusToken = UUID()
+        }
+        quickPreview.navigate = { [weak self] in self?.store.movePreviewSelection($0) }
+        let previewPolicy = store.ocrResourcePolicy
+        quickPreview.shouldDeferOCR = {
+            switch previewPolicy.decision() {
+            case .protectedApp, .audioInput, .audioOutput, .audioUnavailable, .lowPower, .cooling: return true
+            default: return false // Explicit one-page preview is foreground work.
+            }
+        }
         store.showLauncher = { [weak self] in self?.showSearch(continuingFlow: true) }
         store.settingsVisibilityChanged = { [weak self] visible in
             if visible {
@@ -120,6 +141,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else { store.hotkeyError = "快捷鍵被占用，請從選單列開啟並重新設定。" }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel?.isKeyWindow == true else { return event }
+            if event.keyCode == 49, event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty,
+               self.store.previewSelectionArmed, self.store.selectedPreviewItem != nil,
+               (self.panel?.firstResponder as? NSTextView)?.hasMarkedText() != true {
+                if !event.isARepeat { self.toggleFilePreview() }
+                return nil
+            }
             if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
                 self.hideSearch(animated: false)
                 NSApp.setActivationPolicy(.regular)
@@ -209,6 +236,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if action == .hide { hideSearch() } else { showSearch() }
     }
     private func hideSearch(animated: Bool = true) {
+        quickPreview.dismiss(restoreFocus: false)
         store.launcherDidHide()
         presentation.hide(); fadeGeneration += 1
         guard let panel else { return }
@@ -220,6 +248,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, self.fadeGeneration == generation, !self.presentation.isPresented else { return }
             panel?.orderOut(nil); panel?.alphaValue = 1
         }
+    }
+    private func toggleFilePreview() {
+        guard let item = store.selectedPreviewItem else { return }
+        if quickPreview.isPresented { quickPreview.dismiss() }
+        else { quickPreview.present(FilePreviewRequest(item: item, query: store.query), relativeTo: panel) }
     }
     func showSearch(continuingFlow: Bool = false) {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }

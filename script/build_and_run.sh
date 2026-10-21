@@ -33,7 +33,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIconFile</key><string>SpotlightHan.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>1.0.1-dev</string>
-<key>CFBundleVersion</key><string>29</string>
+<key>CFBundleVersion</key><string>30</string>
 <key>NSContactsUsageDescription</key><string>在本機搜尋你允許取用的聯絡人，不會上傳。</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>搜尋行事曆，並依你確認的指令新增行程。</string>
 <key>NSRemindersFullAccessUsageDescription</key><string>搜尋提醒事項，並依你確認的指令新增提醒。</string>
