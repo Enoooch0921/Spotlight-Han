@@ -172,6 +172,7 @@
 "先選範圍，再找得深入。" = "Choose folders. Search deeper.";
 "先顯示時間與內容，按 Return 才建立。行程及提醒使用系統預設行事曆／清單；新增需要相應的存取授權。鬧鐘交給 Apple 系統時鐘。首次按下方「連接系統時鐘」，在系統視窗加入一次捷徑；不用自己編輯。系統鬧鐘精度為分鐘，只支援下一次的指定時分。" = "Review the time and content, then press Return to create. Events and reminders use system defaults and require permission. Alarms are created in Apple Clock through the bundled shortcut. Precision is one minute and only the next occurrence is supported.";
 "內文" = "Contents";
+"內文尚未確認" = "Content match unconfirmed";
 "內文摘要已取消" = "Content preview cancelled";
 "內文索引預設上限 500 MB，含擷取文字，僅存本機且未額外加密。移除索引不會刪除原始文件。" = "The local text index has a 500 MB default limit and no additional encryption. Removing it does not delete original documents.";
 "全天" = "All day";
@@ -229,6 +230,7 @@
 "可以稍後再設定：設定頁左下角有使用說明，「更新與關於」可重新開啟這份引導。" = "You can set these up later. Open the User Guide at the bottom left of settings, or replay this guide in Updates & About.";
 "可另存成 PPTX，或開啟 Spotlight 補充搜尋。" = "Save as PPTX, or enable supplementary Spotlight search.";
 "可另存成 XLSX，或開啟 Spotlight 補充搜尋。" = "Save as XLSX, or enable supplementary Spotlight search.";
+"可在下方查看結果來源與完整位置。" = "See the result source and full location below.";
 "可拆分成較小文件或匯出文字副本，再更新索引。" = "Split into smaller documents or export a text copy, then update the index.";
 "可按住 ⌘ 一次選擇多個資料夾；選擇使用者資料夾會涵蓋下載、桌面、影片、音樂、圖片、文件六處，不掃描 Library。App 會記住選擇。" = "Hold Command to select multiple folders. Selecting your home folder includes Downloads, Desktop, Movies, Music, Pictures, and Documents, excluding Library. Your choices are remembered.";
 "可自訂組合，也可使用 ⌘Space。若原 Spotlight 仍占用，設定會提示並提供系統設定入口。" = "Choose your own shortcut or use ⌘Space. If Spotlight still uses it, settings will explain the conflict and link to macOS settings.";
@@ -276,6 +278,7 @@
 "存取已被拒絕" = "Access denied";
 "學習我的搜尋開啟習慣" = "Learn from the results I open";
 "完成" = "Done";
+"完整路徑" = "Full path";
 "容量包含文字、頁碼、搜尋索引及暫存日誌；預設 500 MB。實際大小取決於文字量，不按原始照片或 PDF 檔案大小等量複製。" = "Storage includes text, page numbers, search indexes, and temporary journals; the default budget is 500 MB. Size depends on extracted text; original images and PDFs are not duplicated.";
 "專注模式" = "Focus";
 "少開幾個 App，多做一點事。" = "Open fewer apps. Get more done.";
@@ -329,6 +332,8 @@
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
 "已檢查 %@ 個檔案，%@ 份可搜尋內文，%@ 份未完成，%@ 個未支援格式" = "Checked %@ files: %@ with searchable text, %@ unfinished, %@ unsupported formats";
 "已清除 Han 文件索引" = "Han document index cleared";
+"已確認內文命中" = "Content match confirmed";
+"已確認檔名符合" = "Filename match confirmed";
 "已移至「%@」" = "Moved to “%@”";
 "已複製" = "Copied";
 "已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
@@ -446,6 +451,7 @@
 "搜尋狀態" = "Search status";
 "搜尋範圍" = "Search folders";
 "搜尋範圍與限制" = "Scope & limitations";
+"搜尋結果資訊" = "Search result information";
 "搜尋網頁「%@」" = "Search the web for “%@”";
 "搜尋縮寫已儲存" = "Search aliases saved";
 "搜尋習慣" = "Search habits";
@@ -528,7 +534,10 @@
 "標題與純文字內文，最多 2,000 則；不讀取受密碼保護的備忘錄" = "Titles and plain text, up to 2,000 notes. Locked notes are skipped.";
 "檔名" = "Filename";
 "檔名搜尋範圍" = "Filename folders";
+"檔名符合搜尋詞，可在下方查看完整位置。" = "The filename matches your search. See its full location below.";
+"檔名符合搜尋詞；尚未找到可凸顯的內文片段。" = "The filename matches your search. No matching content excerpt was found.";
 "檔名與內文是兩種索引；都只讀取你主動選取的資料夾。" = "Filename and content search use separate indexes. Both read only the folders you choose.";
+"檔名與內文符合" = "Filename and content match";
 "檔名與影片" = "Filenames & Videos";
 "檔案 ⌘2" = "Files ⌘2";
 "檔案已移動或刪除，請更新檔名清單" = "The file moved or was deleted. Refresh the index.";
@@ -570,6 +579,7 @@
 "正在讀取%@…" = "Reading %@…";
 "正在讀取「%@」中的文件…" = "Reading documents in “%@”…";
 "正在讀取備忘錄 %@/%@；已載入 %@ 則，可先搜尋" = "Reading Notes %@/%@; %@ loaded and searchable";
+"正在讀取內文片段" = "Reading content excerpt";
 "正在讀取建立日期…" = "Reading creation dates…";
 "正在讀取文件內容…" = "Reading document content…";
 "正在讀取文件文字…" = "Reading document text…";
@@ -693,6 +703,7 @@
 "系統目前不支援這一組翻譯語言。" = "macOS does not currently support this language pair.";
 "系統目前無法確認登入項目狀態。" = "Login item status is unavailable.";
 "系統索引命中；未找到可凸顯的內文片段" = "System index match; no literal content passage to highlight";
+"系統索引提供此結果，可能來自檔名、屬性或分詞；Han 尚未確認內文命中。" = "Spotlight returned this result, possibly from its filename, metadata or token matching. Han has not confirmed a content match.";
 "系統與工具" = "System & Utilities";
 "系統設定" = "System Settings";
 "系統設定 · 按 Return 開啟此頁面" = "System Settings · Press Return to open this pane";
@@ -709,6 +720,8 @@
 "結束 Spotlight Han" = "Quit Spotlight Han";
 "結束日期（含當天）" = "Last day (inclusive)";
 "結束時間必須晚於開始時間，且不超過 7 天。" = "The end must be after the start and within 7 days.";
+"結果片段已標示符合搜尋詞的文字。" = "Matching words are highlighted in the result excerpt.";
+"結果資訊" = "Result information";
 "維護與清除" = "Maintenance and clearing";
 "網路" = "Network";
 "網路或匯率服務暫不可用，稍後再試。" = "Network or rate service unavailable. Try again later.";
@@ -760,6 +773,7 @@
 "行程與提醒：輸入 cal／行事曆或提醒／rem，按 Tab 後輸入時間和事項。Return 進入確認預覽，按「確認建立」或 ⌘Return 才寫入。行程可選擇 Han 預設行事曆及當次目的地；提醒使用系統預設清單。系統鬧鐘仍按 Return 建立，首次需連接內附捷徑。" = "Events and reminders: type cal/calendar or rem/reminder, press Tab, then enter a time and task. Return opens review; Confirm creation or ⌘Return saves it. Choose a Han default or a per-event calendar. Reminders use the system default list. Clock alarms still use Return and require the bundled shortcut once.";
 "複製內容" = "Copy content";
 "複製翻譯" = "Copy translation";
+"複製路徑" = "Copy path";
 "西元 %@ 年" = "AD %@";
 "西元 %@ 年 %@ 月" = "AD %@, month %@";
 "西元 %@ 年 %@ 月 %@ 日" = "AD %@, month %@, day %@";

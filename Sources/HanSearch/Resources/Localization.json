@@ -946,5 +946,19 @@
   "讀取狀況": "Read status",
   "維護與清除": "Maintenance and clearing",
   "忘記所有資料夾與搜尋索引": "Forget all folders and search indexes",
-  "資料夾授權說明": "About folder permissions"
+  "資料夾授權說明": "About folder permissions",
+  "結果資訊": "Result information",
+  "已確認檔名符合": "Filename match confirmed",
+  "內文尚未確認": "Content match unconfirmed",
+  "檔名符合搜尋詞；尚未找到可凸顯的內文片段。": "The filename matches your search. No matching content excerpt was found.",
+  "系統索引提供此結果，可能來自檔名、屬性或分詞；Han 尚未確認內文命中。": "Spotlight returned this result, possibly from its filename, metadata or token matching. Han has not confirmed a content match.",
+  "完整路徑": "Full path",
+  "複製路徑": "Copy path",
+  "檔名與內文符合": "Filename and content match",
+  "已確認內文命中": "Content match confirmed",
+  "正在讀取內文片段": "Reading content excerpt",
+  "搜尋結果資訊": "Search result information",
+  "結果片段已標示符合搜尋詞的文字。": "Matching words are highlighted in the result excerpt.",
+  "檔名符合搜尋詞，可在下方查看完整位置。": "The filename matches your search. See its full location below.",
+  "可在下方查看結果來源與完整位置。": "See the result source and full location below."
 }

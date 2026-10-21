@@ -16,6 +16,31 @@ struct ResultRow: View {
         if needsPreview, ModelSearch.matches(item.name, query: query) { return "文件・檔名命中" }
         return item.source
     }
+    private var filenameMatches: Bool { ModelSearch.matches(item.name, query: matchingQuery) }
+    private var contentMatches: Bool {
+        let snippet: String
+        if !item.excerpt.isEmpty { snippet = item.excerpt }
+        else if case let .match(text) = preview { snippet = text }
+        else { return false }
+        return !SearchHighlight.ranges(in: snippet, query: matchingQuery).isEmpty
+    }
+    private var informationHeading: String {
+        if contentMatches { return filenameMatches ? "檔名與內文符合" : "已確認內文命中" }
+        if filenameMatches { return "已確認檔名符合" }
+        if needsPreview { return preview == nil ? "正在讀取內文片段" : "內文尚未確認" }
+        return "搜尋結果資訊"
+    }
+    private var informationDetails: String {
+        if contentMatches { return L.text("結果片段已標示符合搜尋詞的文字。") }
+        if needsPreview {
+            if preview == .noLiteralMatch {
+                return L.text(filenameMatches ? "檔名符合搜尋詞；尚未找到可凸顯的內文片段。"
+                    : "系統索引提供此結果，可能來自檔名、屬性或分詞；Han 尚未確認內文命中。")
+            }
+            return L.text(previewStatus)
+        }
+        return L.text(filenameMatches ? "檔名符合搜尋詞，可在下方查看完整位置。" : "可在下方查看結果來源與完整位置。")
+    }
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))
@@ -24,14 +49,9 @@ struct ResultRow: View {
                 HStack {
                     HighlightedText(text: item.name, query: matchingQuery).font(.body.weight(.medium)).lineLimit(1)
                     Spacer()
-                    HStack(spacing: 4) {
-                        Text(L.text(sourceLabel))
-                        if indexOnlyMatch {
-                            Image(systemName: "info.circle")
-                                .accessibilityLabel(L.text(previewStatus))
-                        }
-                    }.font(.caption2).foregroundStyle(.secondary)
-                        .help(indexOnlyMatch ? L.text(previewStatus) : L.text(sourceLabel))
+                    ResultSourceHint(source: L.text(sourceLabel), explanation: informationDetails,
+                                     heading: L.text(informationHeading), url: item.url,
+                                     pages: item.matchPages, isOCR: item.isOCR)
                 }
                 if let match = item.supplement { SearchSupplementLabel(match: match) }
                 if !item.matchPages.isEmpty {
