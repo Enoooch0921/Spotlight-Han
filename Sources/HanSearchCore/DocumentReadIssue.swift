@@ -5,7 +5,7 @@ public enum DocumentReadReason: String, CaseIterable, Sendable, Error, Localized
     case ocrDeferred, ocrPending, ocrDisabled, ocrUnavailable, ocrFailed, ocrTimedOut, ocrFileTooLarge
     public var title: String {
         switch self {
-        case .ocrDeferred: return "OCR 節能等待，已完成部分可搜尋"
+        case .ocrDeferred: return "OCR 背景等待，已完成部分可搜尋"
         case .ocrPending: return "OCR 分批辨識中，已完成部分可搜尋"
         case .ocrDisabled: return "圖片或掃描頁需要開啟 OCR"
         case .ocrUnavailable: return "系統尚未提供所需的繁簡中文 OCR"
@@ -28,7 +28,7 @@ public enum DocumentReadReason: String, CaseIterable, Sendable, Error, Localized
     public var errorDescription: String? { title }
     public var recoverySuggestion: String {
         switch self {
-        case .ocrDeferred: return "符合電源、閒置與溫度條件後自動接續，毋須重新授權。"
+        case .ocrDeferred: return "工作保護解除，且符合電源、閒置與溫度條件後自動接續，毋須重新授權。"
         case .ocrPending: return "背景會接續辨識；暫停後從已儲存的批次繼續。"
         case .ocrDisabled: return "在索引設定開啟 Apple Vision OCR，再更新索引。"
         case .ocrUnavailable: return "請檢查 macOS 更新後再試；其他文字文件仍可搜尋。"

@@ -67,7 +67,7 @@ final class SearchStore: ObservableObject {
     @Published var indexSnapshot = DocumentIndexSnapshot()
     @Published var indexPaused = false
     @Published var ocrEnabled = true {
-        didSet { taskPreferences.set(ocrEnabled, forKey: "documentOCR.v1") }
+        didSet { taskPreferences.set(ocrEnabled, forKey: "documentOCR.v1"); reviewOCRResources() }
     }
     @Published var ocrAllowBattery = false {
         didSet { taskPreferences.set(ocrAllowBattery, forKey: "documentOCRBattery.v1"); reviewOCRResources() }
@@ -75,6 +75,14 @@ final class SearchStore: ObservableObject {
     @Published var ocrIdleOnly = false {
         didSet { taskPreferences.set(ocrIdleOnly, forKey: "documentOCRIdleOnly.v1"); reviewOCRResources() }
     }
+    @Published var ocrProtectWork = true {
+        didSet { taskPreferences.set(ocrProtectWork, forKey: "documentOCRProtectWork.v1"); reviewOCRResources() }
+    }
+    @Published var ocrProtectAudio = true {
+        didSet { taskPreferences.set(ocrProtectAudio, forKey: "documentOCRProtectAudio.v1"); reviewOCRResources() }
+    }
+    @Published var ocrWorkActivity = OCRWorkActivity()
+    let ocrWorkMonitor: OCRWorkActivityMonitor?
     @Published var ocrWorkDecision: OCRWorkDecision = .waitingForPower
     let ocrResourcePolicy: OCRResourcePolicy
     let ocrWorkScheduler: OCRWorkScheduler
@@ -232,6 +240,7 @@ final class SearchStore: ObservableObject {
          fileCreationDateLoader: @escaping @Sendable (URL) async -> Date? = { await FileCreationDateStore.shared.date(for: $0) },
          documentIndexURL: URL = PersistentDocumentIndex.defaultURL,
          ocrResourceState: @escaping @Sendable () -> OCRResourceState = { .current() },
+         ocrWorkActivity: (@Sendable () -> OCRWorkActivity)? = nil,
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.contentSearcher = contentSearcher
@@ -239,7 +248,15 @@ final class SearchStore: ObservableObject {
         self.documentIndexURL = documentIndexURL
         let allowBattery = taskPreferences.bool(forKey: "documentOCRBattery.v1")
         let idleOnly = taskPreferences.bool(forKey: "documentOCRIdleOnly.v1")
-        let policy = OCRResourcePolicy(allowBattery: allowBattery, idleOnly: idleOnly, state: ocrResourceState)
+        let protectWork = taskPreferences.object(forKey: "documentOCRProtectWork.v1") as? Bool ?? true
+        let protectAudio = taskPreferences.object(forKey: "documentOCRProtectAudio.v1") as? Bool ?? true
+        let monitor = loadSources && ocrWorkActivity == nil ? OCRWorkActivityMonitor() : nil
+        self.ocrWorkMonitor = monitor
+        let workActivity: @Sendable () -> OCRWorkActivity = ocrWorkActivity ?? { monitor?.snapshot ?? OCRWorkActivity() }
+        let policy = OCRResourcePolicy(allowBattery: allowBattery, idleOnly: idleOnly, protectWork: protectWork, protectAudio: protectAudio,
+                                       state: ocrResourceState, activity: workActivity)
+        self.ocrProtectWork = protectWork; self.ocrProtectAudio = protectAudio
+        self.ocrWorkActivity = workActivity()
         self.ocrResourcePolicy = policy
         self.ocrWorkScheduler = OCRWorkScheduler { policy.decision() }
         self.ocrAllowBattery = allowBattery; self.ocrIdleOnly = idleOnly
@@ -285,6 +302,8 @@ final class SearchStore: ObservableObject {
         documentRoots = restoredDocuments.available; unavailableDocumentRoots = restoredDocuments.unavailable
         folder = documentRoots.first
         guard loadSources else { return }
+        ocrWorkMonitor?.changed = { [weak self] in Task { @MainActor in self?.reviewOCRResources() } }
+        ocrWorkMonitor?.setEnabled(ocrEnabled && ocrProtectWork && !documentIndexRoots.isEmpty)
         activationObserver = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification).sink { [weak self] _ in
             Task { @MainActor in
                 self?.reconcileSourcePermissions()

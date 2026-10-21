@@ -10,8 +10,8 @@ struct HighlightedText: View {
             guard let source = Range(match, in: text),
                   let start = AttributedString.Index(source.lowerBound, within: result),
                   let end = AttributedString.Index(source.upperBound, within: result) else { continue }
+            // Inherit the material’s adaptive foreground, including within highlighted ranges.
             result[start..<end].backgroundColor = Color.accentColor.opacity(0.22)
-            result[start..<end].foregroundColor = Color.primary
             result[start..<end].inlinePresentationIntent = .stronglyEmphasized
         }
         return result

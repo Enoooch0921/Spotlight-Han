@@ -14,7 +14,7 @@ enum VisionTextRecognizer {
                  kCGImageSourceThumbnailMaxPixelSize: maxDimension, kCGImageSourceShouldCacheImmediately: true] as CFDictionary) else { throw DocumentReadReason.readFailed }
         return image
     }
-    static func recognize(_ image: CGImage, cancellation: ProcessCancellation) throws -> String {
+    static func recognize(_ image: CGImage, cancellation: ProcessCancellation, shouldDefer: @escaping @Sendable () -> Bool = { false }) throws -> String {
         guard !cancellation.isCancelled else { throw CancellationError() }
         let request = VNRecognizeTextRequest()
         request.preferBackgroundProcessing = true
@@ -24,17 +24,23 @@ enum VisionTextRecognizer {
         guard languages.contains("zh-Hant"), languages.contains("zh-Hans") else { throw DocumentReadReason.ocrUnavailable }
         request.recognitionLanguages = languages
         request.usesLanguageCorrection = false
+        let deferred = ProcessCancellation()
         let deadline = Date().addingTimeInterval(20)
         let watchdog = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "local.hansearch.ocr-watchdog"))
         watchdog.schedule(deadline: .now(), repeating: .milliseconds(100))
-        watchdog.setEventHandler { if cancellation.isCancelled || Date() >= deadline { request.cancel() } }
+        watchdog.setEventHandler {
+            if shouldDefer() { deferred.cancel() }
+            if cancellation.isCancelled || deferred.isCancelled || Date() >= deadline { request.cancel() }
+        }
         watchdog.resume(); defer { watchdog.cancel() }
         do { try VNImageRequestHandler(cgImage: image).perform([request]) }
         catch {
             if cancellation.isCancelled { throw CancellationError() }
+            if deferred.isCancelled || shouldDefer() { throw DocumentReadReason.ocrDeferred }
             throw Date() >= deadline ? DocumentReadReason.ocrTimedOut : DocumentReadReason.ocrFailed
         }
         guard !cancellation.isCancelled else { throw CancellationError() }
+        guard !deferred.isCancelled && !shouldDefer() else { throw DocumentReadReason.ocrDeferred }
         guard Date() < deadline else { throw DocumentReadReason.ocrTimedOut }
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }

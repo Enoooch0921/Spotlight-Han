@@ -6,6 +6,7 @@
 " · 無法儲存快取" = " · Could not save cache";
 " · 過期快取" = " · Stale cache";
 "%@ 份文件因節能條件等待，符合條件後自動接續" = "%@ documents waiting for suitable energy conditions; resumes automatically";
+"%@ 份文件因背景保護等待，符合條件後自動接續" = "%@ documents waiting for background protection to clear; resumes automatically";
 "%@ 已被系統快捷鍵使用，請改用其他組合，或先到系統鍵盤設定調整。" = "%@ is used by macOS. Choose another combination or change it in Keyboard settings.";
 "%@ 暫無可用匯率" = "No rate available for %@";
 "%@ 筆檔名 · %@" = "%@ filenames · %@";
@@ -53,6 +54,7 @@
 "Han 自建本機索引，重新啟動也能接續搜尋。" = "Han builds its own local index so you can keep searching after a restart.";
 "Han 自行讀取已選資料夾的 Word、文字 PDF、PowerPoint、Excel 與文字文件，索引保存在本機，重新開啟後可接續搜尋，不依賴 Spotlight。" = "Han reads Word, text-based PDF, PowerPoint, Excel and text files in selected folders. The local index persists across launches and works independently of Spotlight.";
 "Han 預設行事曆" = "Han default calendar";
+"Logic Pro／Final Cut Pro 開啟時暫停背景 OCR。" = "Pause background OCR while Logic Pro / Final Cut Pro is open.";
 "Mail、捷徑與系統時鐘，也能在設定中連接。" = "Mail, Shortcuts and Clock can also be connected in settings.";
 "Microsoft Office" = "Microsoft Office";
 "OCR 分批辨識中，已完成部分可搜尋" = "OCR is processing batches; completed portions are searchable";
@@ -61,6 +63,8 @@
 "OCR 會增加耗電與溫度，預設僅接電時辨識；使用中降低頻率，閒置後加快。低耗電或溫度升高會等待，可在索引設定暫停或調整。" = "OCR increases energy use and temperature. By default it runs only on external power, slower while in use and faster while idle. Low Power Mode or elevated temperatures defer it. Pause or adjust it in index settings.";
 "OCR 節能等待（已完成內容可搜尋）" = "OCR waiting to save energy (completed content is searchable)";
 "OCR 節能等待，已完成部分可搜尋" = "OCR waiting to save energy; completed text remains searchable";
+"OCR 背景等待（已完成內容可搜尋）" = "OCR waiting in the background (completed content is searchable)";
+"OCR 背景等待，已完成部分可搜尋" = "OCR waiting in the background; completed text remains searchable";
 "OCR 辨識" = "OCR recognition";
 "OCR 辨識未完成" = "OCR recognition did not finish";
 "PDF 受密碼保護" = "PDF is password protected";
@@ -70,6 +74,7 @@
 "Spotlight Han 搜尋" = "Search Spotlight Han";
 "Spotlight Han 繁簡搜尋" = "Spotlight Han search";
 "Spotlight 的 %@ 仍然開啟。請先關閉系統 Spotlight 快捷鍵，再回來設定 Han。" = "Spotlight still uses %@. Disable its shortcut, then return to Han.";
+"Spotlight 補充受系統索引與權限限制；不會擴大 Han 的資料夾索引範圍。" = "Spotlight supplements depend on system indexes and permissions, without adding folders to Han’s index.";
 "Waves" = "Waves";
 "Word 與 PDF 內容" = "Word and PDF content";
 "Word、PDF 與 PowerPoint 內容" = "Word, PDF and PowerPoint Contents";
@@ -148,6 +153,7 @@
 "保留上次搜尋多久" = "Keep previous search for";
 "保留原樣" = "Keep the originals";
 "停止連接" = "Stop connecting";
+"偵測到工作軟體：%@" = "Protected app detected: %@";
 "備忘錄" = "Notes";
 "備忘錄會分批續讀，已載入內容可先搜尋；行事曆與提醒事項獨立在背景更新，不必等待備忘錄。" = "Notes continue in small batches, with loaded content searchable immediately. Calendar and Reminders refresh independently in the background.";
 "備忘錄本批未能繼續讀取；已保留先前進度，稍後可重新讀取。" = "This Notes batch made no progress. The previous checkpoint is preserved for the next attempt.";
@@ -197,6 +203,7 @@
 "功能預覽・範例資料" = "Feature preview · Sample data";
 "加入 iCloud Drive…" = "Add iCloud Drive…";
 "加入常用資料夾與 iCloud" = "Add common folders and iCloud";
+"加入搜尋範圍…" = "Add search folders…";
 "加入文件資料夾…" = "Add document folder…";
 "加入文件資料夾以建立 Han 全文索引" = "Add document folders to build the Han full-text index";
 "勾選分類，展開可查看全部 App。建立時會保留原本手動分類。" = "Select categories and expand to see every app. Existing manual categories are preserved.";
@@ -250,6 +257,7 @@
 "圖片或 PDF 超過單檔 100 MB 上限" = "Image or PDF exceeds the 100 MB per-file limit";
 "圖片或掃描頁可開啟 Han OCR；若辨識後仍無文字，請確認畫面清晰、方向正確；空白頁沒有內文可索引。" = "Enable Han OCR for images/scanned pages. If no text is recognized, check clarity and orientation. Blank pages have no text to index.";
 "圖片或掃描頁需要開啟 OCR" = "Enable OCR for images or scanned pages";
+"圖片與掃描 PDF" = "Images and scanned PDFs";
 "圖片與掃描 PDF 使用 Apple Vision 在本機背景辨識；可在索引設定暫停、繼續或關閉。結果標示 OCR 與 PDF 頁碼，辨識不會修改原檔或上傳圖片。" = "Images and scanned PDFs are recognized locally in the background with Apple Vision. Pause, resume, or disable OCR in index settings. Results show OCR and PDF pages; originals are unchanged and images are not uploaded.";
 "圖片與掃描 PDF 使用 Apple Vision 背景 OCR，顯示片段與 PDF 頁碼；舊版 PPT／XLS 可轉成 PPTX／XLSX。iCloud 只處理已下載檔案。" = "Images/scanned PDFs use Apple Vision OCR in the background, with excerpts and PDF page numbers. Convert legacy PPT/XLS to PPTX/XLSX. Only downloaded iCloud files are processed.";
 "圖示" = "Grid";
@@ -257,6 +265,7 @@
 "在 Finder 顯示索引" = "Reveal index in Finder";
 "在「一般」設定再次開啟時的行為與預設頁。可每次清空、一直保留，或在指定時間內接續搜尋。計時從收起面板開始，重新啟動 App 不會還原上次的搜尋文字。" = "In General, choose your default page and whether to clear, keep or briefly resume searches. Retention starts when the panel is dismissed. Restarting the app does not restore the last query.";
 "在本機背景辨識繁簡中文與英文，結果標示 OCR、片段及 PDF 頁碼；不修改原檔、不保存辨識圖片。" = "Recognizes Traditional/Simplified Chinese and English on device in the background. Results show OCR, excerpts, and PDF page numbers. Originals are unchanged; rendered images are not stored.";
+"在本機辨識文字，搜尋結果顯示命中片段與 PDF 頁碼。" = "Recognize text on this Mac, with matching excerpts and PDF page numbers in results.";
 "在索引設定開啟 Apple Vision OCR，再更新索引。" = "Enable Apple Vision OCR in index settings, then update the index.";
 "在設定中啟用，並依系統提示授權。" = "Enable this source in Settings and approve access if you wish.";
 "在預設瀏覽器開啟" = "Open in default browser";
@@ -280,6 +289,7 @@
 "尚未辨識到時間，試試「明天下午3點開會」。" = "No time recognised. Try “tomorrow at 3pm meeting”.";
 "尚未連接 · 前往設定啟用" = "Not connected · Enable in Settings";
 "尚未選擇可用的資料夾" = "No available folder selected";
+"尚未選擇搜尋範圍" = "No search folders selected";
 "尚未選擇文件資料夾；Han 不會自動掃描整個使用者資料夾。" = "No document folders selected. Han does not automatically scan your entire home folder.";
 "尚未選擇，可稍後設定" = "Not selected · Set up later";
 "尚無剪貼板記錄" = "No clipboard history yet";
@@ -287,6 +297,14 @@
 "尚無可寫入的預設行事曆" = "No writable default calendar";
 "尚無完整更新記錄" = "No complete refresh yet";
 "展開完整翻譯" = "Expand full translation";
+"工作保護" = "Work protection";
+"工作保護會在 Logic Pro／Final Cut Pro 開啟，或偵測到音訊輸入／播放時暫停 OCR；退出軟體且音訊停止後會自動接續。可在「OCR 效能與電池」調整。" = "Work protection pauses OCR while Logic Pro / Final Cut Pro is open or audio input / playback is active. It resumes after the app closes and audio stops. Adjust it in OCR performance and battery.";
+"工作保護解除，且符合電源、閒置與溫度條件後自動接續，毋須重新授權。" = "Resumes automatically after work protection clears and power, idle and thermal conditions allow. No new permission is required.";
+"工作保護（Logic Pro／Final Cut Pro 開啟時暫停 OCR）" = "Work protection (pause OCR while Logic Pro / Final Cut Pro is open)";
+"工作保護：偵測到音訊播放活動，暫停 OCR" = "Work protection: OCR paused for active audio output";
+"工作保護：偵測到音訊輸入活動，暫停 OCR" = "Work protection: OCR paused for active audio input";
+"工作保護：指定工作軟體開啟中，暫停 OCR" = "Work protection: OCR paused while a protected app is open";
+"工作保護：暫時無法確認音訊活動，等待後重試" = "Work protection: waiting until audio activity can be checked";
 "工作與學習" = "Work & Learning";
 "工具範例" = "Tool example";
 "已停止連接；已載入的結果仍可搜尋。系統授權視窗若仍開著，請自行處理或關閉。" = "Stopped. Loaded results remain searchable. Handle or close any remaining system consent dialog yourself.";
@@ -298,9 +316,11 @@
 "已完成 %@/%@ 個來源；%@ 個需注意（其中 %@ 個部分讀取），詳見下方狀態。" = "Updated %@/%@ sources; %@ need attention (%@ partially read). See each source below.";
 "已建立" = "Created";
 "已忘記資料夾；可重新選擇搜尋範圍" = "Folders forgotten. Choose your search scope again.";
+"已手動暫停文件索引" = "Document indexing paused manually";
 "已掃描 %@ 筆檔名…" = "Scanned %@ filenames…";
 "已搜尋 Han 收錄的文件與已連接資料；可增加搜尋資料夾。Spotlight 補充可在設定另行啟用；掃描 PDF 尚需 OCR。" = "Searched Han-indexed documents and connected sources. Add more folders to expand coverage. Spotlight supplementation is optional in Settings; scanned PDFs require OCR.";
 "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。" = "Searched the system document index and connected sources. Try fewer keywords or add a folder for unindexed documents. Scanned PDFs still need OCR.";
+"已收錄 %@ 筆可搜尋資料" = "%@ searchable items indexed";
 "已整理 %@ 個 App；保留原本手動分類" = "Organized %@ apps; kept existing manual categories";
 "已新增提醒「%@」" = "Created reminder “%@”";
 "已新增行程「%@」" = "Created event “%@”";
@@ -359,6 +379,7 @@
 "從 Han 開啟 App 後會出現在這裡" = "Apps you open through Han will appear here";
 "從收起時開始計時；逾時後，下次開啟才清空搜尋並回到預設頁。正在輸入時不會被清除。" = "The timer starts when search is dismissed. After it expires, the next opening clears the query and returns to the default page. Active typing is never cleared.";
 "忘記切換輸入法時，可用標準注音鍵位找 App，例如 rnr 或 ru4nj04ru 找計算機。必須完整對上 App 的注音或至少三個首符號，不套用到文件內文；原始查詢命中始終優先。" = "Forgot to switch input methods? Use standard Zhuyin keys such as rnr or ru4nj04ru to find Calculator. Only complete app pronunciations or at least three initials qualify. This does not apply to document contents; original-query matches always come first.";
+"忘記所有資料夾與搜尋索引" = "Forget all folders and search indexes";
 "忘記資料夾" = "Forget folders";
 "快捷鍵" = "Keyboard shortcut";
 "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再到 Han「搜尋與快捷鍵」按「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。" = "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight. In Han, go to Search & Shortcuts and choose Use ⌘Space. Conflicts keep the previous shortcut.";
@@ -418,9 +439,12 @@
 "搜尋你允許取用的姓名、電話與電子郵件。" = "Search the names, phone numbers and emails you allow.";
 "搜尋前後各一年的行程、地點與備註。" = "Search events, locations and notes one year before and after today.";
 "搜尋應用程式…" = "Search apps…";
+"搜尋整合" = "Search integration";
 "搜尋文件內文" = "Search document contents";
 "搜尋未完成提醒；也能在確認預覽後新增。" = "Search incomplete reminders, or create one after reviewing a preview.";
 "搜尋標題與可讀取的純文字內文；不讀取鎖定備忘錄。" = "Search titles and accessible plain text. Locked notes are excluded.";
+"搜尋狀態" = "Search status";
+"搜尋範圍" = "Search folders";
 "搜尋範圍與限制" = "Scope & limitations";
 "搜尋網頁「%@」" = "Search the web for “%@”";
 "搜尋縮寫已儲存" = "Search aliases saved";
@@ -444,6 +468,7 @@
 "文件全文" = "Document Text";
 "文件全文範圍" = "Document folders";
 "文件或搜尋輸出過大，請縮小搜尋範圍。" = "Document or search output is too large. Narrow the scope.";
+"文件與圖片內容" = "Document and image contents";
 "文件資料夾授權無法恢復，請重新選擇；未顯示快取內文" = "Document folder access could not be restored. Reselect the folders; cached text is not shown.";
 "文件頁數或讀取時間超過 Han 索引上限" = "Document pages or reading time exceed the Han index limit";
 "新增分類" = "New category";
@@ -465,10 +490,12 @@
 "時間尚未完整辨識，請簡化成一個日期與時間。" = "The time is incomplete. Simplify it to one date and time.";
 "時間已經過去，請調整後再建立。" = "This time has passed. Adjust it before creating.";
 "時間解析暫時無法使用，請重新開啟 Han。" = "Date parsing is unavailable. Please reopen Han.";
+"暫停文件索引" = "Pause document indexing";
 "暫停索引" = "Pause indexing";
 "暫無可用匯率" = "No exchange rates available";
 "更改分類" = "Change Category";
 "更新 App 清單" = "Refresh App List";
+"更新搜尋索引" = "Update search indexes";
 "更新檔名清單" = "Refresh file index";
 "更新索引" = "Update index";
 "更新與關於" = "Updates & About";
@@ -488,6 +515,7 @@
 "查看全部 App" = "View All Apps";
 "查看更新內容" = "Release notes";
 "查看未完成的檔案與原因" = "View unfinished files and reasons";
+"查看未完成項目（%@）" = "View unfinished items (%@)";
 "查看系統語言下載" = "View system language downloads";
 "查詢系統文件索引" = "Querying the system document index";
 "核對內文 %@／%@ 份" = "Checking content %@/%@ documents";
@@ -495,6 +523,7 @@
 "格式、權限或讀取錯誤" = "Format, access or read error";
 "桌面" = "Desktop";
 "桌面與 Dock" = "Desktop & Dock";
+"概覽" = "Overview";
 "標題" = "Title";
 "標題與純文字內文，最多 2,000 則；不讀取受密碼保護的備忘錄" = "Titles and plain text, up to 2,000 notes. Locked notes are skipped.";
 "檔名" = "Filename";
@@ -506,6 +535,7 @@
 "檔案排序" = "File sorting";
 "檔案與內文" = "Files & Contents";
 "檔案與索引" = "Files & Index";
+"檔案與索引設定分類" = "File and index settings categories";
 "檢查更新…" = "Check for updates…";
 "檢查狀態" = "Check status";
 "檢查翻譯…" = "Check translation…";
@@ -623,7 +653,10 @@
 "移除" = "Remove";
 "移除並清除索引" = "Remove and clear indexed text";
 "移除所有文件範圍並清除索引" = "Remove all document scopes and clear index";
+"移除搜尋範圍" = "Remove search folder";
+"移除搜尋範圍只會清除 Han 的索引，不會刪除原始檔案。" = "Removing a search folder clears its Han index without deleting original files.";
 "移除搜尋範圍會清除對應的 Han 內文索引；清除並重建會重新擷取原檔。這些操作不刪除原始文件。Spotlight 補充搜尋預設關閉，開啟後的補充結果仍受系統索引限制。" = "Removing a scope clears its Han full-text index. Rebuilding extracts the original documents again. Neither deletes originals. Supplementary Spotlight search is off by default and remains subject to system index limitations.";
+"移除範圍：%@" = "Remove folder: %@";
 "稍後" = "Later";
 "稍後設定" = "Set up later";
 "空間或掃描範圍達限，尚有文件未收錄；請調整範圍或容量後更新索引。" = "Storage or scan limit reached. Some files are not indexed. Adjust scope or capacity and update the index.";
@@ -637,6 +670,7 @@
 "等待讀取" = "Queued";
 "管理…" = "Manage…";
 "管理所有來源…" = "Manage all sources…";
+"管理搜尋範圍…" = "Manage search folders…";
 "管理文件範圍…" = "Manage document folders…";
 "管理檔名範圍…" = "Manage filename folders…";
 "節能等待：接上電源後自動繼續" = "Waiting to save energy: resumes when connected to power";
@@ -665,6 +699,8 @@
 "系統限制存取" = "Access restricted by the system";
 "系統預設提醒事項清單（確認後授權）" = "System default reminder list (permission after confirmation)";
 "系統預設行事曆（確認後授權）" = "System default calendar (permission after confirmation)";
+"索引位置與讀取限制" = "Index location and reading limits";
+"索引占用" = "Index size";
 "索引占用：%@" = "Index storage: %@";
 "索引含文件文字，僅保存在這台 Mac，不上傳，也不複製原始文件。預設略過 Library、快取、隱藏與部分開發資料夾；不跟隨符號連結。單檔 20 MB、可擷取文字 8 MB；首次建立較慢，之後只重新擷取有變動的文件。掃描 PDF 尚無 OCR。" = "The index contains document text and stays on this Mac. No uploads or copies of original files. Library, caches, hidden and some developer folders are excluded; symlinks are not followed. Limits: 20 MB per file, 8 MB extracted text. Initial indexing takes time; unchanged text is reused. No OCR for scanned PDFs.";
 "索引容量上限" = "Index storage limit";
@@ -673,6 +709,7 @@
 "結束 Spotlight Han" = "Quit Spotlight Han";
 "結束日期（含當天）" = "Last day (inclusive)";
 "結束時間必須晚於開始時間，且不超過 7 天。" = "The end must be after the start and within 7 days.";
+"維護與清除" = "Maintenance and clearing";
 "網路" = "Network";
 "網路或匯率服務暫不可用，稍後再試。" = "Network or rate service unavailable. Try again later.";
 "編輯分類名稱與圖示" = "Edit category name and icon";
@@ -683,6 +720,7 @@
 "繁簡與 App 首字母，都能比對原始名稱。" = "Chinese scripts and app initials can match the original name.";
 "繁簡都找得到" = "Search across Chinese scripts";
 "繼續" = "Continue";
+"繼續文件索引" = "Resume document indexing";
 "繼續索引" = "Resume indexing";
 "缺少時間解析元件，請重新安裝 Han。" = "The date parser is missing. Please reinstall Han.";
 "翻譯" = "Translation";
@@ -699,6 +737,8 @@
 "背景更新啟用時，文件變更會觸發增量更新，另每 15 分鐘重新檢查。未變動的文件沿用既有內文，重新開啟 App 不必全部重建。" = "With background updates enabled, file changes trigger incremental indexing, plus a recheck every 15 minutes. Unchanged documents reuse indexed text. Restarting does not require a full rebuild.";
 "背景會接續辨識；暫停後從已儲存的批次繼續。" = "Recognition continues in the background. After pausing, it resumes from saved batches.";
 "背景自動更新已連接來源" = "Refresh connected sources in the background";
+"背景辨識" = "Background OCR";
+"背景辨識狀態" = "Background OCR status";
 "自動偵測" = "Detect automatically";
 "自動檢查新版本" = "Automatically check for updates";
 "自訂保留時長" = "Custom search retention";
@@ -769,6 +809,7 @@
 "讀取失敗（仍顯示舊／部分資料）" = "Read failed (showing old/partial data)";
 "讀取失敗（沒有可用資料）" = "Read failed (no data available)";
 "讀取已選資料夾，索引只存在本機；移除索引不會刪除原始文件。" = "Indexes selected folders locally. Removing the index does not delete original documents.";
+"讀取狀況" = "Read status";
 "讓 Han 配合你的習慣" = "Make Han work your way";
 "讓常用資料，也進得了搜尋。" = "Bring your everyday information into search.";
 "貨幣可輸入 3000tb=rmb、3000tb rmb、nt3000 = rmb。只輸入 3000tb 或 3000台幣，會顯示下方選取的目標；也可明寫 3000tb=rmb,usd,jpy。參考匯率每日更新，結果標示資料時間及過期快取，非銀行成交價。" = "Try 3000tb rmb or nt3000 = rmb. Enter 3000tb to see your selected default currencies, or specify 3000tb=rmb,usd,jpy. Daily reference rates show their timestamp and stale cache status; they are not bank transaction rates.";
@@ -777,6 +818,7 @@
 "資料只留在本次執行的記憶體；搜尋不修改或上傳；只有你確認新增指令時才寫入行事曆、提醒事項或系統時鐘。系統授權由你確認。移除來源會清除 App 內的搜尋副本；撤銷系統授權請至系統設定。" = "Search copies stay in memory and are not uploaded. Only confirmed creation commands write to Calendar, Reminders or Clock. You approve system permissions. Removing a source clears its search copy; revoke permissions in System Settings.";
 "資料夾全文索引只留在記憶體，結束 App 後需重新加入。掃描文件尚未提供 OCR。" = "Content indexing stays in memory. Add folders again after quitting. OCR is not available.";
 "資料夾授權" = "Folder access";
+"資料夾授權說明" = "About folder permissions";
 "資料已舊（超過15分鐘）" = "Out of date (over 15 minutes)";
 "資料有變動，待更新" = "Data changed; refresh needed";
 "超過單檔 20 MB 上限" = "Exceeds the 20 MB per-file limit";
@@ -807,6 +849,7 @@
 "連接失敗：%@ 可檢查系統設定 → 隱私權與安全性。" = "Could not connect: %@ Check System Settings > Privacy & Security.";
 "連接系統時鐘" = "Connect Apple Clock";
 "進行中" = "Ongoing";
+"進階" = "Advanced";
 "遊戲" = "Games";
 "選取資料夾後，可搜尋 Word、文字 PDF、PPTX、Excel 內文與命中片段。" = "Choose folders to search Word, text PDF, PPTX and Excel contents, with matching excerpts.";
 "選擇下載、文件、影片等常用位置。" = "Choose frequently used locations such as Downloads, Documents or Movies.";
@@ -819,7 +862,9 @@
 "選擇要保存在本機搜尋索引的文件資料夾。只讀取支援的文字文件，不複製原始檔；可一次選擇多個資料夾。" = "Select document folders for the persistent local search index. Only supported document text is read; originals are not copied. You can select multiple folders.";
 "選擇要搜尋的文件與圖片資料夾，可一次多選。文字及 OCR 索引只保存在本機；iCloud 僅讀已下載檔案，不自動下載。" = "Select document/image folders; multiple selection is supported. Text/OCR indexes stay on this Mac. Only downloaded iCloud files are read; no automatic downloads.";
 "選擇資料夾…" = "Choose folders…";
+"選擇資料夾後才開始索引；iCloud 只處理已下載的檔案。" = "Indexing starts after you choose folders. Only downloaded iCloud files are processed.";
 "還沒設定的項目不影響 App、計算與系統設定搜尋。之後可從「更新與關於」重看引導。" = "Unconfigured features do not block app, calculator or system settings search. Replay this guide from Updates & About.";
+"部分搜尋範圍需要重新授權，請到搜尋範圍重新選擇。" = "Some folders need access again. Reselect them in Search folders.";
 "部分資料讀取於：%@" = "Partial data read: %@";
 "郵件" = "Mail";
 "重新命名分類" = "Rename category";
@@ -842,6 +887,7 @@
 "開啟 Spotlight Han" = "Open Spotlight Han";
 "開啟 Spotlight 快捷鍵開關" = "Open Spotlight shortcuts";
 "開啟 Spotlight 補充（混合搜尋）" = "Enable Spotlight supplement (hybrid search)";
+"開啟工作保護" = "Enable work protection";
 "開啟時的行為" = "When reopening";
 "開啟時鐘" = "Open Clock";
 "開啟系統登入項目" = "Open Login Items";
@@ -860,11 +906,13 @@
 "雲端檔案尚未下載" = "Cloud file has not been downloaded";
 "雲端與遠端" = "Cloud and remote access";
 "電池且閒置：低速背景 OCR" = "On battery and idle: slower background OCR";
+"電源與閒置" = "Power and idle time";
 "需要授權（仍顯示舊資料）" = "Permission required (showing old data)";
 "需要重新授權，請按「重新讀取」；啟動時不會自動彈出授權視窗。" = "Permission is needed. Choose Reload; startup will not automatically ask again.";
 "需要重新授權；背景更新已暫停，請主動按連接。" = "Permission is required again. Background refresh is paused; choose Connect to continue.";
 "音樂" = "Music";
 "音訊外掛本體不屬於可啟動的 App；此處整理獨立程式與管理工具。" = "Plug-in files are not launchable apps. This list organizes standalone apps and management tools.";
+"音訊輸入或播放活動時也暫停 OCR" = "Also pause OCR during audio input or playback";
 "預覽" = "Preview";
 "預覽中可核對時間、內容與目的行事曆；確認後才寫入。" = "Review the time, content and destination calendar before confirming creation.";
 "預覽範例" = "Preview example";
@@ -872,7 +920,9 @@
 "預設不掃描整台 Mac；只讀取已選且可存取的範圍。檔名與內文結果會合併到「全部」。" = "Han does not scan your entire Mac by default. It reads selected, accessible folders. All combines filename and content results.";
 "預設保留 3 分鐘。從收起開始計時，只在下次開啟時判斷，不會打斷正在輸入的內容。" = "The default is 3 minutes from dismissal. Expiry is checked when reopening, never while you type.";
 "預設保留上次搜尋 3 分鐘；你可以自訂時間及再次開啟的頁面。" = "Searches are kept for 3 minutes by default. Customize the duration and the page shown when reopening.";
+"預設保護工作軟體與音訊活動，既有搜尋照常使用。只偵測 App 開啟與音訊輸入／輸出狀態，不讀取專案或聲音；輸入活動也可能是監聽或通話，不代表已開始錄製檔案。" = "Protected apps and audio activity pause OCR by default; existing search remains available. Only app lifetime and audio IO flags are checked, without reading projects or audio. Input activity can be monitoring or a call, not necessarily recording to a file.";
 "預設只在接電時 OCR：使用中降低頻率，閒置 90 秒後加快；低耗電模式或溫度升高時等待。條件改善後約 30 秒內自動續讀，不阻止 Mac 睡眠。" = "By default, OCR runs only on external power: slower while in use and faster after 90 seconds idle. Low Power Mode or elevated temperatures defer OCR. It resumes within about 30 seconds when conditions improve and never prevents sleep.";
+"預設接電才辨識；使用中降速，閒置 90 秒後加快。低耗電模式或溫度升高時先等待。" = "OCR uses external power by default: slower while in use, faster after 90 seconds idle. Low Power Mode or elevated temperatures defer it.";
 "預設換算目標（至少選一種，可多選）" = "Default target currencies (choose at least one)";
 "預設搜尋頁" = "Default search page";
 "預設關閉。啟用後只在記憶體保留最近 50 筆、每筆最多 2,000 字；略過標示為隱藏／暫存的內容及常見密碼管理器。其他 App 未標示的敏感文字仍可能被記錄。" = "Off by default. Stores the latest 50 text entries in memory, up to 2,000 characters each. Skips marked hidden or temporary content and common password managers. Unmarked sensitive text may still be captured.";
@@ -887,6 +937,7 @@
 "首次" = "First occurrence";
 "首次不會自動掃描整個 Mac，也不會一次要求所有隱私權限。" = "Han does not automatically scan your entire Mac or ask for every privacy permission at startup.";
 "首次只需加入一個預先做好的捷徑，不用自己編輯。鬧鐘以分鐘為精度，會向上取整；支援下一次的指定時分，更晚日期請用提醒事項。鬧鐘由系統時鐘管理，這裡不顯示或儲存鬧鐘清單。" = "Add the bundled shortcut once. Alarms round up to the next minute and support the next occurrence only. Use Reminders for later dates. Apple Clock manages the alarms.";
+"首次大量辨識會增加耗電與溫度；可在概覽隨時暫停，已完成內容仍可搜尋。" = "The first large OCR pass increases energy use and temperature. Pause it from Overview at any time; completed text remains searchable.";
 "首次確認範圍，之後沿用資料夾書籤；未授權前不自動掃描。勾選常用範圍再選使用者資料夾，可一次加入下載、桌面、影片、音樂、圖片、文件；各種媒體只處理支援的檔案類型。" = "Approve folders once, then reuse saved bookmarks; no scanning before approval. Select checked common folders through your home folder to add Downloads, Desktop, Movies, Music, Pictures, and Documents together. Only supported file types are processed.";
 "首次索引可能較久；完成後會保存在本機，背景只重新讀取有變動的文件。" = "The first index may take longer. It stays on your Mac, and background updates reuse unchanged documents.";
 "首次請在設定選擇搜尋資料夾" = "Choose search folders in Settings to begin";

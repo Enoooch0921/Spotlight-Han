@@ -21,6 +21,22 @@ extension ChineseSearchTests {
         precondition(decision(.battery, percent: 80, idle: 300, low: true, battery: true) == .lowPower)
         precondition(OCRWorkDecision.active.interval! > OCRWorkDecision.idle.interval!)
         precondition(OCRWorkDecision.batteryIdle.interval! > OCRWorkDecision.active.interval!)
+        var working = OCRResourceState(power: .external, idleSeconds: 900,
+                                       workActivity: OCRWorkActivity(protectedApp: "Logic Pro"))
+        precondition(OCRWorkDecision.evaluate(working) == .protectedApp, "Opening a work app overrides idle acceleration")
+        precondition(OCRWorkDecision.evaluate(working, protectWork: false) == .idle)
+        for activity in [OCRWorkActivity.Audio.input, .inputAndOutput] {
+            working.workActivity = OCRWorkActivity(audio: activity)
+            precondition(OCRWorkDecision.evaluate(working) == .audioInput)
+        }
+        working.workActivity = OCRWorkActivity(audio: .output)
+        precondition(OCRWorkDecision.evaluate(working) == .audioOutput)
+        precondition(OCRWorkDecision.evaluate(working, protectAudio: false) == .idle)
+        working.workActivity = OCRWorkActivity(audio: .unavailable)
+        precondition(OCRWorkDecision.evaluate(working) == .audioUnavailable)
+        working.workActivity = OCRWorkActivity()
+        precondition(OCRWorkDecision.evaluate(working) == .idle, "Quiet state recovers normal scheduling")
+        precondition(OCRWorkDecision.protectedApp.interval == nil && OCRWorkDecision.audioInput.interval == nil)
         let cancelled = ProcessCancellation(); cancelled.cancel()
         do { try OCRWorkScheduler { .idle }.prepare(cancellation: cancelled); preconditionFailure("Cancellation required") }
         catch is CancellationError {} catch { preconditionFailure("Wrong cancellation error") }

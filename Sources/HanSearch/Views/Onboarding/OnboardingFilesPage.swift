@@ -29,6 +29,7 @@ struct OnboardingFilesPage: View {
             if !error.isEmpty { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
             OnboardingNote(text: "首次索引可能較久；完成後會保存在本機，背景只重新讀取有變動的文件。")
             OnboardingNote(text: "OCR 會增加耗電與溫度，預設僅接電時辨識；使用中降低頻率，閒置後加快。低耗電或溫度升高會等待，可在索引設定暫停或調整。")
+            OnboardingNote(text: "工作保護會在 Logic Pro／Final Cut Pro 開啟，或偵測到音訊輸入／播放時暫停 OCR；退出軟體且音訊停止後會自動接續。可在「OCR 效能與電池」調整。")
             DisclosureGroup(L.text("搜尋範圍與限制")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.text("預設不掃描整台 Mac；只讀取已選且可存取的範圍。檔名與內文結果會合併到「全部」。"))

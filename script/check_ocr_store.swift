@@ -5,6 +5,9 @@ import HanSearchCore
 
 final class OCRPowerFixture: @unchecked Sendable {
     private let lock = NSLock()
+    private var work = OCRWorkActivity()
+    func readWork() -> OCRWorkActivity { lock.lock(); defer { lock.unlock() }; return work }
+    func setWork(_ newValue: OCRWorkActivity) { lock.lock(); work = newValue; lock.unlock() }
     private var value = OCRResourceState(power: .battery, batteryPercent: 90, idleSeconds: 300)
     func read() -> OCRResourceState { lock.lock(); defer { lock.unlock() }; return value }
     func set(_ state: OCRResourceState) { lock.lock(); defer { lock.unlock() }; value = state }
@@ -28,7 +31,7 @@ final class OCRPowerFixture: @unchecked Sendable {
         let access = FileAccessBookmarks(defaults: defaults)
         let power = OCRPowerFixture()
         let store = SearchStore(loadSources: false, fileAccess: access, taskPreferences: defaults, sourcePreferences: defaults,
-            eventCalendarLoader: { [] }, contentSearcher: { _, _ in SearchResponse(items: []) }, documentIndexURL: base.appendingPathComponent("Index/Documents.sqlite"), ocrResourceState: { power.read() })
+            eventCalendarLoader: { [] }, contentSearcher: { _, _ in SearchResponse(items: []) }, documentIndexURL: base.appendingPathComponent("Index/Documents.sqlite"), ocrResourceState: { power.read() }, ocrWorkActivity: { power.readWork() })
         precondition(store.ocrEnabled)
         try store.addDocumentRoots([root])
         for _ in 0..<1000 { if !store.indexing { break }; try await Task.sleep(for: .milliseconds(10)) }
@@ -42,7 +45,11 @@ final class OCRPowerFixture: @unchecked Sendable {
         power.set(OCRResourceState(power: .external, idleSeconds: 300))
         store.reviewOCRResources(); precondition(!store.indexing, "Manual pause must survive power recovery")
         store.indexPaused = false
-        store.reviewOCRResources()
+        power.setWork(OCRWorkActivity(protectedApp: "Logic Pro")); store.reviewOCRResources()
+        precondition(!store.indexing && store.ocrWorkDecision == .protectedApp, "Logic open must block automatic continuation")
+        power.setWork(OCRWorkActivity(audio: .input)); store.reviewOCRResources()
+        precondition(!store.indexing && store.ocrWorkDecision == .audioInput, "Audio input must block automatic continuation")
+        power.setWork(OCRWorkActivity()); store.reviewOCRResources()
         precondition(store.indexing, "Power recovery automatically resumes without new consent")
         var observedPages = false, observedPending = false
         // Background priority may be deliberately delayed under system load.

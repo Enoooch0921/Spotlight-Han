@@ -64,6 +64,7 @@ extension SearchStore {
     }
     func rebuildIndex() {
         guard !indexing, !documentIndexRoots.isEmpty else { return }
+        ocrWorkMonitor?.setEnabled(ocrEnabled && ocrProtectWork)
         ocrWorkDecision = ocrResourcePolicy.decision()
         indexPaused = false; indexing = true; documentChangePending = false
         let index = documentIndex, roots = documentIndexRoots
@@ -129,7 +130,9 @@ extension SearchStore {
     /// No rescans while power/idle conditions remain unsuitable. The existing low-frequency
     /// refresh timer resumes committed OCR batches, independently of source auto-refresh.
     func reviewOCRResources() {
-        ocrResourcePolicy.configure(allowBattery: ocrAllowBattery, idleOnly: ocrIdleOnly)
+        ocrWorkMonitor?.setEnabled(ocrEnabled && ocrProtectWork && !documentIndexRoots.isEmpty)
+        ocrResourcePolicy.configure(allowBattery: ocrAllowBattery, idleOnly: ocrIdleOnly, protectWork: ocrProtectWork, protectAudio: ocrProtectAudio)
+        ocrWorkActivity = ocrResourcePolicy.workActivity
         ocrWorkDecision = ocrResourcePolicy.decision()
         guard ocrEnabled, !indexPaused, !indexing, !documentIndexRoots.isEmpty,
               !indexSnapshot.capped, indexSnapshot.deferredOCR + indexSnapshot.pendingOCR > 0,
@@ -171,6 +174,7 @@ extension SearchStore {
     func resetScope() { clearDocumentScopes() }
     func pruneDocumentIndex() {
         documentWatcher.stop(); documentChangeTask?.cancel(); documentChangePending = false
+        if documentRoots.isEmpty { ocrWorkMonitor?.setEnabled(false) }
         indexing = true
         let roots = documentRoots + unavailableDocumentRoots, index = documentIndex
         resetDocumentVerification(); cachedGlobalQuery = nil; cachedGlobalContents = []; search()

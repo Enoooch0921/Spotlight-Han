@@ -93,7 +93,7 @@ struct ContentView: View {
             store.mode = store.mode == mode ? .all : mode; focused = true
         } label: {
             Image(systemName: symbol).font(.system(size: 21, weight: .regular))
-                .foregroundStyle(store.mode == mode ? Color.primary : Color.secondary)
+                .foregroundStyle(store.mode == mode ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                 .frame(width: 54, height: 60)
                 .background(store.mode == mode ? Color.primary.opacity(0.08) : .clear, in: Circle())
                 .spotlightGlass(Circle())
@@ -321,7 +321,8 @@ struct ContentView: View {
 
 extension View {
     @ViewBuilder func spotlightGlass<S: Shape>(_ shape: S) -> some View {
-        if #available(macOS 26, *) { self.glassEffect(.regular, in: shape) }
+        // A hierarchical style lets glass supply a vibrant foreground as its backdrop changes.
+        if #available(macOS 26, *) { self.foregroundStyle(.primary).glassEffect(.regular, in: shape) }
         else { self.background(.ultraThinMaterial, in: shape) }
     }
 }

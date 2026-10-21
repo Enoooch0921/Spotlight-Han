@@ -18,7 +18,7 @@ struct DocumentExtraction {
             guard ocrEnabled else { return DocumentExtraction(pages: [], reason: .ocrDisabled) }
             try scheduler?.prepare(cancellation: cancellation)
             pageProgress(1, 1, true)
-            let text = try autoreleasepool { try VisionTextRecognizer.recognize(VisionTextRecognizer.image(url), cancellation: cancellation) }
+            let text = try autoreleasepool { try VisionTextRecognizer.recognize(VisionTextRecognizer.image(url), cancellation: cancellation, shouldDefer: { scheduler?.shouldDefer ?? false }) }
             return DocumentExtraction(pages: [IndexedPage(number: 1, text: text, isOCR: true)], reason: nil)
         }
         guard url.pathExtension.lowercased() == "pdf" else {
@@ -45,7 +45,7 @@ struct DocumentExtraction {
                     try scheduler?.prepare(cancellation: cancellation)
                     pageProgress(index + 1, pdf.pageCount, true)
                     ocrCount += 1
-                    return IndexedPage(number: index + 1, text: try VisionTextRecognizer.recognize(render(page), cancellation: cancellation), isOCR: true)
+                    return IndexedPage(number: index + 1, text: try VisionTextRecognizer.recognize(render(page), cancellation: cancellation, shouldDefer: { scheduler?.shouldDefer ?? false }), isOCR: true)
                 }
                 bytes += page.text.utf8.count
                 guard bytes <= 8_000_000 else { return DocumentExtraction(pages: pages, reason: .indexFileTextLimit) }

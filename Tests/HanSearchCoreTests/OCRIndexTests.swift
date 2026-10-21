@@ -9,11 +9,11 @@ import HanSearchCore
 
 private final class OCRPageAllowance: @unchecked Sendable {
     private let lock = NSLock()
-    private var remaining = 1
+    private var stopped = false
+    func stop() { lock.lock(); stopped = true; lock.unlock() }
     func decision() -> OCRWorkDecision {
         lock.lock(); defer { lock.unlock() }
-        if remaining == 0 { return .waitingForPower }
-        remaining -= 1; return .idle
+        return stopped ? .protectedApp : .idle
     }
 }
 
@@ -122,7 +122,9 @@ extension ChineseSearchTests {
         try fm.copyItem(at: long, to: interruptedRoot.appendingPathComponent("drop.pdf"))
         let allowance = OCRPageAllowance(), interruptedDB = base.appendingPathComponent("DropIndex/Documents.sqlite")
         let dropping = PersistentDocumentIndex(databaseURL: interruptedDB, ocrScheduler: OCRWorkScheduler { allowance.decision() })
-        let interrupted = try dropping.synchronize(roots: [interruptedRoot])
+        let interrupted = try dropping.synchronize(roots: [interruptedRoot], progress: { report in
+            if report.currentPage == 2 && report.recognizing { allowance.stop() }
+        })
         precondition(interrupted.deferredOCR == 1 && interrupted.ocrPages == 1 && interrupted.searchable == 1)
         try check(dropping.search(query: "保固", roots: [interruptedRoot]).items.first?.matchPages == [1])
         try check(dropping.search(query: "FINALMARKER", roots: [interruptedRoot]).items.isEmpty)

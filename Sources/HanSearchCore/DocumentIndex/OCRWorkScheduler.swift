@@ -10,9 +10,10 @@ public struct OCRResourceState: Sendable {
     public var idleSeconds: TimeInterval
     public var lowPower: Bool
     public var thermalElevated: Bool
-    public init(power: Power, batteryPercent: Int? = nil, idleSeconds: TimeInterval = 0, lowPower: Bool = false, thermalElevated: Bool = false) {
+    public var workActivity: OCRWorkActivity
+    public init(power: Power, batteryPercent: Int? = nil, idleSeconds: TimeInterval = 0, lowPower: Bool = false, thermalElevated: Bool = false, workActivity: OCRWorkActivity = OCRWorkActivity()) {
         self.power = power; self.batteryPercent = batteryPercent; self.idleSeconds = idleSeconds
-        self.lowPower = lowPower; self.thermalElevated = thermalElevated
+        self.lowPower = lowPower; self.thermalElevated = thermalElevated; self.workActivity = workActivity
     }
     public static func current() -> Self {
         var power: Power = .unknown, battery: Int?
@@ -40,6 +41,7 @@ public struct OCRResourceState: Sendable {
 
 public enum OCRWorkDecision: Equatable, Sendable {
     case waitingForPower, unknownPower, lowBattery, lowPower, cooling, waitingForIdle
+    case protectedApp, audioInput, audioOutput, audioUnavailable
     case active, idle, batteryIdle
     public var canRun: Bool { interval != nil }
     public var interval: TimeInterval? {
@@ -47,6 +49,10 @@ public enum OCRWorkDecision: Equatable, Sendable {
     }
     public var title: String {
         switch self {
+        case .protectedApp: return "工作保護：指定工作軟體開啟中，暫停 OCR"
+        case .audioInput: return "工作保護：偵測到音訊輸入活動，暫停 OCR"
+        case .audioOutput: return "工作保護：偵測到音訊播放活動，暫停 OCR"
+        case .audioUnavailable: return "工作保護：暫時無法確認音訊活動，等待後重試"
         case .waitingForPower: return "節能等待：接上電源後自動繼續"
         case .unknownPower: return "節能等待：暫時無法確認電源狀態"
         case .lowBattery: return "節能等待：電量低於或等於 30%，或無法確認電量"
@@ -58,7 +64,18 @@ public enum OCRWorkDecision: Equatable, Sendable {
         case .batteryIdle: return "電池且閒置：低速背景 OCR"
         }
     }
-    public static func evaluate(_ state: OCRResourceState, allowBattery: Bool = false, idleOnly: Bool = false) -> Self {
+    public static func evaluate(_ state: OCRResourceState, allowBattery: Bool = false, idleOnly: Bool = false, protectWork: Bool = true, protectAudio: Bool = true) -> Self {
+        if protectWork {
+            if state.workActivity.protectedApp != nil { return .protectedApp }
+            if protectAudio {
+                switch state.workActivity.audio {
+                case .input, .inputAndOutput: return .audioInput
+                case .output: return .audioOutput
+                case .unavailable: return .audioUnavailable
+                case .quiet: break
+                }
+            }
+        }
         if state.lowPower { return .lowPower }
         if state.thermalElevated { return .cooling }
         switch state.power {
@@ -80,6 +97,7 @@ public final class OCRWorkScheduler: @unchecked Sendable {
     private let decision: @Sendable () -> OCRWorkDecision
     private var lastStart: TimeInterval?
     public init(decision: @escaping @Sendable () -> OCRWorkDecision) { self.decision = decision }
+    public var shouldDefer: Bool { !decision().canRun }
     public func prepare(cancellation: ProcessCancellation) throws {
         while true {
             guard !cancellation.isCancelled else { throw CancellationError() }
