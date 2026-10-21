@@ -89,6 +89,17 @@ public enum FileCatalog {
     }
 
     public static func search(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL? = nil, aliasPaths: Set<String> = []) -> [SearchItem] {
+        var items = searchLiteral(entries, query: query, mode: mode, folder: folder, aliasPaths: aliasPaths)
+        var seen = Set(items.map(\.id))
+        for alternative in TaiwanVocabulary.alternatives(for: query) where items.count < 2000 {
+            for item in searchLiteral(entries, query: alternative.query, mode: mode, folder: folder, aliasPaths: []) where seen.insert(item.id).inserted {
+                items.append(item.supplemented(by: alternative))
+                if items.count == 2000 { break }
+            }
+        }
+        return items
+    }
+    private static func searchLiteral(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL?, aliasPaths: Set<String>) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return [] }
         let prefix = folder.map { $0.path + "/" }

@@ -80,7 +80,10 @@ public enum SearchService {
     public static func searchApplications(query: String, aliasTargets: Set<String> = []) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return [] }
-        return applicationCatalog.filter { $0.matches(terms: terms) || aliasTargets.contains("app:" + $0.preferenceID) }.map(\.searchItem)
+        return applicationCatalog.compactMap { app in
+            if aliasTargets.contains("app:" + app.preferenceID) { return app.searchItem }
+            return app.matches(terms: terms) ? app.searchItem(query: query) : nil
+        }
     }
 
     public static func index(folder: URL) -> FolderIndex {
@@ -150,9 +153,17 @@ public enum SearchService {
 
     public static func merge(_ items: [SearchItem], query: String, limit: Int = 200) -> [SearchItem] {
         var byPath: [String: SearchItem] = [:]
+        func unverified(_ item: SearchItem) -> Bool {
+            item.source == "文件・系統索引" && item.excerpt.isEmpty && !ModelSearch.matches(item.name, query: query)
+        }
         for item in items {
             // Keep the informative local preview when Spotlight returns the same file.
-            if byPath[item.id] == nil || !item.excerpt.isEmpty || (item.applicationIdentifier != nil && byPath[item.id]?.applicationIdentifier == nil) { byPath[item.id] = item }
+            if let existing = byPath[item.id] {
+                if existing.supplement != nil, unverified(item) { continue }
+                if item.supplement != nil, unverified(existing) { byPath[item.id] = item; continue }
+            }
+            if let existing = byPath[item.id], existing.supplement == nil, item.supplement != nil { continue }
+            if byPath[item.id] == nil || (byPath[item.id]?.supplement != nil && item.supplement == nil) || !item.excerpt.isEmpty || (item.applicationIdentifier != nil && byPath[item.id]?.applicationIdentifier == nil) { byPath[item.id] = item }
         }
         let needle = ChineseSearch.normalized(query)
         let model = ModelSearch.Query(query)
@@ -165,6 +176,7 @@ public enum SearchService {
             return evidence + (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (alias ? 80 : 0) + (item.isApplication ? 5 : 0)
         }
         return Array(byPath.values.sorted { a, b in
+            if (a.supplement == nil) != (b.supplement == nil) { return a.supplement == nil }
             let x = score(a), y = score(b)
             return x == y ? a.url.path < b.url.path : x > y
         }.prefix(limit))

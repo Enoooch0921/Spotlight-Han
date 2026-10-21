@@ -14,9 +14,14 @@ public struct QuickResult: Identifiable, Hashable, Sendable {
     public let action: QuickAction
     public let startDate: Date?
     public let endDate: Date?
-    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil) {
+    public let supplement: SearchSupplement?
+    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil, supplement: SearchSupplement? = nil) {
         self.id = "quick:" + id; self.title = title; self.subtitle = subtitle; self.symbol = symbol; self.action = action
         self.startDate = startDate; self.endDate = endDate
+        self.supplement = supplement
+    }
+    public func supplemented(by match: SearchSupplement) -> QuickResult {
+        QuickResult(id: String(id.dropFirst("quick:".count)), title: title, subtitle: subtitle, symbol: symbol, action: action, startDate: startDate, endDate: endDate, supplement: match)
     }
 }
 
@@ -40,6 +45,14 @@ public struct PersonalRecord: Sendable {
         self.startDate = startDate; self.endDate = endDate
     }
     public func result(query: String, mode: SearchMode, aliasMatch: Bool = false) -> QuickResult? {
+        guard mode == .all || mode == self.mode else { return nil }
+        if let result = primaryResult(query: query, mode: mode, aliasMatch: aliasMatch) { return result }
+        for alternative in TaiwanVocabulary.alternatives(for: query) {
+            if let result = primaryResult(query: alternative.query, mode: mode, aliasMatch: false) { return result.supplemented(by: alternative) }
+        }
+        return nil
+    }
+    private func primaryResult(query: String, mode: SearchMode, aliasMatch: Bool) -> QuickResult? {
         guard mode == .all || mode == self.mode else { return nil }
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         let model = ModelSearch.Query(query)

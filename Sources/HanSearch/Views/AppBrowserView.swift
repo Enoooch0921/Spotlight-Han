@@ -219,7 +219,7 @@ struct AppBrowserView: View {
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
     private func tile(_ app: InstalledApplication, list: Bool) -> some View {
-        AppLibraryTile(app: app, pinned: library.isPinned(app), selected: gridFocused && library.selection == app.id, list: list, query: store.query) {
+        AppLibraryTile(app: app, pinned: library.isPinned(app), selected: gridFocused && library.selection == app.id, list: list, query: store.query, supplement: library.supplement(for: app, query: store.query)) {
             library.selection = app.id
             if library.open(app, query: store.query) { store.hideLauncher?() }
         }
@@ -254,6 +254,7 @@ private struct AppLibraryTile: View {
     let selected: Bool
     let list: Bool
     let query: String
+    let supplement: SearchSupplement?
     let open: () -> Void
     @State private var hovered = false
     var body: some View {
@@ -262,7 +263,10 @@ private struct AppLibraryTile: View {
                 if list {
                     HStack(spacing: 12) {
                         icon.frame(width: 30, height: 30)
-                        HighlightedText(text: app.name, query: query).font(.system(size: 13)).lineLimit(1)
+                        VStack(alignment: .leading, spacing: 3) {
+                            HighlightedText(text: app.name, query: supplement?.query ?? query).font(.system(size: 13)).lineLimit(1)
+                            if let match = supplement { SearchSupplementLabel(match: match) }
+                        }
                         Spacer()
                         if pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary) }
                     }.padding(.horizontal, 10).frame(height: 44)
@@ -270,7 +274,8 @@ private struct AppLibraryTile: View {
                     VStack(spacing: 7) {
                         icon.frame(width: 44, height: 44)
                             .overlay(alignment: .bottomTrailing) { if pinned { Image(systemName: "pin.circle.fill").font(.system(size: 14)).symbolRenderingMode(.palette).foregroundStyle(Color.secondary, Color(nsColor: .windowBackgroundColor)) } }
-                        HighlightedText(text: app.name, query: query).font(.system(size: 11)).multilineTextAlignment(.center).lineLimit(2).frame(height: 29, alignment: .top)
+                        HighlightedText(text: app.name, query: supplement?.query ?? query).font(.system(size: 11)).multilineTextAlignment(.center).lineLimit(2).frame(height: 29, alignment: .top)
+                        if let match = supplement { SearchSupplementLabel(match: match) }
                     }.padding(.horizontal, 4).padding(.vertical, 9).frame(maxWidth: .infinity)
                 }
             }.contentShape(Rectangle())

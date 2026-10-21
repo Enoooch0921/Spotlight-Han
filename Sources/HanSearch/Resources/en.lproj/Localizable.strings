@@ -294,6 +294,8 @@
 "已釘選" = "Pinned";
 "常用小事，順手完成" = "Handle everyday tasks";
 "常用結果會優先；學習紀錄只存在這台 Mac。" = "Frequently opened results rank higher. Learning history stays on this Mac.";
+"常用詞互搜限於隨身碟／U盤、列印／打印、印表機／打印機、滑鼠／鼠標、軟體／軟件、硬體／硬件。補充結果標示實際比對詞，使用習慣與日期排序不會把它們移到原始命中之前。" = "Related wording is limited to six curated Taiwan/Mainland pairs for USB drives, printing, printers, mice, software and hardware. Supplemental results show the matched wording and stay below original-query matches, including when learning or date sorting is enabled.";
+"常用詞補充：%@" = "Related wording: %@";
 "建立 Han 索引" = "Build Han index";
 "建立所選分類" = "Create selected categories";
 "建立日期無法取得" = "Creation date unavailable";
@@ -307,6 +309,7 @@
 "影音製作" = "Audio and video production";
 "從 Han 開啟 App 後會出現在這裡" = "Apps you open through Han will appear here";
 "從收起時開始計時；逾時後，下次開啟才清空搜尋並回到預設頁。正在輸入時不會被清除。" = "The timer starts when search is dismissed. After it expires, the next opening clears the query and returns to the default page. Active typing is never cleared.";
+"忘記切換輸入法時，可用標準注音鍵位找 App，例如 rnr 或 ru4nj04ru 找計算機。必須完整對上 App 的注音或至少三個首符號，不套用到文件內文；原始查詢命中始終優先。" = "Forgot to switch input methods? Use standard Zhuyin keys such as rnr or ru4nj04ru to find Calculator. Only complete app pronunciations or at least three initials qualify. This does not apply to document contents; original-query matches always come first.";
 "忘記資料夾" = "Forget folders";
 "快捷鍵" = "Keyboard shortcut";
 "快捷鍵可開啟及收起面板。若要用 ⌘Space，先在系統設定 → 鍵盤 → 鍵盤快捷鍵 → Spotlight 關閉「顯示 Spotlight 搜尋」，再到 Han「搜尋與快捷鍵」按「使用 ⌘Space」。App 會記住你的選擇；若有衝突，保留原快捷鍵。" = "The shortcut toggles search. To use ⌘Space, disable Show Spotlight search in System Settings > Keyboard > Keyboard Shortcuts > Spotlight. In Han, go to Search & Shortcuts and choose Use ⌘Space. Conflicts keep the previous shortcut.";
@@ -494,6 +497,7 @@
 "沒有可擷取的文字（空白或圖片）" = "No extractable text (empty or image-only)";
 "沒有符合的 App" = "No matching apps";
 "沿用檔名搜尋範圍" = "Use filename folders";
+"注音鍵位：%@" = "Zhuyin keyboard: %@";
 "注音首符號" = "Zhuyin initials";
 "清單" = "List";
 "清除並重建索引" = "Clear and rebuild index";

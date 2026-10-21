@@ -780,5 +780,9 @@
   "輸入「計算機」每個字的第一個注音符號 ㄐㄙㄐ，也能找到 App。": "Type ㄐㄙㄐ, the first Zhuyin symbol of each character in 計算機, to find Calculator.",
   "計算機 → ji suan ji → jsj。也支援完整拼音 jisuanji；右鍵點結果可自訂縮寫。": "計算機 → ji suan ji → jsj. Full Pinyin jisuanji also works. Right-click a result to customize aliases.",
   "計算機 → ㄐㄧˋ ㄙㄨㄢˋ ㄐㄧ → ㄐㄙㄐ。也支援完整注音；右鍵點結果可自訂縮寫。": "計算機 → ㄐㄧˋ ㄙㄨㄢˋ ㄐㄧ → ㄐㄙㄐ. Full Zhuyin also works. Right-click a result to customize aliases.",
-  "拼音首字母與注音首符號只套用 App；文件標題與內文維持文字比對。": "Pinyin and Zhuyin initials apply only to apps. Document names and contents use text matching."
+  "拼音首字母與注音首符號只套用 App；文件標題與內文維持文字比對。": "Pinyin and Zhuyin initials apply only to apps. Document names and contents use text matching.",
+  "注音鍵位：%@": "Zhuyin keyboard: %@",
+  "常用詞補充：%@": "Related wording: %@",
+  "忘記切換輸入法時，可用標準注音鍵位找 App，例如 rnr 或 ru4nj04ru 找計算機。必須完整對上 App 的注音或至少三個首符號，不套用到文件內文；原始查詢命中始終優先。": "Forgot to switch input methods? Use standard Zhuyin keys such as rnr or ru4nj04ru to find Calculator. Only complete app pronunciations or at least three initials qualify. This does not apply to document contents; original-query matches always come first.",
+  "常用詞互搜限於隨身碟／U盤、列印／打印、印表機／打印機、滑鼠／鼠標、軟體／軟件、硬體／硬件。補充結果標示實際比對詞，使用習慣與日期排序不會把它們移到原始命中之前。": "Related wording is limited to six curated Taiwan/Mainland pairs for USB drives, printing, printers, mice, software and hardware. Supplemental results show the matched wording and stay below original-query matches, including when learning or date sorting is enabled."
 }

@@ -54,6 +54,23 @@ public struct PersistentDocumentIndex: Sendable {
         }
     }
     public func search(query: String, roots: [URL], mode: SearchMode = .all, cancellation: ProcessCancellation? = nil, limit: Int = 200) throws -> SearchResponse {
+        guard limit > 0 else { return SearchResponse(items: []) }
+        let primary = try literalSearch(query: query, roots: roots, mode: mode, cancellation: cancellation, limit: limit)
+        var items = primary.items, truncated = primary.truncated, seen = Set(primary.items.map(\.id))
+        for alternative in TaiwanVocabulary.alternatives(for: query) {
+            if cancellation?.isCancelled == true { throw CancellationError() }
+            // Primary results always get the entire cap first.
+            guard items.count < limit else { break }
+            let response = try literalSearch(query: alternative.query, roots: roots, mode: mode, cancellation: cancellation, limit: limit)
+            truncated = truncated || response.truncated
+            for item in response.items where seen.insert(item.id).inserted {
+                if items.count == limit { truncated = true; break }
+                items.append(item.supplemented(by: alternative))
+            }
+        }
+        return SearchResponse(items: items, truncated: truncated)
+    }
+    private func literalSearch(query: String, roots: [URL], mode: SearchMode, cancellation: ProcessCancellation?, limit: Int) throws -> SearchResponse {
         guard !roots.isEmpty, FileManager.default.fileExists(atPath: databaseURL.path), let expression = DocumentIndexTerms.expression(String(query.prefix(200))) else { return SearchResponse(items: []) }
         let db = try IndexDatabase(url: databaseURL, limit: limitBytes, readOnly: true)
         let (scope, bindings) = predicate(roots)
@@ -66,7 +83,7 @@ public struct PersistentDocumentIndex: Sendable {
             for row in rows {
                 if cancellation?.isCancelled == true { throw CancellationError() }
                 let url = URL(fileURLWithPath: row[0])
-                guard FileManager.default.isReadableFile(atPath: url.path), let item = IndexedDocument(url: url, text: row[1]).match(query: query, mode: mode) else { continue }
+                guard FileManager.default.isReadableFile(atPath: url.path), let item = IndexedDocument(url: url, text: row[1]).match(query: query, mode: mode, allowVocabulary: false) else { continue }
                 found.append(SearchItem(url: url, source: item.excerpt.isEmpty ? "Han 索引・檔名" : "Han 索引・內文", excerpt: item.excerpt))
                 if found.count > limit { return SearchResponse(items: Array(found.prefix(limit)), truncated: true) }
             }

@@ -15,8 +15,13 @@ extension SearchStore {
         let primaryQuickResults = allQuickResults.filter { $0.id != translationResult?.id }
         let translationIDs = translationResult.map { [$0.id] } ?? []
         let original = primaryQuickResults.map(\.id) + results.map(\.id) + translationIDs
+        let supplements = Set(primaryQuickResults.filter { $0.supplement != nil }.map(\.id) + results.filter { $0.supplement != nil }.map(\.id))
+        func primaryFirst(_ ids: [String]) -> [String] {
+            ids.filter { !supplements.contains($0) } + ids.filter { supplements.contains($0) }
+        }
         // Explicit calendar chronology and clipboard order remain authoritative.
-        guard mode != .calendar && mode != .clipboard else { return original }
+        guard mode != .clipboard else { return original }
+        guard mode != .calendar else { return primaryFirst(primaryQuickResults.map(\.id) + results.map(\.id)) + translationIDs }
         let candidates = primaryQuickResults.compactMap { habitCandidate($0) } + results.map { habitCandidate($0) }
         let eligible = Set(candidates.map(\.id))
         let fixed = primaryQuickResults.filter { !eligible.contains($0.id) }.map(\.id)
@@ -41,7 +46,9 @@ extension SearchStore {
         ranked = ranked.map { calendarSet.contains($0) ? iterator.next()! : $0 }
         let otherIndexed = Set(results.filter { isOtherIndexedResult($0) }.map(\.id))
         let confirmed = fileDateOrder(ranked.filter { !otherIndexed.contains($0) })
-        ranked = confirmed + (showOtherIndexedResults ? fileDateOrder(ranked.filter { otherIndexed.contains($0) }) : [])
+        ranked = primaryFirst(confirmed) + (showOtherIndexedResults ? primaryFirst(fileDateOrder(ranked.filter { otherIndexed.contains($0) })) : [])
+        // Hard boundary after habits, calendar slot restoration and date sorting:
+        // inferred alternatives can never overtake any original-query match.
         return fixed + ranked + translationIDs
     }
     func recordHabit(_ candidate: HabitCandidate?, query: String) {

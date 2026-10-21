@@ -25,6 +25,8 @@ struct CheckRunner {
             return
         }
         let tests = ChineseSearchTests()
+        try tests.testTaiwanSearchSupplements()
+        if CommandLine.arguments.contains("--taiwan-search-only") { return }
         tests.testSearchReopenPolicy()
         if CommandLine.arguments.contains("--task-parser-only") {
             try await tests.testNaturalTaskComposer()
@@ -64,7 +66,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 33 check groups — Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 34 check groups — Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 

@@ -107,8 +107,14 @@ final class AppLibraryStore: ObservableObject {
             let order = a.name.localizedStandardCompare(b.name)
             return order == .orderedSame ? a.id < b.id : order == .orderedAscending
         }
-        if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, customID != nil || scope != .recent { return rankSearch?(sorted, query) ?? sorted }
-        return sorted
+        let ranked: [InstalledApplication]
+        if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, customID != nil || scope != .recent { ranked = rankSearch?(sorted, query) ?? sorted }
+        else { ranked = sorted }
+        return ranked.filter { supplement(for: $0, query: query) == nil } + ranked.filter { supplement(for: $0, query: query) != nil }
+    }
+    func supplement(for app: InstalledApplication, query: String) -> SearchSupplement? {
+        if ApplicationAliases.matches(query, aliases: customAliases?(app) ?? []) { return nil }
+        return app.supplement(for: query)
     }
     func setCategory(_ app: InstalledApplication, group: ApplicationGroup?) {
         if let group, ApplicationGroup.assignable.contains(group) { overrides[app.preferenceID] = group.rawValue }

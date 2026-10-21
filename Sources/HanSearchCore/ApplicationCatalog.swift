@@ -73,6 +73,12 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
         matches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
     }
     public func matches(terms: [String]) -> Bool {
+        primaryMatches(terms: terms) || supplement(for: terms.joined(separator: " ")) != nil
+    }
+    public func primaryMatches(_ query: String) -> Bool {
+        primaryMatches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
+    }
+    private func primaryMatches(terms: [String]) -> Bool {
         let phoneticQuery = PhoneticSearch.Query(terms.joined(separator: " "))
         if !terms.isEmpty && phonetics.contains(where: { $0.matches(phoneticQuery) }) { return true }
         return terms.allSatisfy { term in
@@ -82,7 +88,15 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
             return !value.isEmpty && compact.contains { $0.contains(value) }
         }
     }
+    public func supplement(for query: String) -> SearchSupplement? {
+        guard !primaryMatches(query) else { return nil }
+        if let keyboard = ZhuyinKeyboard.Query(query), phonetics.contains(where: { keyboard.matches($0) }) { return keyboard.supplement }
+        return TaiwanVocabulary.alternatives(for: query).first { primaryMatches($0.query) }
+    }
     public var searchItem: SearchItem { SearchItem(url: url, name: name, source: "App・繁簡比對", applicationIdentifier: preferenceID) }
+    public func searchItem(query: String) -> SearchItem {
+        supplement(for: query).map { searchItem.supplemented(by: $0) } ?? searchItem
+    }
 }
 
 public enum ApplicationCatalog {

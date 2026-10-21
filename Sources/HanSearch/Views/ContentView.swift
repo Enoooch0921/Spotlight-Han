@@ -141,7 +141,7 @@ struct ContentView: View {
             }
             if let details = store.details {
                 VStack(alignment: .leading, spacing: 16) {
-                    ScrollView { HighlightedText(text: details, query: store.query).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    ScrollView { HighlightedText(text: details, query: store.allQuickResults.first(where: { $0.id == store.selection })?.supplement?.query ?? store.query).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                     HStack {
                         Button(L.text("複製內容")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(details, forType: .string) }
                         Spacer(); Button(L.text("返回搜尋")) { store.details = nil; focused = true }
@@ -247,8 +247,9 @@ struct ContentView: View {
         HStack(spacing: 13) {
             Image(systemName: item.symbol).font(.system(size: 22)).foregroundStyle(.secondary).frame(width: 30, height: 32)
             VStack(alignment: .leading, spacing: 3) {
-                HighlightedText(text: quickTitle(item), query: store.query).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
-                HighlightedText(text: quickSubtitle(item), query: store.query).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                HighlightedText(text: quickTitle(item), query: item.supplement?.query ?? store.query).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
+                HighlightedText(text: quickSubtitle(item), query: item.supplement?.query ?? store.query).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                if let match = item.supplement { SearchSupplementLabel(match: match) }
                 if item.id.hasPrefix("quick:currency:") {
                     Link("Rates by ExchangeRate-API", destination: URL(string: "https://www.exchangerate-api.com")!).font(.system(size: 10))
                 }

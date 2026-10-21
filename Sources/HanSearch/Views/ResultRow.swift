@@ -9,6 +9,7 @@ struct ResultRow: View {
     @State private var creationDate: Date?
     @State private var datedPath: String?
     private var needsPreview: Bool { item.excerpt.isEmpty && item.source == "文件・系統索引" }
+    private var matchingQuery: String { item.supplement?.query ?? query }
     private var sourceLabel: String {
         if needsPreview, case .match = preview { return "文件・內文命中" }
         if needsPreview, ModelSearch.matches(item.name, query: query) { return "文件・檔名命中" }
@@ -20,17 +21,18 @@ struct ResultRow: View {
                 .resizable().frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    HighlightedText(text: item.name, query: query).font(.body.weight(.medium)).lineLimit(1)
+                    HighlightedText(text: item.name, query: matchingQuery).font(.body.weight(.medium)).lineLimit(1)
                     Spacer()
                     Text(L.text(sourceLabel)).font(.caption2).foregroundStyle(.secondary)
                 }
+                if let match = item.supplement { SearchSupplementLabel(match: match) }
                 Text(item.url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 if !item.isApplication, datedPath == item.id {
                     Text(creationDate.map { L.format("建立日期：%@", $0.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(L.language.locale))) } ?? L.text("建立日期無法取得"))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
                 if !item.excerpt.isEmpty {
-                    HighlightedText(text: item.excerpt, query: query).font(.callout).foregroundStyle(.secondary).lineLimit(3)
+                    HighlightedText(text: item.excerpt, query: matchingQuery).font(.callout).foregroundStyle(.secondary).lineLimit(3)
                 } else if needsPreview {
                     if case let .match(snippet) = preview {
                         HighlightedText(text: snippet, query: query).font(.callout).foregroundStyle(.secondary).lineLimit(3)

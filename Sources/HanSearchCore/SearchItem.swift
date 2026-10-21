@@ -7,14 +7,19 @@ public struct SearchItem: Identifiable, Hashable, Sendable {
     public let source: String
     public let excerpt: String
     public let applicationIdentifier: String?
+    public let supplement: SearchSupplement?
     public var isApplication: Bool { url.pathExtension.lowercased() == "app" }
 
-    public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil) {
+    public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil, supplement: SearchSupplement? = nil) {
         self.url = url.isFileURL ? url.standardizedFileURL.resolvingSymlinksInPath() : url
         self.name = name ?? url.lastPathComponent
         self.source = source
         self.excerpt = excerpt
         self.applicationIdentifier = applicationIdentifier
+        self.supplement = supplement
+    }
+    public func supplemented(by match: SearchSupplement) -> SearchItem {
+        SearchItem(url: url, name: name, source: source, excerpt: excerpt, applicationIdentifier: applicationIdentifier, supplement: match)
     }
 }
 
@@ -33,7 +38,16 @@ public struct IndexedDocument: Sendable {
         self.normalizedText = ChineseSearch.normalized(text)
     }
 
-    public func match(query: String, mode: SearchMode) -> SearchItem? {
+    public func match(query: String, mode: SearchMode, allowVocabulary: Bool = true) -> SearchItem? {
+        if let item = literalMatch(query: query, mode: mode) { return item }
+        if allowVocabulary {
+            for alternative in TaiwanVocabulary.alternatives(for: query) {
+                if let item = literalMatch(query: alternative.query, mode: mode) { return item.supplemented(by: alternative) }
+            }
+        }
+        return nil
+    }
+    private func literalMatch(query: String, mode: SearchMode) -> SearchItem? {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
         guard !terms.isEmpty else { return nil }
         let identifier = ModelSearch.key(query) != nil

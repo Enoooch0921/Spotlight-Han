@@ -403,7 +403,10 @@ final class SearchStore: ObservableObject {
                 let base = files
                 if lookup { files += cachedContents }
                 quick += utilities
-                if !utilityOnly { quick += calendarSort.sorted(personal).lazy.compactMap { $0.result(query: term, mode: mode, aliasMatch: aliasTargets.contains("quick:" + $0.id)) }.prefix(50) }
+                if !utilityOnly {
+                    let matches = calendarSort.sorted(personal).compactMap { $0.result(query: term, mode: mode, aliasMatch: aliasTargets.contains("quick:" + $0.id)) }
+                    quick += (matches.filter { $0.supplement == nil } + matches.filter { $0.supplement != nil }).prefix(50)
+                }
                 if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {
