@@ -18,12 +18,14 @@ final class IndexDatabase {
             try execute("PRAGMA secure_delete=ON")
             try execute("PRAGMA synchronous=NORMAL")
             let version = try rows("PRAGMA user_version").first?.first ?? "0"
-            guard version == "0" || version == "1" else { throw IndexDatabaseError.message("索引版本不相容，請先備份並重建") }
+            guard ["0", "1", "2"].contains(version) else { throw IndexDatabaseError.message("索引版本不相容，請先備份並重建") }
             try execute("CREATE TABLE IF NOT EXISTS documents(path TEXT PRIMARY KEY, name TEXT NOT NULL, body TEXT NOT NULL, modified REAL, created REAL, size INTEGER, reason TEXT, generation TEXT NOT NULL)")
             try execute("CREATE VIRTUAL TABLE IF NOT EXISTS document_terms USING fts5(tokens, content='', detail=none)")
             try execute("CREATE TABLE IF NOT EXISTS scans(root TEXT PRIMARY KEY, completed REAL)")
             try execute("CREATE TABLE IF NOT EXISTS scan_state(root TEXT PRIMARY KEY, incomplete INTEGER NOT NULL)")
-            try execute("PRAGMA user_version=1")
+            if !(try rows("PRAGMA table_info(documents)")).contains(where: { $0[1] == "extraction" }) { try execute("ALTER TABLE documents ADD COLUMN extraction INTEGER NOT NULL DEFAULT 0") }
+            try execute("CREATE TABLE IF NOT EXISTS document_pages(path TEXT NOT NULL, page INTEGER NOT NULL, body TEXT NOT NULL, ocr INTEGER NOT NULL, reason TEXT, PRIMARY KEY(path,page))")
+            try execute("PRAGMA user_version=2")
             let pageSize = Int64(try rows("PRAGMA page_size").first?.first ?? "4096") ?? 4096
             try execute("PRAGMA max_page_count=\(max(32, limit / pageSize))")
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)

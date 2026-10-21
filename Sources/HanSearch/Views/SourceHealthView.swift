@@ -7,6 +7,7 @@ struct SourceHealthView: View {
     private var label: String {
         guard let health else { return "未連接" }
         switch health.phase {
+        case .waiting: return "OCR 節能等待（已完成內容可搜尋）"
         case .queued: return health.partialUpdate == nil ? "等待讀取" : "等待續讀（已有部分資料）"
         case .authorizing: return "等待授權"
         case .loading: return health.partialUpdate == nil ? "正在讀取" : "正在讀取（已有部分資料）"
@@ -36,6 +37,7 @@ struct SourceHealthView: View {
     private var symbol: String {
         guard let health else { return "minus.circle" }
         switch health.phase {
+        case .waiting: return "leaf.fill"
         case .failed: return "xmark.octagon.fill"
         case .ready: return health.isStale(at: now) ? "clock.badge.exclamationmark" : "checkmark.circle.fill"
         case .needsPermission: return "lock.fill"

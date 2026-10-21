@@ -20,10 +20,30 @@ extension SearchStore {
         guard !indexing else { return }
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = true
         panel.prompt = L.text("建立 Han 索引")
-        panel.message = L.text("選擇要保存在本機搜尋索引的文件資料夾。只讀取支援的文字文件，不複製原始檔；可一次選擇多個資料夾。")
+        panel.message = L.text("選擇要搜尋的文件與圖片資料夾，可一次多選。文字及 OCR 索引只保存在本機；iCloud 僅讀已下載檔案，不自動下載。")
         guard panel.runModal() == .OK else { return }
         do { try addDocumentRoots(panel.urls) }
         catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }
+    }
+    func chooseCommonSearchFolders(_ selected: Set<CommonSearchFolder>) {
+        guard !indexing, !catalogRefreshing, !selected.isEmpty else { return }
+        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+        panel.prompt = L.text("允許並建立索引")
+        panel.message = L.text("可選擇使用者資料夾，一次授權下方勾選的常用位置；只索引勾選位置，不掃描 Library。也可以直接多選其他資料夾。")
+            + "\n" + CommonSearchFolder.allCases.filter { selected.contains($0) }.map { L.text($0.title) }.joined(separator: "、")
+        guard panel.runModal() == .OK else { return }
+        do {
+            try fileAccess.add(panel.urls)
+            let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.resolvingSymlinksInPath()
+            let roots = panel.urls.flatMap { url in
+                url.standardizedFileURL.resolvingSymlinksInPath() == home ? CommonSearchFolder.allCases.filter { selected.contains($0) }.map(\.url) : [url]
+            }.filter { FileManager.default.fileExists(atPath: $0.path) }
+            guard !roots.isEmpty else { indexNotice = "尚未選擇可用的資料夾"; return }
+            spotlightSupplement = true
+            try addDocumentRoots(roots)
+            addAuthorizedCatalogRoots(roots)
+        } catch { indexNotice = "無法保存文件資料夾授權：" + error.localizedDescription }
     }
     func addDocumentRoots(_ roots: [URL]) throws {
         guard !indexing else { return }
@@ -44,6 +64,7 @@ extension SearchStore {
     }
     func rebuildIndex() {
         guard !indexing, !documentIndexRoots.isEmpty else { return }
+        ocrWorkDecision = ocrResourcePolicy.decision()
         indexPaused = false; indexing = true; documentChangePending = false
         let index = documentIndex, roots = documentIndexRoots
         let cancellation = ProcessCancellation(), token = UUID()
@@ -54,12 +75,15 @@ extension SearchStore {
         let update: @Sendable (DocumentIndexSnapshot) -> Void = { [weak self] progress in
             Task { @MainActor [weak self] in
                 guard let self, self.documentIndexGeneration == token, self.indexing else { return }
+                self.ocrWorkDecision = self.ocrResourcePolicy.decision()
+                self.indexCurrentFile = progress.currentFile; self.indexCurrentPage = progress.currentPage
+                self.indexTotalPages = progress.totalPages; self.indexRecognizing = progress.recognizing
                 self.indexNotice = "Han 索引：已檢查 \(progress.examined) 份，擷取 \(progress.extracted) 份，沿用 \(progress.reused) 份"
             }
         }
         documentIndexTask = Task { [weak self] in
             do {
-                let snapshot = try await Task.detached(priority: .utility) {
+                let snapshot = try await Task.detached(priority: .background) {
                     try index.synchronize(roots: roots, cancellation: cancellation, progress: update)
                 }.value
                 guard let self, self.documentIndexGeneration == token else { return }
@@ -76,24 +100,47 @@ extension SearchStore {
             }
             guard let self, self.documentIndexGeneration == token else { return }
             self.indexing = false; self.documentIndexCancellation = nil; self.documentIndexTask = nil
+            self.indexCurrentFile = ""; self.indexCurrentPage = 0; self.indexTotalPages = 0; self.indexRecognizing = false
             self.refreshSearchResults(); self.configureDocumentWatcher()
-            if self.documentChangePending && !self.indexPaused && self.autoRefreshEnabled { self.scheduleDocumentUpdate() }
+            if self.indexSnapshot.pendingOCR > 0 && self.ocrResourcePolicy.decision().canRun && !self.indexSnapshot.capped && !self.indexPaused && !cancellation.isCancelled {
+                self.documentChangeTask?.cancel()
+                self.documentChangeTask = Task { [weak self] in
+                    do { try await Task.sleep(for: .seconds(1)) } catch { return }
+                    guard let self, !self.indexPaused else { return }; self.rebuildIndex()
+                }
+            } else if self.documentChangePending && !self.indexPaused && self.autoRefreshEnabled { self.scheduleDocumentUpdate() }
         }
     }
     func applyIndexSnapshot(_ snapshot: DocumentIndexSnapshot) {
         indexSnapshot = snapshot; documentIssues = snapshot.issues; documentIndexCapped = snapshot.capped
         indexNotice = "Han 已收錄 \(snapshot.files) 份文件，\(snapshot.searchable) 份可搜尋內文，\(snapshot.unfinished) 份未完成"
             + (snapshot.capped ? "；空間或掃描範圍達限，尚有文件未收錄" : "")
-        if snapshot.capped || snapshot.unfinished > 0 {
+        if snapshot.pendingOCR > 0 && ocrResourcePolicy.decision().canRun && !snapshot.capped && indexing && !indexPaused {
+            sourceHealth[.contents, default: SourceHealth()].phase = .loading
+        } else if snapshot.deferredOCR + snapshot.pendingOCR > 0 && !snapshot.capped && snapshot.unfinished == snapshot.deferredOCR + snapshot.pendingOCR {
+            sourceHealth[.contents, default: SourceHealth()].phase = .waiting
+            sourceHealth[.contents, default: SourceHealth()].partialUpdate = snapshot.updated
+        } else if snapshot.capped || snapshot.unfinished > 0 {
             sourceHealth[.contents, default: SourceHealth()].phase = .incomplete
             sourceHealth[.contents, default: SourceHealth()].partialUpdate = snapshot.updated
         } else if let date = snapshot.updated { sourceHealth[.contents, default: SourceHealth()].succeeded(at: date) }
         refreshSearchResults()
     }
+    /// No rescans while power/idle conditions remain unsuitable. The existing low-frequency
+    /// refresh timer resumes committed OCR batches, independently of source auto-refresh.
+    func reviewOCRResources() {
+        ocrResourcePolicy.configure(allowBattery: ocrAllowBattery, idleOnly: ocrIdleOnly)
+        ocrWorkDecision = ocrResourcePolicy.decision()
+        guard ocrEnabled, !indexPaused, !indexing, !documentIndexRoots.isEmpty,
+              !indexSnapshot.capped, indexSnapshot.deferredOCR + indexSnapshot.pendingOCR > 0,
+              ocrWorkDecision.canRun else { return }
+        rebuildIndex()
+    }
     func pauseDocumentIndex() {
         indexPaused = true; documentChangePending = false
         documentChangeTask?.cancel(); documentWatcher.stop()
         documentIndexCancellation?.cancel()
+        if !indexing { sourceHealth[.contents, default: SourceHealth()].phase = .stopped }
     }
     func configureDocumentWatcher() {
         guard autoRefreshEnabled, !indexPaused, !documentIndexRoots.isEmpty else { documentWatcher.stop(); return }

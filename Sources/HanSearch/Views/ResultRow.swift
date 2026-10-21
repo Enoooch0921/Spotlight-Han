@@ -26,6 +26,12 @@ struct ResultRow: View {
                     Text(L.text(sourceLabel)).font(.caption2).foregroundStyle(.secondary)
                 }
                 if let match = item.supplement { SearchSupplementLabel(match: match) }
+                if !item.matchPages.isEmpty {
+                    Text(L.format("命中第 %@ 頁", item.matchPages.map(String.init).joined(separator: "、")) + (item.isOCR ? " · " + L.text("OCR 辨識") : ""))
+                        .font(.caption2).foregroundStyle(.secondary)
+                } else if item.isOCR {
+                    Text(L.text("OCR 辨識")).font(.caption2).foregroundStyle(.secondary)
+                }
                 Text(item.url.deletingLastPathComponent().path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 if !item.isApplication, datedPath == item.id {
                     Text(creationDate.map { L.format("建立日期：%@", $0.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(L.language.locale))) } ?? L.text("建立日期無法取得"))

@@ -44,10 +44,7 @@ public enum FileCatalog {
     public static let excludedDirectoryNames: Set<String> = ["node_modules", "Pods", "DerivedData", "venv", "__pycache__"]
     public static let videoExtensions: Set<String> = ["mp4", "mov", "m4v", "mkv", "avi", "webm", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv", "3gp", "ts", "mxf"]
     public static var defaultRoots: [URL] {
-        let fm = FileManager.default
-        return [FileManager.SearchPathDirectory.downloadsDirectory, .moviesDirectory, .documentDirectory].compactMap {
-            fm.urls(for: $0, in: .userDomainMask).first
-        }
+        CommonSearchFolder.defaultURLs
     }
     public static var cacheURL: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]

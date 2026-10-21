@@ -15,7 +15,7 @@ public enum DocumentPreview: Sendable, Equatable {
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])
             guard values.isRegularFile == true else { return .unavailable(.readFailed) }
             guard (values.fileSize ?? 0) <= 20_000_000 else { return .unavailable(.tooLarge) }
-            if values.isUbiquitousItem == true && values.ubiquitousItemDownloadingStatus == .notDownloaded { return .unavailable(.cloudOnly) }
+            if CloudFileAvailability.needsDownload(isUbiquitous: values.isUbiquitousItem == true, status: values.ubiquitousItemDownloadingStatus) { return .unavailable(.cloudOnly) }
             let model = ModelSearch.Query(query)
             func excerpt(_ text: String) -> DocumentPreview {
                 guard !cancellation.isCancelled else { return .cancelled }

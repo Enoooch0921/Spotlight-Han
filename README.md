@@ -58,7 +58,7 @@ An open-source macOS Spotlight alternative with Traditional/Simplified Chinese s
 
 行程預覽可調整標題、日期、開始／結束時間、全天與提前通知。在 Han 設定選擇預設行事曆（例如「大拇指」），每次確認預覽仍能改到其他可寫入的行事曆（例如「大腳趾」），只影響當次新增。
 
-自然語言日期使用內附 [Chrono](https://github.com/wanasit/chrono) 加上 Han 的中文補強，透過 JavaScriptCore 在本機處理；使用 App 不需 Node.js、API Key 或下載模型。公開1.0.0支援單次事項；本機1.0.1-dev另加入每天／每週／每月重複、民國日期與台灣單位換算，尚未發布，詳見[本機測試版說明](docs/guide.zh-Hant.md#本機測試版-101-dev尚未發布)。未支援或無法完整辨識的規則會提示調整。
+自然語言日期使用內附 [Chrono](https://github.com/wanasit/chrono) 加上 Han 的中文補強，透過 JavaScriptCore 在本機處理；使用 App 不需 Node.js、API Key 或下載模型。公開1.0.0支援單次事項；本機1.0.1-dev另加入每天／每週／每月重複、民國日期、台灣單位換算與Apple Vision圖片／掃描PDF的背景OCR，尚未發布，詳見[本機測試版說明](docs/guide.zh-Hant.md#本機測試版-101-dev尚未發布)。未支援或無法完整辨識的規則會提示調整。
 
 行事曆搜尋預設依時間排序：進行中／即將到來的行程在前，過去行程由近到遠，也能切換日期新到舊或舊到新。已授權來源會背景更新：行事曆／提醒事項每 5 分鐘及系統變更後重讀，其他來源與文件索引每 15 分鐘更新。來源狀態會標示上次完整更新、失敗、部分資料與舊副本；權限失效時暫停並提示，不在背景要求授權。
 
@@ -109,7 +109,7 @@ cd Spotlight-Han
 
 - **目前功能仍有範圍。** 這是獨立的開源啟動器，現階段尚未達到 Spotlight 完整功能對等。
 - **檔名清單需要首次掃描。** 已選範圍在啟動及叫出面板時按間隔更新，也可手動更新；目前尚非即時檔案監看。
-- **全文搜尋有指定範圍。** 加入資料夾後可直接讀取支援的 Word、文字 PDF、PPTX、XLSX 與純文字；未加入資料夾的文件不在 Han 索引範圍；可另外開啟 Spotlight 補充。掃描圖片與掃描 PDF 尚不支援 OCR。
+- **全文搜尋有指定範圍。** 加入資料夾後可直接讀取支援的 Word、文字 PDF、PPTX、XLSX 與純文字；未加入資料夾的文件不在 Han 索引範圍；可另外開啟 Spotlight 補充。公開1.0.0尚不支援掃描圖片／PDF的OCR；本機1.0.1-dev已加入Apple Vision背景OCR、命中片段與頁碼，預設接電時逐頁辨識，使用中降速、閒置加快，低耗電或升溫先等待，尚未發布。
 - **授權由 macOS 管理。** 已選資料夾會保存存取書籤；系統撤銷權限或開發版重新簽章後，仍可能需要再次授權。
 
 [使用、權限與隱私說明](docs/guide.zh-Hant.md) · [開發檢查](docs/guide.zh-Hant.md#建置) · [待完成項目](docs/guide.zh-Hant.md#待完成的功能對等)

@@ -21,7 +21,7 @@ struct DocumentReadDetailsView: View {
                             ForEach(Array(issues.prefix(200))) { issue in
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(issue.url.lastPathComponent).font(.caption.weight(.medium)).lineLimit(1)
-                                    Text(L.text(issue.reason.title)).font(.caption).foregroundStyle(.orange)
+                                    Text(L.text(issue.reason.title)).font(.caption).foregroundStyle([.ocrDeferred, .ocrPending].contains(issue.reason) ? Color.secondary : Color.orange)
                                     Text(L.text(issue.reason.recoverySuggestion)).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                                     Text(issue.url.deletingLastPathComponent().path).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                                 }.frame(maxWidth: .infinity, alignment: .leading).accessibilityElement(children: .combine)

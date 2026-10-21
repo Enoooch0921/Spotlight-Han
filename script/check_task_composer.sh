@@ -52,3 +52,9 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_taiwan_search.swift -o "$BUILD_DIR/HanTaiwanSearchChecks"
 "$BUILD_DIR/HanTaiwanSearchChecks"
+
+swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
+  "$BUILD_DIR"/HanSearchCore.build/*.o \
+  Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
+  script/check_ocr_store.swift -o "$BUILD_DIR/HanOCRStoreChecks"
+"$BUILD_DIR/HanOCRStoreChecks"

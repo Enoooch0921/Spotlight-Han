@@ -7,12 +7,13 @@ struct OnboardingFilesPage: View {
     @State private var error = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
+            DisclosureGroup(L.text("先選常用資料夾")) { CommonSearchFoldersView(store: store).padding(.vertical, 8) }
             indexPanel(title: "檔名與影片", detail: "找名稱與路徑，不讀取影片內容。適合先加入下載、文件、影片等常用位置。", symbol: "folder", mode: .names, roots: store.catalogRoots) {
                 Button(L.text(store.catalogRoots.isEmpty ? "選擇檔名搜尋範圍…" : "管理檔名範圍…")) {
                     if store.catalogRoots.isEmpty { store.chooseCatalogFolder() } else { settings(.files) }
                 }.disabled(store.catalogRefreshing)
             }
-            indexPanel(title: "文件全文", detail: "讀取 Word、文字 PDF、PPTX、XLSX 與文字文件。搜尋時會顯示命中的內文片段。", symbol: "doc.text.magnifyingglass", mode: .contents, roots: store.documentRoots) {
+            indexPanel(title: "文件全文", detail: "讀取 Word、PDF、PPTX、XLSX、文字及圖片；掃描頁與圖片用 Apple Vision 辨識，結果顯示片段與 PDF 頁碼。", symbol: "doc.text.magnifyingglass", mode: .contents, roots: store.documentRoots) {
                 HStack {
                     Button(L.text(store.documentRoots.isEmpty ? "選擇文件範圍…" : "管理文件範圍…")) {
                         if store.documentRoots.isEmpty { store.chooseFolder() } else { settings(.files) }
@@ -27,10 +28,11 @@ struct OnboardingFilesPage: View {
             }
             if !error.isEmpty { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
             OnboardingNote(text: "首次索引可能較久；完成後會保存在本機，背景只重新讀取有變動的文件。")
+            OnboardingNote(text: "OCR 會增加耗電與溫度，預設僅接電時辨識；使用中降低頻率，閒置後加快。低耗電或溫度升高會等待，可在索引設定暫停或調整。")
             DisclosureGroup(L.text("搜尋範圍與限制")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.text("預設不掃描整台 Mac；只讀取已選且可存取的範圍。檔名與內文結果會合併到「全部」。"))
-                    Text(L.text("掃描 PDF 需要先做 OCR；舊版 PPT／XLS 可轉成 PPTX／XLSX。未完整讀取時，設定會列出原因與處理方式。"))
+                    Text(L.text("圖片與掃描 PDF 使用 Apple Vision 背景 OCR，顯示片段與 PDF 頁碼；舊版 PPT／XLS 可轉成 PPTX／XLSX。iCloud 只處理已下載檔案。"))
                     Text(L.text("內文索引預設上限 500 MB，含擷取文字，僅存本機且未額外加密。移除索引不會刪除原始文件。"))
                 }.font(.caption).foregroundStyle(.secondary).padding(.top, 8)
             }.font(.callout)

@@ -25,6 +25,9 @@ struct CheckRunner {
             return
         }
         let tests = ChineseSearchTests()
+        try tests.testOCRScheduling()
+        if CommandLine.arguments.contains("--ocr-energy-only") { return }
+        if CommandLine.arguments.contains("--ocr-only") { try tests.testOCRIndex(); return }
         tests.testNaturalConversions()
         if CommandLine.arguments.contains("--taiwan-dates-only") { try await tests.testTaiwanDates(); return }
         if CommandLine.arguments.contains("--conversions-only") { return }
@@ -47,6 +50,7 @@ struct CheckRunner {
         try tests.testPresentationContents()
         try tests.testSpreadsheetContents()
         try tests.testPersistentDocumentIndex()
+        try tests.testOCRIndex()
         try tests.testRealSpotlightQueryDoesNotError()
         try tests.testCalculator()
         tests.testConversions()
@@ -70,7 +74,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 36 check groups — Taiwan era years and recurring tasks, natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 38 check groups — Apple Vision OCR and resumable page-aware index, Taiwan era years and recurring tasks, natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 

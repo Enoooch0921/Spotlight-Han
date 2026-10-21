@@ -66,6 +66,22 @@ final class SearchStore: ObservableObject {
     @Published var unavailableDocumentRoots: [URL] = []
     @Published var indexSnapshot = DocumentIndexSnapshot()
     @Published var indexPaused = false
+    @Published var ocrEnabled = true {
+        didSet { taskPreferences.set(ocrEnabled, forKey: "documentOCR.v1") }
+    }
+    @Published var ocrAllowBattery = false {
+        didSet { taskPreferences.set(ocrAllowBattery, forKey: "documentOCRBattery.v1"); reviewOCRResources() }
+    }
+    @Published var ocrIdleOnly = false {
+        didSet { taskPreferences.set(ocrIdleOnly, forKey: "documentOCRIdleOnly.v1"); reviewOCRResources() }
+    }
+    @Published var ocrWorkDecision: OCRWorkDecision = .waitingForPower
+    let ocrResourcePolicy: OCRResourcePolicy
+    let ocrWorkScheduler: OCRWorkScheduler
+    @Published var indexCurrentFile = ""
+    @Published var indexCurrentPage = 0
+    @Published var indexTotalPages = 0
+    @Published var indexRecognizing = false
     @Published var indexStorageMB = 500 {
         didSet { taskPreferences.set(indexStorageMB, forKey: "documentIndexStorageMB.v1") }
     }
@@ -73,7 +89,7 @@ final class SearchStore: ObservableObject {
         didSet { taskPreferences.set(spotlightSupplement, forKey: "spotlightSupplement.v1"); cachedGlobalQuery = nil; cachedGlobalContents = []; search() }
     }
     let documentIndexURL: URL
-    var documentIndex: PersistentDocumentIndex { PersistentDocumentIndex(databaseURL: documentIndexURL, limitBytes: Int64(indexStorageMB) * 1_000_000) }
+    var documentIndex: PersistentDocumentIndex { PersistentDocumentIndex(databaseURL: documentIndexURL, limitBytes: Int64(indexStorageMB) * 1_000_000, ocrEnabled: ocrEnabled, ocrScheduler: ocrWorkScheduler) }
     var documentIndexRoots: [URL] { documentRoots.isEmpty ? folder.map { [$0] } ?? [] : documentRoots }
     let documentWatcher = DocumentIndexWatcher()
     var documentIndexTask: Task<Void, Never>?
@@ -215,11 +231,19 @@ final class SearchStore: ObservableObject {
          documentPreviewLoader: @escaping @Sendable (URL, String) async -> DocumentPreview = { url, query in await DocumentPreviewStore.shared.preview(url: url, query: query) },
          fileCreationDateLoader: @escaping @Sendable (URL) async -> Date? = { await FileCreationDateStore.shared.date(for: $0) },
          documentIndexURL: URL = PersistentDocumentIndex.defaultURL,
+         ocrResourceState: @escaping @Sendable () -> OCRResourceState = { .current() },
          taskWriter: (@MainActor (TaskPlan) async throws -> String)? = nil) {
         self.resultOpener = resultOpener; self.noteOpener = noteOpener
         self.contentSearcher = contentSearcher
         self.documentPreviewLoader = documentPreviewLoader
         self.documentIndexURL = documentIndexURL
+        let allowBattery = taskPreferences.bool(forKey: "documentOCRBattery.v1")
+        let idleOnly = taskPreferences.bool(forKey: "documentOCRIdleOnly.v1")
+        let policy = OCRResourcePolicy(allowBattery: allowBattery, idleOnly: idleOnly, state: ocrResourceState)
+        self.ocrResourcePolicy = policy
+        self.ocrWorkScheduler = OCRWorkScheduler { policy.decision() }
+        self.ocrAllowBattery = allowBattery; self.ocrIdleOnly = idleOnly
+        self.ocrWorkDecision = policy.decision()
         self.fileCreationDateLoader = fileCreationDateLoader
         self.fullTextInAll = taskPreferences.object(forKey: "fullTextInAll.v1") as? Bool ?? true
         self.habits = SearchHabitStore(defaults: taskPreferences)
@@ -230,6 +254,7 @@ final class SearchStore: ObservableObject {
         self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
+        self.ocrEnabled = taskPreferences.object(forKey: "documentOCR.v1") as? Bool ?? true
         self.temperaturePreference = TemperaturePreference(rawValue: taskPreferences.string(forKey: "temperaturePreference.v1") ?? "") ?? .system
         self.reopenBehavior = SearchReopenBehavior(rawValue: taskPreferences.string(forKey: "searchReopenBehavior.v1") ?? "") ?? .timed
         let retention = taskPreferences.double(forKey: "searchReopenRetention.v1")
@@ -280,7 +305,8 @@ final class SearchStore: ObservableObject {
         }
         backgroundRefreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                do { try await Task.sleep(for: .seconds(30)) } catch { return }
+                self?.reviewOCRResources()
                 self?.refreshAuthorizedSources()
             }
         }
@@ -557,7 +583,7 @@ final class SearchStore: ObservableObject {
         guard !catalogRefreshing else { return }
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = true
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        panel.prompt = "允許搜尋"; panel.message = "可按住 ⌘ 一次選擇多個資料夾；選擇你的使用者資料夾可一次涵蓋下載、影片、文件，只索引這三處。App 會記住選擇。"
+        panel.prompt = L.text("允許搜尋"); panel.message = L.text("可按住 ⌘ 一次選擇多個資料夾；選擇使用者資料夾會涵蓋下載、桌面、影片、音樂、圖片、文件六處，不掃描 Library。App 會記住選擇。")
         guard panel.runModal() == .OK else { return }
         do {
             try fileAccess.add(panel.urls)
@@ -566,10 +592,19 @@ final class SearchStore: ObservableObject {
             for root in recovered.available where !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
             for url in panel.urls {
                 let roots = url.standardizedFileURL == FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL ? FileCatalog.defaultRoots : [url]
-                for root in roots where !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
+                for root in roots where FileManager.default.fileExists(atPath: root.path) && !catalogRoots.contains(where: { $0.path == root.path }) { catalogRoots.append(root) }
             }
             saveCatalogRoots(); refreshCatalog()
         } catch { catalogStatus = "無法記住資料夾授權：" + error.localizedDescription }
+    }
+    func addAuthorizedCatalogRoots(_ roots: [URL]) {
+        for root in roots {
+            let root = root.standardizedFileURL.resolvingSymlinksInPath()
+            if !catalogRoots.contains(where: { root.path == $0.path || root.path.hasPrefix($0.path + "/") }) {
+                catalogRoots.removeAll { $0.path.hasPrefix(root.path + "/") }; catalogRoots.append(root)
+            }
+        }
+        saveCatalogRoots(); refreshCatalog()
     }
     private func saveCatalogRoots() { UserDefaults.standard.set(Array(Set((catalogRoots + unavailableCatalogRoots).map(\.path))).sorted(), forKey: "indexRootPaths.v2") }
     func removeRoot(_ url: URL) {

@@ -8,18 +8,21 @@ public struct SearchItem: Identifiable, Hashable, Sendable {
     public let excerpt: String
     public let applicationIdentifier: String?
     public let supplement: SearchSupplement?
+    public let matchPages: [Int]
+    public let isOCR: Bool
     public var isApplication: Bool { url.pathExtension.lowercased() == "app" }
 
-    public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil, supplement: SearchSupplement? = nil) {
+    public init(url: URL, name: String? = nil, source: String, excerpt: String = "", applicationIdentifier: String? = nil, supplement: SearchSupplement? = nil, matchPages: [Int] = [], isOCR: Bool = false) {
         self.url = url.isFileURL ? url.standardizedFileURL.resolvingSymlinksInPath() : url
         self.name = name ?? url.lastPathComponent
         self.source = source
         self.excerpt = excerpt
         self.applicationIdentifier = applicationIdentifier
         self.supplement = supplement
+        self.matchPages = matchPages; self.isOCR = isOCR
     }
     public func supplemented(by match: SearchSupplement) -> SearchItem {
-        SearchItem(url: url, name: name, source: source, excerpt: excerpt, applicationIdentifier: applicationIdentifier, supplement: match)
+        SearchItem(url: url, name: name, source: source, excerpt: excerpt, applicationIdentifier: applicationIdentifier, supplement: match, matchPages: matchPages, isOCR: isOCR)
     }
 }
 

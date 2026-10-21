@@ -42,7 +42,7 @@ public enum SearchService {
             let items = paths.compactMap { bytes -> SearchItem? in
                 guard let path = String(data: Data(bytes), encoding: .utf8) else { return nil }
                 let url = URL(fileURLWithPath: path, isDirectory: false)
-                guard documentExtensions.contains(url.pathExtension.lowercased()) else { return nil }
+                guard documentExtensions.contains(url.pathExtension.lowercased()) || VisionTextRecognizer.imageExtensions.contains(url.pathExtension.lowercased()) else { return nil }
                 return SearchItem(url: url, source: "文件・系統索引")
             }
             return SearchResponse(items: Array(items.prefix(2000)), truncated: items.count > 2000)

@@ -8,6 +8,8 @@ struct DocumentIndexSettingsView: View {
             Toggle(L.text("「全部」搜尋 Han 文件內文索引"), isOn: $store.fullTextInAll)
             Text(L.text("讀取已選資料夾，索引只存在本機；移除索引不會刪除原始文件。"))
                 .font(.caption).foregroundStyle(.secondary)
+            DisclosureGroup(L.text("加入常用資料夾與 iCloud")) { CommonSearchFoldersView(store: store).padding(.vertical, 8) }
+            OCRIndexStatusView(store: store)
             ForEach(store.documentRoots, id: \.path) { root in
                 HStack {
                     Text(root.path).font(.caption).lineLimit(1).truncationMode(.middle).help(root.path)
@@ -29,7 +31,7 @@ struct DocumentIndexSettingsView: View {
                 Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.disabled(store.indexing)
                 if !store.documentIndexRoots.isEmpty {
                     Button(L.text(store.indexPaused ? "繼續索引" : "更新索引")) { store.rebuildIndex() }.disabled(store.indexing)
-                    if store.indexing { Button(L.text("暫停索引")) { store.pauseDocumentIndex() } }
+                    if !store.indexPaused { Button(L.text("暫停索引")) { store.pauseDocumentIndex() } }
                 }
             }
             if store.documentIndexCapped { Text(L.text("空間或掃描範圍達限，尚有文件未收錄；請調整範圍或容量後更新索引。" )).font(.caption).foregroundStyle(.orange) }
@@ -44,6 +46,8 @@ struct DocumentIndexSettingsView: View {
                         }.fixedSize().disabled(store.indexing)
                     }
                     Toggle(L.text("額外使用 Spotlight 補充全機文件結果"), isOn: $store.spotlightSupplement)
+                    Text(L.text("混合搜尋：Han 提供可核對片段與頁碼，Spotlight 補充其他系統命中；重複檔案合併，無法驗證的系統結果收合顯示。"))
+                        .font(.caption).foregroundStyle(.secondary)
                     Text(L.text("預設關閉。補充結果受 macOS 系統索引與權限限制；不會把未選的文件加入 Han 索引。"))
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
@@ -55,6 +59,10 @@ struct DocumentIndexSettingsView: View {
                     Button(L.text("移除所有文件範圍並清除索引")) { store.clearDocumentScopes() }.disabled(store.indexing)
                         .controlSize(.small)
                     Text(store.documentIndexURL.deletingLastPathComponent().path).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text(L.text("容量包含文字、頁碼、搜尋索引及暫存日誌；預設 500 MB。實際大小取決於文字量，不按原始照片或 PDF 檔案大小等量複製。"))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(L.text("開啟 OCR 時圖片與 PDF 單檔上限 100 MB，PDF 最多 2,000 頁；其他文件單檔 20 MB。單頁辨識逾時或讀取失敗會列出原因，保留已完成片段。"))
+                        .font(.caption).foregroundStyle(.secondary)
                 }.padding(.top, 10)
             }
         }

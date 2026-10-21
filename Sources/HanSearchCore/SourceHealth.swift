@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SourceHealth: Equatable, Sendable {
-    public enum Phase: Sendable { case queued, authorizing, loading, ready, failed, incomplete, stopped, needsPermission }
+    public enum Phase: Sendable { case waiting, queued, authorizing, loading, ready, failed, incomplete, stopped, needsPermission }
     public var phase: Phase
     public var lastSuccess: Date?
     public var partialUpdate: Date?
@@ -32,7 +32,7 @@ public struct SourceHealth: Equatable, Sendable {
     }
     public func shouldRefresh(at now: Date, interval: TimeInterval, force: Bool = false) -> Bool {
         if phase == .needsPermission { return false }
-        if [.queued, .authorizing, .loading].contains(phase) { return false }
+        if [.waiting, .queued, .authorizing, .loading].contains(phase) { return false }
         if force && ![.failed, .incomplete, .stopped].contains(phase) { return true }
         let since = [lastAttempt, lastSuccess].compactMap { $0 }.max()
         // Failed, partial and stopped reads back off at least 15 minutes.

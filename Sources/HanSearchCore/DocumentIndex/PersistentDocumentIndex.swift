@@ -4,6 +4,9 @@ public struct DocumentIndexSnapshot: Sendable {
     public var files = 0, searchable = 0, examined = 0, extracted = 0, reused = 0, unsupported = 0
     public var issues: [DocumentReadIssue] = []
     public var unfinished = 0, capped = false
+    public var ocrPages = 0, ocrFiles = 0, pendingOCR = 0, deferredOCR = 0
+    public var currentFile = "", currentPage = 0, totalPages = 0
+    public var recognizing = false
     public var bytes: Int64 = 0
     public var updated: Date?
     public init() {}
@@ -13,12 +16,14 @@ public struct DocumentIndexSnapshot: Sendable {
 public struct PersistentDocumentIndex: Sendable {
     public let databaseURL: URL
     public let limitBytes: Int64
+    public let ocrEnabled: Bool
+    public let ocrScheduler: OCRWorkScheduler?
     public static var defaultURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Spotlight Han/Index/Documents-v1.sqlite")
     }
-    public init(databaseURL: URL = Self.defaultURL, limitBytes: Int64 = 500_000_000) {
-        self.databaseURL = databaseURL; self.limitBytes = max(131_072, limitBytes)
+    public init(databaseURL: URL = Self.defaultURL, limitBytes: Int64 = 500_000_000, ocrEnabled: Bool = true, ocrScheduler: OCRWorkScheduler? = nil) {
+        self.databaseURL = databaseURL; self.limitBytes = max(131_072, limitBytes); self.ocrEnabled = ocrEnabled; self.ocrScheduler = ocrScheduler
     }
     public static let excludedDirectories: Set<String> = ["Library", "Caches", "node_modules", "Pods", "DerivedData", "venv", "__pycache__", "build"]
     public func contains(_ path: String, roots: [URL]) -> Bool {
@@ -45,6 +50,12 @@ public struct PersistentDocumentIndex: Sendable {
         let completed = try db.rows("SELECT root, completed FROM scans").filter { roots.contains($0[0]) }
         result.capped = try db.rows("SELECT root FROM scan_state WHERE incomplete=1").contains { roots.contains($0[0]) }
         if completed.count == roots.count, let oldest = completed.compactMap({ Double($0[1]) }).min() { result.updated = Date(timeIntervalSince1970: oldest) }
+        result.pendingOCR = Int(try db.rows("SELECT count(*) FROM documents WHERE (\(scope)) AND reason=?", bindings + [DocumentReadReason.ocrPending.rawValue])[0][0]) ?? 0
+        result.deferredOCR = Int(try db.rows("SELECT count(*) FROM documents WHERE (\(scope)) AND reason=?", bindings + [DocumentReadReason.ocrDeferred.rawValue])[0][0]) ?? 0
+        if try db.rows("PRAGMA user_version")[0][0] == "2" {
+            let counts = try db.rows("SELECT count(*),count(DISTINCT path) FROM document_pages WHERE ocr=1 AND (\(scope))", bindings)[0]
+            result.ocrPages = Int(counts[0]) ?? 0; result.ocrFiles = Int(counts[1]) ?? 0
+        }
         result.bytes = diskBytes
         return result
     }
@@ -74,6 +85,7 @@ public struct PersistentDocumentIndex: Sendable {
         guard !roots.isEmpty, FileManager.default.fileExists(atPath: databaseURL.path), let expression = DocumentIndexTerms.expression(String(query.prefix(200))) else { return SearchResponse(items: []) }
         let db = try IndexDatabase(url: databaseURL, limit: limitBytes, readOnly: true)
         let (scope, bindings) = predicate(roots)
+        let hasPages = try db.rows("PRAGMA user_version")[0][0] == "2"
         // Stream through candidate pages. False gram intersections must not consume the result cap.
         var found: [SearchItem] = [], offset = 0
         while true {
@@ -84,7 +96,14 @@ public struct PersistentDocumentIndex: Sendable {
                 if cancellation?.isCancelled == true { throw CancellationError() }
                 let url = URL(fileURLWithPath: row[0])
                 guard FileManager.default.isReadableFile(atPath: url.path), let item = IndexedDocument(url: url, text: row[1]).match(query: query, mode: mode, allowVocabulary: false) else { continue }
-                found.append(SearchItem(url: url, source: item.excerpt.isEmpty ? "Han 索引・檔名" : "Han 索引・內文", excerpt: item.excerpt))
+                let pages = hasPages && !item.excerpt.isEmpty ? try loadPages(db, path: url.path) : []
+                let matching = pages.filter { IndexedDocument(url: url, text: $0.text).match(query: query, mode: .contents, allowVocabulary: false) != nil }
+                let locations = matching.isEmpty ? pages.filter { !SearchHighlight.ranges(in: $0.text, query: query).isEmpty } : matching
+                let first = matching.first
+                let snippet = first.map { SearchHighlight.excerpt(in: $0.text, query: query, limit: 220) } ?? item.excerpt
+                let ocr = locations.contains(where: \.isOCR)
+                found.append(SearchItem(url: url, source: item.excerpt.isEmpty ? "Han 索引・檔名" : ocr ? "Han 索引・OCR" : "Han 索引・內文", excerpt: snippet,
+                    matchPages: url.pathExtension.lowercased() == "pdf" ? Array(locations.filter { $0.number > 0 }.prefix(5).map(\.number)) : [], isOCR: ocr))
                 if found.count > limit { return SearchResponse(items: Array(found.prefix(limit)), truncated: true) }
             }
             offset += rows.count
@@ -120,21 +139,31 @@ public struct PersistentDocumentIndex: Sendable {
                 guard v.isRegularFile == true, seen.insert(path).inserted else { continue }
                 report.examined += 1
                 if report.examined > 100_000 { report.capped = true; break }
-                guard SearchService.documentExtensions.contains(url.pathExtension.lowercased()) else { report.unsupported += 1; continue }
-                let old = try db.rows("SELECT rowid, modified, size, reason, name, body FROM documents WHERE path=?", [path]).first
+                guard SearchService.documentExtensions.contains(url.pathExtension.lowercased()) || VisionTextRecognizer.imageExtensions.contains(url.pathExtension.lowercased()) else { report.unsupported += 1; continue }
+                let old = try db.rows("SELECT rowid, modified, size, reason, name, body, extraction FROM documents WHERE path=?", [path]).first
                 let modified = v.contentModificationDate?.timeIntervalSince1970
-                let unchanged = old != nil && modified != nil && abs((Double(old![1]) ?? 0) - modified!) < 0.00001 && old![2] == String(v.fileSize ?? 0) && old![3].isEmpty
+                let visual = url.pathExtension.lowercased() == "pdf" || VisionTextRecognizer.imageExtensions.contains(url.pathExtension.lowercased())
+                let extractionVersion = visual ? (ocrEnabled ? 2 : 1) : 0
+                let sameFile = old != nil && modified != nil && abs((Double(old![1]) ?? 0) - modified!) < 0.00001 && old![2] == String(v.fileSize ?? 0) && old![6] == String(extractionVersion)
+                let local = !CloudFileAvailability.needsDownload(isUbiquitous: v.isUbiquitousItem == true, status: v.ubiquitousItemDownloadingStatus)
+                let unchanged = sameFile && local && (old![3].isEmpty || [DocumentReadReason.noText.rawValue, DocumentReadReason.ocrDisabled.rawValue].contains(old![3]))
                 if unchanged {
                     try db.execute("UPDATE documents SET generation=? WHERE path=?", [generation, path]); report.reused += 1
                 } else {
                     var body = "", reason: DocumentReadReason?
-                    if (v.fileSize ?? 0) > 20_000_000 { reason = .tooLarge }
-                    else if v.isUbiquitousItem == true && v.ubiquitousItemDownloadingStatus == .notDownloaded { reason = .cloudOnly }
+                    var pages: [IndexedPage] = []
+                    if (v.fileSize ?? 0) > (visual && ocrEnabled ? 100_000_000 : 20_000_000) { reason = visual && ocrEnabled ? .ocrFileTooLarge : .tooLarge }
+                    else if !local { reason = .cloudOnly }
                     else {
                         do {
-                            body = try IndexedDocumentText.read(url, cancellation: cancellation)
-                            if body.utf8.count > 8_000_000 { body = ""; reason = .indexFileTextLimit }
-                            else if body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { reason = .noText }
+                            let cached = sameFile && [DocumentReadReason.ocrPending.rawValue, DocumentReadReason.ocrDeferred.rawValue].contains(old?[3] ?? "") ? try loadPages(db, path: path) : []
+                            let extraction = try DocumentExtraction.read(url, cached: cached, ocrEnabled: ocrEnabled, scheduler: ocrScheduler, cancellation: cancellation) { page, count, recognizing in
+                                report.currentFile = url.lastPathComponent; report.currentPage = page; report.totalPages = count; report.recognizing = recognizing
+                                if recognizing || page == 1 || page == count || page % 20 == 0 { progress(report) }
+                            }
+                            pages = extraction.pages; body = extraction.text; reason = extraction.reason
+                            if body.utf8.count > 8_000_000 { body = ""; pages = []; reason = .indexFileTextLimit }
+                            else if reason == nil && body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !pages.contains(where: \.isOCR) { reason = .noText }
                         } catch is CancellationError { throw CancellationError() }
                         catch { reason = error as? DocumentReadReason ?? .readFailed }
                     }
@@ -143,17 +172,20 @@ public struct PersistentDocumentIndex: Sendable {
                     guard !cancellation.isCancelled else { throw CancellationError() }
                     let free = (try? fm.attributesOfFileSystem(forPath: databaseURL.deletingLastPathComponent().path)[.systemFreeSize] as? NSNumber)?.int64Value ?? Int64.max
                     // Include WAL headroom; the SQLite page limit is the final hard guard.
-                    if diskBytes + Int64(tokens.utf8.count * 2 + body.utf8.count + 65_536) > limitBytes || free < 128_000_000 { report.capped = true; break }
+                    if diskBytes + Int64(tokens.utf8.count * 2 + body.utf8.count * 2 + pages.count * 200 + 65_536) > limitBytes || free < 128_000_000 { report.capped = true; break }
                     do {
                         try db.transaction {
                             if let old { try eraseTerms(db, row: old, idIndex: 0, nameIndex: 4, bodyIndex: 5) }
-                            try db.execute("INSERT INTO documents(path,name,body,modified,created,size,reason,generation) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(path) DO UPDATE SET name=excluded.name,body=excluded.body,modified=excluded.modified,created=excluded.created,size=excluded.size,reason=excluded.reason,generation=excluded.generation", [path,url.lastPathComponent,body,modified.map { String($0) },v.creationDate?.timeIntervalSince1970.description,String(v.fileSize ?? 0),reason?.rawValue,generation])
+                            try db.execute("INSERT INTO documents(path,name,body,modified,created,size,reason,generation,extraction) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(path) DO UPDATE SET name=excluded.name,body=excluded.body,modified=excluded.modified,created=excluded.created,size=excluded.size,reason=excluded.reason,generation=excluded.generation,extraction=excluded.extraction", [path,url.lastPathComponent,body,modified.map { String($0) },v.creationDate?.timeIntervalSince1970.description,String(v.fileSize ?? 0),reason?.rawValue,generation,String(extractionVersion)])
+                            try db.execute("DELETE FROM document_pages WHERE path=?", [path])
+                            for page in pages where visual { try db.execute("INSERT INTO document_pages(path,page,body,ocr,reason) VALUES(?,?,?,?,?)", [path,String(page.number),page.text,page.isOCR ? "1" : "0",page.issue?.rawValue]) }
                             let id = try db.rows("SELECT rowid FROM documents WHERE path=?", [path])[0][0]
                             try db.execute("INSERT INTO document_terms(rowid,tokens) VALUES(?,?)", [id,tokens])
                         }
                     } catch IndexDatabaseError.capacity { report.capped = true; break }
                     report.extracted += 1
                 }
+                report.currentFile = ""; report.currentPage = 0; report.totalPages = 0; report.recognizing = false
                 if (report.extracted + report.reused) % 20 == 0 { try db.execute("PRAGMA wal_checkpoint(PASSIVE)"); progress(report) }
             }
             guard !cancellation.isCancelled else { throw CancellationError() }
@@ -164,7 +196,7 @@ public struct PersistentDocumentIndex: Sendable {
                     let stale = try db.rows("SELECT rowid,name,body FROM documents WHERE instr(path,?)=1 AND generation<>? LIMIT 8", [root.path + "/", generation])
                     if stale.isEmpty { break }
                     try db.transaction {
-                        for row in stale { try eraseTerms(db, row: row); try db.execute("DELETE FROM documents WHERE rowid=?", [row[0]]) }
+                        for row in stale { try eraseTerms(db, row: row); try db.execute("DELETE FROM document_pages WHERE path=(SELECT path FROM documents WHERE rowid=?)", [row[0]]); try db.execute("DELETE FROM documents WHERE rowid=?", [row[0]]) }
                     }
                 }
                 try db.transaction {
@@ -180,6 +212,11 @@ public struct PersistentDocumentIndex: Sendable {
         final.unsupported = report.unsupported; final.capped = report.capped
         progress(final)
         return final
+    }
+    private func loadPages(_ db: IndexDatabase, path: String) throws -> [IndexedPage] {
+        try db.rows("SELECT page,body,ocr,reason FROM document_pages WHERE path=? ORDER BY page", [path]).map {
+            IndexedPage(number: Int($0[0]) ?? 0, text: $0[1], isOCR: $0[2] == "1", issue: DocumentReadReason(rawValue: $0[3]))
+        }
     }
     private func eraseTerms(_ db: IndexDatabase, row: [String], idIndex: Int = 0, nameIndex: Int = 1, bodyIndex: Int = 2) throws {
         try db.execute("INSERT INTO document_terms(document_terms,rowid,tokens) VALUES('delete',?,?)", [row[idIndex], DocumentIndexTerms.tokens(name: row[nameIndex], body: row[bodyIndex])])
@@ -202,7 +239,7 @@ public struct PersistentDocumentIndex: Sendable {
             while true {
                 let batch = try db.rows("SELECT rowid,name,body FROM documents WHERE NOT (\(scope)) LIMIT 8", bindings)
                 if batch.isEmpty { break }
-                for row in batch { try eraseTerms(db, row: row); try db.execute("DELETE FROM documents WHERE rowid=?", [row[0]]) }
+                for row in batch { try eraseTerms(db, row: row); try db.execute("DELETE FROM document_pages WHERE path=(SELECT path FROM documents WHERE rowid=?)", [row[0]]); try db.execute("DELETE FROM documents WHERE rowid=?", [row[0]]) }
             }
             for row in try db.rows("SELECT root FROM scans") where !roots.contains(where: { $0.resolvingSymlinksInPath().path == row[0] }) { try db.execute("DELETE FROM scans WHERE root=?", [row[0]]) }
             for row in try db.rows("SELECT root FROM scan_state") where !roots.contains(where: { $0.resolvingSymlinksInPath().path == row[0] }) { try db.execute("DELETE FROM scan_state WHERE root=?", [row[0]]) }
