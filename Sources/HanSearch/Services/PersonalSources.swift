@@ -22,8 +22,7 @@ enum PersonalSources {
         case .calendar: return EventKitAccess.hasAccess(.event)
         case .reminders: return EventKitAccess.hasAccess(.reminder)
         case .notes, .mail:
-            let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
-            return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
+            return AutomationAccess.state(source) == .authorized
         default: return true
         }
     }
@@ -36,16 +35,9 @@ enum PersonalSources {
             return SourceAccessFailure(source: source.rawValue, status: status == .denied ? .denied : status == .restricted ? .restricted : .notDetermined)
         }
         if source == .notes || source == .mail {
-            let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
-            let result = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false)
-            return SourceAccessFailure(source: source.rawValue, status: result == errAEEventNotPermitted ? .denied : .notDetermined)
+            return SourceAccessFailure(source: source.rawValue, status: AutomationAccess.state(source).permissionStatus)
         }
         return SourceAccessFailure(source: source.rawValue)
-    }
-
-    private static func automationIsAuthorized(_ source: SearchMode) -> Bool {
-        let target = NSAppleEventDescriptor(bundleIdentifier: source == .notes ? "com.apple.Notes" : "com.apple.mail")
-        return AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false) == noErr
     }
 
     @MainActor static func authorize(_ source: SearchMode) async throws {
@@ -64,21 +56,7 @@ enum PersonalSources {
         case .reminders:
             try await EventKitAccess.authorize(.reminder); return
         case .notes, .mail:
-            let target = source == .notes ? "com.apple.Notes" : "com.apple.mail"
-            let cancellation = ProcessCancellation()
-            let worker = Task.detached(priority: .userInitiated) {
-                // Ask using an application-name read, then release the consent UI before slow content indexing.
-                try ProcessRunner.run("/usr/bin/osascript", ["-l", "JavaScript", "-e", "function run(a) { return Application(a[0]).name(); }", target], timeout: 120, cancellation: cancellation)
-            }
-            do {
-                _ = try await withTaskCancellationHandler { try await worker.value }
-                    onCancel: { cancellation.cancel(); worker.cancel() }
-            } catch {
-                let permission = permissionFailure(source)
-                if !Task.isCancelled, permission.status == .denied { throw permission }
-                throw error
-            }
-            granted = isAuthorized(source)
+            try await AutomationAccess.authorize(source); return
         default: return
         }
         guard granted else { throw permissionFailure(source) }
@@ -162,7 +140,8 @@ enum PersonalSources {
         do { return try NotesReader.read(checkpoint: checkpoint, cancellation: cancellation, progress: progress) }
         catch is CancellationError { throw CancellationError() }
         catch {
-            guard automationIsAuthorized(.notes) else { throw SourceAccessFailure(source: "備忘錄", status: .denied) }
+            let state = AutomationAccess.state(.notes)
+            if state != .authorized { throw state.failure(source: "備忘錄") }
             throw error
         }
     }

@@ -987,5 +987,9 @@
   "檔案尚未下載，請先在 Finder 下載後再預覽。": "This file is not downloaded. Download it in Finder before previewing.",
   "先用方向鍵或滑鼠選取檔案，再按空白鍵快速預覽；再次按空白鍵或 Esc 返回。PDF 優先開到命中頁，並標示繁簡相符文字；掃描 PDF 僅定位目前命中頁的 OCR 文字，不改原檔。": "Select a file with the arrow keys or mouse, then press Space for Quick Preview. Space or Esc returns to search. PDFs open at a matching page and highlight matching Traditional/Simplified Chinese text. Scanned PDFs locate OCR text only on the current matching page without modifying the file.",
   "工作保護會在 Logic Pro／Final Cut Pro 開啟，或偵測到音訊輸入／播放時暫停 OCR；退出軟體且音訊停止後會自動接續。可在「檔案與索引 → 背景辨識」調整。": "Work protection pauses OCR while Logic Pro or Final Cut Pro is open or audio input/playback is active. It resumes after the apps quit and audio stops. Adjust it in Files & Index > Background Recognition.",
-  "空白鍵或 Esc 返回搜尋": "Space or Esc returns to search"
+  "空白鍵或 Esc 返回搜尋": "Space or Esc returns to search",
+  "無法連接%@，請先開啟該 App，再按「連接」。": "Cannot connect to %@. Open the app, then click Connect.",
+  "無法確認%@的自動化授權（錯誤 %@）；請稍後重新連接。": "Cannot determine automation access for %@ (error %@). Try connecting again later.",
+  "%@已授權，請重新讀取資料。": "%@ is authorized. Reload its data.",
+  "找不到%@ App，請確認系統 App 仍可開啟。": "Cannot find %@. Check that the system app can still be opened."
 }
