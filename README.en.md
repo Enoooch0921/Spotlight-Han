@@ -6,7 +6,7 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.0.0/Spotlight-Han-1.0.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.1.0/Spotlight-Han-1.1.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
@@ -14,13 +14,17 @@ A file is named `会议记录.docx`, but you type `會議記錄`. A Word documen
 
 Han matches both Chinese scripts while keeping original filenames and text. Filename and video search uses its own index of folders you select. Document text is indexed locally in selected folders and persisted across launches. Spotlight is an optional supplement, disabled by default.
 
-This is script matching, not synonym search: `影片` and `視頻` are not automatically treated as the same word.
+Six explicit Taiwan/Mainland wording pairs, such as 隨身碟/U盤 and 列印/打印, also match as lower-priority supplements. This is not unrestricted synonym or typo search: `影片` and `視頻` are not automatically treated as the same word.
 
-New users get an optional in-app guide. Version 1.0.0 has six steps with separate Pinyin and Zhuyin app examples, covering search examples, shortcuts and resume behavior, file scopes, personal sources, everyday tools and a real setup summary. Replay it from the menu or Updates & About.
+New users get an optional in-app guide. The guide has six steps with separate Pinyin and Zhuyin app examples, covering search examples, shortcuts and resume behavior, file scopes, personal sources, everyday tools and a real setup summary. Replay it from the menu or Updates & About.
 
 ## What it does
 
 - Launch apps and search filenames, videos, Word/PDF/PowerPoint/Excel/text content, with visible cross-script keyword highlights and hit-centred excerpts.
+- Index images and scanned PDF pages locally with Apple Vision, retaining cross-script excerpts and PDF page numbers. OCR defaults to external power, slows during use and pauses for low power, elevated temperature, running Logic Pro/Final Cut Pro or detected audio activity. This is conservative scheduling; editing/recording workload energy comparisons are not yet available.
+- Select a file and press Space to preview it. PDFs jump to indexed hit pages and highlight text; other supported formats use Quick Look. Normal typing spaces remain available.
+- Recover standard Zhuyin keyboard app queries such as `rnr` for 計算機 when you forgot to switch input methods; exact query matches stay ahead.
+- Convert Taiwan units (`20坪換平方公尺`, `3台斤換公斤`), ROC years (`115年` → 2026) and natural temperature queries. Bare degrees follow the system temperature preference unless overridden in Han.
 - Search authorised Notes, Contacts, Calendar, Reminders and a limited Mail scope. Source status distinguishes fresh data, stale/partial copies and failed reads, with timestamps.
 - Refresh already-authorised sources in the background without requesting new permissions. Calendar and Reminders refresh every 5 minutes and after change notifications; other connected sources and document indexes every 15 minutes. Refresh can be disabled.
 - Create an event with `cal` + Tab, then `tomorrow at 3pm meeting for 30 minutes`. Use `rem` + Tab for a reminder. Chinese works too: `明天下午三點到四點開會`, `30分鐘後喝水`.
@@ -28,11 +32,11 @@ New users get an optional in-app guide. Version 1.0.0 has six steps with separat
 - Sort event search results by upcoming first, newest date first or oldest date first.
 - Calculate expressions, convert units/currencies, open system settings panes and optionally translate queries with Apple's local Translation framework.
 
-Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) parser plus Han-specific Chinese rules in JavaScriptCore. No API key, Node.js runtime or model download is needed for event parsing. This version supports one-time items; recurrence and ambiguous time clauses require editing. See [third-party notices](THIRD_PARTY_NOTICES.md).
+Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) parser plus Han-specific Chinese rules in JavaScriptCore. No API key, Node.js runtime or model download is needed for event parsing. One-time items and daily, weekly or monthly recurrence are supported, with review before creation. Unsupported or ambiguous clauses require editing. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Install and try
 
-**v1.0.0 is the first stable release for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v1.1.0 is the current stable release for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 
@@ -42,7 +46,7 @@ cd Spotlight-Han
 ./script/build_and_run.sh
 ```
 
-The app targets macOS 14+, but macOS 14/15 and Intel hardware still need real-device validation. Press Control + Option + Space to toggle the launcher, then select the folders to index. You can customise the shortcut or use ⌘Space after turning off the original Spotlight binding. Interface languages: system, Traditional Chinese, Simplified Chinese and English.
+The app targets macOS 14+, but macOS 14/15 and Intel hardware still need real-device validation. Press Control + Option + Space to toggle the launcher, then select the folders to index. You can customise the shortcut or use ⌘Space after turning off the original Spotlight binding. Dismissing with the same shortcut or Escape returns focus to the originating app. Interface languages: system, Traditional Chinese, Simplified Chinese and English.
 
 Private sources require macOS permissions. Valid grants are reused; revoked access pauses background refresh and shows a reconnect state. Local development signing changes can require reauthorisation.
 
@@ -50,7 +54,7 @@ Private sources require macOS permissions. Valid grants are reused; revoked acce
 
 Search data stays on the Mac. Personal-source copies stay in memory; selected document text is persisted in the local Han index. Filename metadata is cached locally. There is no analytics service or automatic query upload. Currency conversion downloads a public daily USD rate table; amounts and query text are not sent. Optional web search only runs when selected. Apple translation requires its language resources and macOS 15+.
 
-Han is an early independent launcher and does not yet match all Spotlight features. There is no OCR, no fuzzy synonym search, no realtime exchange-rate feed and no Siri/Apple Intelligence integration. Calendar/Reminders confirmation and EventKit object mapping are tested with a fake writer; real-account writes are not performed by automated tests.
+Han is an early independent launcher and does not yet match all Spotlight features. There is no unrestricted fuzzy synonym search, realtime exchange-rate feed or Siri/Apple Intelligence integration. OCR only covers accessible, locally downloaded files in selected folders; recognition can be imperfect. Calendar/Reminders confirmation and EventKit object mapping are tested with a fake writer; real-account writes are not performed by automated tests.
 
 [Full guide (Traditional Chinese)](docs/guide.zh-Hant.md) · [Install details](docs/install.zh-Hant.md) · [MIT License](LICENSE)
 
