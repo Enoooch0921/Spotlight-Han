@@ -76,3 +76,7 @@ swiftc -parse-as-library -I "$BUILD_DIR/Modules" \
   Sources/HanSearch/Services/*.swift Sources/HanSearch/Stores/*.swift \
   script/check_automation_access.swift -o "$BUILD_DIR/HanAutomationAccessChecks"
 "$BUILD_DIR/HanAutomationAccessChecks"
+
+swiftc -parse-as-library Sources/HanSearch/Services/LauncherFocusReturn.swift \
+  script/check_launcher_focus.swift -o "$BUILD_DIR/HanLauncherFocusChecks"
+"$BUILD_DIR/HanLauncherFocusChecks"

@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastToggle = Date.distantPast
     private var rejectedBinding: ShortcutBinding?
     private var presentation = LauncherPresentation()
+    private let focusReturn = LauncherFocusReturn()
     private var fadeGeneration = 0
     private var layoutTarget: NSRect?
     private var updateObservation: AnyCancellable?
@@ -74,12 +75,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             if self.store.appLibrary.isEditingCategory { self.store.appLibrary.isEditingCategory = false }
             else if self.store.appLibrary.isPreviewingSuggestions { self.store.appLibrary.isPreviewingSuggestions = false }
-            else { self.hideSearch() }
+            else { self.hideSearch(returnFocus: true) }
         }
         self.panel = panel
         store.showOnboarding = { [weak self] in self?.showOnboarding() }
         store.onLayoutChanged = { [weak self] in self?.resizePanel() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
+        store.dismissLauncher = { [weak self] in self?.hideSearch(returnFocus: true) }
         store.toggleFilePreview = { [weak self] in self?.toggleFilePreview() }
         store.dismissFilePreview = { [weak self] in self?.quickPreview.dismiss(restoreFocus: false) }
         store.previewSelectionChanged = { [weak self] in
@@ -233,20 +235,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let visible = panel?.isVisible == true
         let action = presentation.toggle(applicationActive: active, windowVisible: visible)
         Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle launcher; active=\(active, privacy: .public), visible=\(visible, privacy: .public)")
-        if action == .hide { hideSearch() } else { showSearch() }
+        if action == .hide { hideSearch(returnFocus: true) } else { showSearch() }
     }
-    private func hideSearch(animated: Bool = true) {
+    private func hideSearch(animated: Bool = true, returnFocus: Bool = false) {
+        if !returnFocus { focusReturn.discard() }
         quickPreview.dismiss(restoreFocus: false)
         store.launcherDidHide()
         presentation.hide(); fadeGeneration += 1
         guard let panel else { return }
         let generation = fadeGeneration
         guard panel.isVisible, animated, store.motionEnabled else {
-            panel.orderOut(nil); panel.alphaValue = 1; return
+            panel.orderOut(nil); panel.alphaValue = 1
+            if returnFocus { focusReturn.restore(excluding: panel) }
+            return
         }
         LauncherMotion.perform(duration: LauncherMotion.hideDuration, changes: { panel.animator().alphaValue = 0 }) { [weak self, weak panel] in
             guard let self, self.fadeGeneration == generation, !self.presentation.isPresented else { return }
-            panel?.orderOut(nil); panel?.alphaValue = 1
+            guard let panel else { return }
+            panel.orderOut(nil); panel.alphaValue = 1
+            if returnFocus { self.focusReturn.restore(excluding: panel) }
         }
     }
     private func toggleFilePreview() {
@@ -258,6 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
         if !store.onboarding.hasFinished { showOnboarding(); return }
         if store.onboardingPresented { onboardingWindow?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
+        focusReturn.capture()
         store.prepareLauncherForOpening(continuingFlow: continuingFlow)
         fadeGeneration += 1
         let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden

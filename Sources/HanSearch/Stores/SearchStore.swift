@@ -195,6 +195,7 @@ final class SearchStore: ObservableObject {
     @Published var clipboardEnabled = false { didSet { updateClipboard() } }
     var onLayoutChanged: (() -> Void)?
     var hideLauncher: (() -> Void)?
+    var dismissLauncher: (() -> Void)?
     var prepareSystemAuthorization: (() -> Void)?
     var settingsVisibilityChanged: ((Bool) -> Void)?
     private var sourceQueue = SourceConnectionQueue()

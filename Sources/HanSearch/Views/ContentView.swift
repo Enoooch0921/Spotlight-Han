@@ -35,7 +35,7 @@ struct ContentView: View {
         .onKeyPress(.leftArrow) { horizontal(-1) }
         .onKeyPress(.rightArrow) { horizontal(1) }
         .onKeyPress(.return) { if store.isAppBrowser && appGridFocused && !store.appLibrary.isEditingCategory && !store.appLibrary.isPreviewingSuggestions { openApp(); return .handled }; return .ignored }
-        .onExitCommand { if store.appLibrary.isEditingCategory { store.appLibrary.isEditingCategory = false } else if store.appLibrary.isPreviewingSuggestions { store.appLibrary.isPreviewingSuggestions = false } else if store.composerMode != nil { store.cancelComposer() } else { store.hideLauncher?() } }
+        .onExitCommand { if store.appLibrary.isEditingCategory { store.appLibrary.isEditingCategory = false } else if store.appLibrary.isPreviewingSuggestions { store.appLibrary.isPreviewingSuggestions = false } else if store.composerMode != nil { store.cancelComposer() } else { store.dismissLauncher?() } }
         .environment(\.locale, store.interfaceLanguage.locale)
         .id(store.interfaceLanguage.rawValue)
 
