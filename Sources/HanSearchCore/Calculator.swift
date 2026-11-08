@@ -12,10 +12,15 @@ public enum MathError: Error, LocalizedError {
 }
 
 public enum Calculator {
+    private static func isEqualsSign(_ character: Character?) -> Bool {
+        character == "=" || character == "＝"
+    }
+
     public static func evaluate(_ input: String) throws -> Double {
         guard input.count <= 200 else { throw MathError.tooComplex }
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.hasPrefix("=") { text.removeFirst() }
+        if isEqualsSign(text.first) { text.removeFirst() }
+        else if isEqualsSign(text.last) { text.removeLast() }
         text = text.replacingOccurrences(of: "×", with: "*").replacingOccurrences(of: "÷", with: "/")
             .replacingOccurrences(of: "−", with: "-").replacingOccurrences(of: "π", with: "pi")
             .replacingOccurrences(of: "√", with: "sqrt")
@@ -26,10 +31,14 @@ public enum Calculator {
         return result
     }
 
-    public static func looksLikeExpression(_ text: String) -> Bool {
-        if text.hasPrefix("=") { return true }
+    public static func looksLikeExpression(_ input: String) -> Bool {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isEqualsSign(text.first) { return true }
+        // A trailing equals also occurs in ordinary text. Only claim it for math
+        // when the whole expression can be evaluated.
+        if isEqualsSign(text.last) { return (try? evaluate(text)) != nil }
         if text.range(of: #"^\d{4}[-/]\d{1,2}[-/]\d{1,2}$"#, options: .regularExpression) != nil { return false }
-        return text.contains(where: { $0.isNumber }) && text.contains(where: { "+-*/×÷^%√()".contains($0) })
+        return text.contains(where: { $0.isNumber }) && text.contains(where: { "+-−*/×÷^%√()".contains($0) })
     }
 
     public static func format(_ number: Double) -> String {

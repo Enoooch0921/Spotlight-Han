@@ -704,6 +704,16 @@ final class ChineseSearchTests {
 
     func testSafeQuickActions() {
         XCTAssertEqual(QuickProvider.results(query: "120*1.08").first?.title, "129.6")
+        for query in ["-42000+15675", "-42000+15675=  ", "−42000 + 15675 ＝"] {
+            let result = QuickProvider.results(query: query).first
+            XCTAssertEqual(result?.id, "quick:calculator")
+            XCTAssertEqual(result?.title, "-26325")
+            XCTAssertEqual(result?.action, .copy("-26325"))
+        }
+        XCTAssertEqual(QuickProvider.results(query: "42=").first?.title, "42")
+        for query in ["=", "2+3==", "2=3", "12+=", "3000台幣=rmb", "report.pdf="] {
+            XCTAssertFalse(QuickProvider.results(query: query).contains { $0.id == "quick:calculator" })
+        }
         XCTAssertEqual(QuickProvider.results(query: "(1200+300)*0.9").count, 1)
         XCTAssertEqual(QuickProvider.results(query: "github.com").count, 1)
         XCTAssertTrue(QuickProvider.results(query: "report.docx").isEmpty)

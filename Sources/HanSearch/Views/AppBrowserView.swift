@@ -18,7 +18,7 @@ struct AppBrowserView: View {
             HStack(spacing: 10) {
                 Button { store.mode = .all; store.focusToken = UUID() } label: {
                     Image(systemName: "arrow.left").frame(width: 28, height: 28).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(L.text("返回搜尋"))
+                }.buttonStyle(LauncherButtonStyle()).help(L.text("返回搜尋"))
                 Text(L.text("應用程式")).font(.headline)
                 Spacer()
                 Picker(L.text("顯示方式"), selection: $library.listView) {
@@ -26,7 +26,7 @@ struct AppBrowserView: View {
                     Image(systemName: "list.bullet").tag(true).accessibilityLabel(L.text("列表"))
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 76).controlSize(.small)
                 Button { library.refresh(force: true) } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).disabled(library.loading).help(L.text("更新 App 清單"))
+                    .buttonStyle(LauncherButtonStyle()).disabled(library.loading).help(L.text("更新 App 清單"))
             }.padding(.horizontal, 18).padding(.vertical, 8)
             Divider().padding(.horizontal, 18)
             HStack(spacing: 0) {
@@ -55,11 +55,11 @@ struct AppBrowserView: View {
                 Button { beginEditing(nil) } label: {
                     Label(L.text("新增分類"), systemImage: "folder.badge.plus").font(.system(size: 11))
                         .frame(maxWidth: .infinity, alignment: .leading).padding(10).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(LauncherButtonStyle())
                 Button { library.isPreviewingSuggestions.toggle(); library.isEditingCategory = false } label: {
                     Label(L.text("建議分類"), systemImage: "sparkles").font(.system(size: 11))
                         .frame(maxWidth: .infinity, alignment: .leading).padding(10).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(LauncherButtonStyle())
                 Divider().padding(.vertical, 5)
                 ForEach(library.orderedCategoryIDs, id: \.self) { id in
                     if let group = library.customGroups.first(where: { $0.id == id }) {
@@ -73,26 +73,22 @@ struct AppBrowserView: View {
                         sidebarRow(id: group.rawValue, title: L.text(group.title), symbol: group.symbol, count: library.items(query: store.query, group: group).count, selected: library.selectedCustomGroupID == nil && library.group == group) { library.select(group) }
                     }
                 }
-            }.padding(10)
+            }
+            .launcherSelectionBackground(library.selectedCustomGroupID ?? library.group.rawValue, cornerRadius: 8)
+            .padding(10)
         }
     }
     private func sidebarRow(id: String, title: String, symbol: String, count: Int, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: symbol).frame(width: 17)
-                Text(title).lineLimit(1)
-                Spacer(minLength: 0)
-                Text(String(count)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-            }.font(.system(size: 11, weight: selected ? .medium : .regular))
-                .padding(.horizontal, 10).padding(.vertical, 8).contentShape(Rectangle())
-                .background(dropTargetID == id ? Color.accentColor.opacity(0.22) : selected ? Color.primary.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain).help(title)
-            .overlay {
-                AppLibraryDragSource(payload: "han-category:" + id, image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage(), click: action,
-                    acceptsDrop: { library.acceptsDrop($0, to: id) }, drop: { library.drop($0, to: id) }, targeted: { active in
-                        if active { dropTargetID = id } else if dropTargetID == id { dropTargetID = nil }
-                    }).accessibilityHidden(true)
-            }
+        AppLibraryCategoryRow(id: id, title: title, symbol: symbol, count: count, selected: selected,
+                              targeted: dropTargetID == id, action: action,
+                              acceptsDrop: { library.acceptsDrop($0, to: id) }, drop: { values in
+                                  withAnimation(LauncherMotion.animation(enabled: store.motionEnabled)) {
+                                      library.drop(values, to: id)
+                                  }
+                              },
+                              targetChanged: { active in
+                                  if active { dropTargetID = id } else if dropTargetID == id { dropTargetID = nil }
+                              })
     }
 
     private func beginEditing(_ group: UserApplicationGroup?) {
@@ -248,6 +244,42 @@ struct AppBrowserView: View {
     }
 }
 
+/// Local press state avoids recomputing every category count and App search
+/// when the pointer goes down or up on just one row.
+private struct AppLibraryCategoryRow: View {
+    let id: String
+    let title: String
+    let symbol: String
+    let count: Int
+    let selected: Bool
+    let targeted: Bool
+    let action: () -> Void
+    let acceptsDrop: ([String]) -> Bool
+    let drop: ([String]) -> Bool
+    let targetChanged: (Bool) -> Void
+    @State private var pressed = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol).frame(width: 17)
+                Text(title).lineLimit(1)
+                Spacer(minLength: 0)
+                Text(String(count)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+            }.font(.system(size: 11, weight: selected ? .medium : .regular))
+                .padding(.horizontal, 10).padding(.vertical, 8).contentShape(Rectangle())
+                .background(targeted ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        }.buttonStyle(LauncherButtonStyle(externalPressed: pressed)).help(title)
+            .launcherSelectionAnchor(id)
+            .overlay {
+                AppLibraryDragSource(payload: "han-category:" + id,
+                                     image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage(),
+                                     click: action, acceptsDrop: acceptsDrop, drop: drop, targeted: targetChanged,
+                                     pressChanged: { pressed = $0 }, iconPlacement: .category).accessibilityHidden(true)
+            }
+    }
+}
+
 private struct AppLibraryTile: View {
     let app: InstalledApplication
     let pinned: Bool
@@ -257,6 +289,7 @@ private struct AppLibraryTile: View {
     let supplement: SearchSupplement?
     let open: () -> Void
     @State private var hovered = false
+    @State private var pointerPressed = false
     var body: some View {
         Button(action: open) {
             Group {
@@ -280,8 +313,11 @@ private struct AppLibraryTile: View {
                 }
             }.contentShape(Rectangle())
                 .background(selected ? Color.accentColor.opacity(0.18) : hovered ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 12))
-        }.buttonStyle(.plain)
-            .overlay { AppLibraryDragSource(payload: "han-app:" + app.id, image: AppIconCache.shared.icon(app.url.path), click: open).accessibilityHidden(true) }
+        }.buttonStyle(LauncherButtonStyle(externalPressed: pointerPressed))
+            .overlay {
+                AppLibraryDragSource(payload: "han-app:" + app.id, image: AppIconCache.shared.icon(app.url.path), click: open,
+                                     pressChanged: { pointerPressed = $0 }, iconPlacement: list ? .list : .grid).accessibilityHidden(true)
+            }
             .focusable(false).onHover { hovered = $0 }
             .help(app.name + "\n" + app.url.path).accessibilityLabel(app.name)
     }

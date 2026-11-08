@@ -2,7 +2,7 @@
 
 [← 回到專案首頁](../README.md)
 
-目前版本：1.1.0，正式版。
+目前版本為 [v1.1.1 正式版](releases/v1.1.1.md)。
 
 ## 1.1.0 新增功能
 
@@ -275,7 +275,7 @@ cd Spotlight-Han
 
 腳本建立 `outputs/Spotlight Han.app` 並以本機簽章啟動。`--build-only` 只建置，不啟動。沒有第三方套件依賴；發行給其他 Mac 的 Developer ID 簽章與公證尚未設定。
 
-正式版安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。1.1.0 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
+正式版安裝包與發佈狀態請見 [Releases](https://github.com/Enoooch0921/Spotlight-Han/releases)。1.1.1 提供 Apple Silicon DMG 拖曳安裝與 ZIP 包，使用 ad hoc 簽章，下載後可能被 Gatekeeper 阻擋；詳見[安裝說明](install.zh-Hant.md)。
 
 ```sh
 ./script/package_release.sh

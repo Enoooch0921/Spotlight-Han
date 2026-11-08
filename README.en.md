@@ -6,7 +6,7 @@
 
 An open-source macOS Spotlight alternative with Traditional/Simplified Chinese matching and an independent local filename index.
 
-[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.1.0/Spotlight-Han-1.1.0-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
+[Download Apple Silicon DMG](https://github.com/Enoooch0921/Spotlight-Han/releases/download/v1.1.1/Spotlight-Han-1.1.1-macOS-arm64.dmg) · [Releases / ZIP](https://github.com/Enoooch0921/Spotlight-Han/releases) · [Report an issue](https://github.com/Enoooch0921/Spotlight-Han/issues)
 
 ## The problem
 
@@ -36,7 +36,7 @@ Date parsing uses a bundled, pinned [Chrono](https://github.com/wanasit/chrono) 
 
 ## Install and try
 
-**v1.1.0 is the current stable release for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
+**v1.1.1 is the current stable release for Apple Silicon, verified on macOS 26.6.1.** Open the DMG and drag Spotlight Han to Applications, or use the ZIP. The current build is ad hoc signed and **not Developer ID signed or Apple-notarised**; Gatekeeper may prevent a downloaded copy from opening. Packaging as a DMG does not change this. Users who need a trusted, notarised installer should wait for that distribution, or developers can build the source themselves.
 
 With an SDK for macOS 26 and Swift 5.9 or later:
 

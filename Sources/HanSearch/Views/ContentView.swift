@@ -6,6 +6,14 @@ struct ContentView: View {
     @ObservedObject var store: SearchStore
     @FocusState private var focused: Bool
     @FocusState private var appGridFocused: Bool
+    @Namespace private var glassNamespace
+    @State private var retainsBody = false
+    @State private var bodyContentVisible = false
+    @State private var surfaceGeneration = 0
+    private enum Surface: Equatable { case collapsed, results, apps, composer }
+    private var surface: Surface {
+        store.composerMode != nil ? .composer : !store.hasBody ? .collapsed : store.isAppBrowser ? .apps : .results
+    }
     private let filters: [SearchMode] = [.all, .videos, .contents, .notes, .contacts, .calendar, .reminders, .alarms, .mail]
     var body: some View {
         Group {
@@ -20,6 +28,7 @@ struct ContentView: View {
             if #available(macOS 15.0, *) { TranslationBridge(store: store) }
         }
         .onAppear { focused = true }
+        .onChange(of: surface, initial: true) { _, _ in updateSurface() }
         .onChange(of: store.query) { _, _ in store.search() }
         .onChange(of: store.mode) { _, mode in
             appGridFocused = false; focused = true
@@ -37,6 +46,7 @@ struct ContentView: View {
         .onKeyPress(.return) { if store.isAppBrowser && appGridFocused && !store.appLibrary.isEditingCategory && !store.appLibrary.isPreviewingSuggestions { openApp(); return .handled }; return .ignored }
         .onExitCommand { if store.appLibrary.isEditingCategory { store.appLibrary.isEditingCategory = false } else if store.appLibrary.isPreviewingSuggestions { store.appLibrary.isPreviewingSuggestions = false } else if store.composerMode != nil { store.cancelComposer() } else { store.dismissLauncher?() } }
         .environment(\.locale, store.interfaceLanguage.locale)
+        .environment(\.launcherMotionEnabled, store.motionEnabled)
         .id(store.interfaceLanguage.rawValue)
 
     }
@@ -59,9 +69,10 @@ struct ContentView: View {
                     if store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
                     if store.composerMode != nil {
                         Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
-                            .buttonStyle(.plain).disabled(store.actionInFlight).help(L.text("返回搜尋"))
+                            .buttonStyle(LauncherButtonStyle()).disabled(store.actionInFlight).help(L.text("返回搜尋"))
                     }
                 }.padding(.horizontal, 20).frame(height: 60).spotlightGlass(Capsule())
+                    .launcherGlassIdentity("search-field", in: glassNamespace)
                 if store.composerMode == nil {
                     category(.apps, symbol: "square.grid.2x2", hint: "應用程式 ⌘1")
                     category(.names, symbol: "folder", hint: "檔案 ⌘2")
@@ -78,15 +89,32 @@ struct ContentView: View {
                     }.padding(.horizontal, 20).padding(.vertical, 10).contentShape(Rectangle())
                 }.buttonStyle(.plain).spotlightGlass(Capsule())
             }
-            if store.composerMode != nil { TaskComposerView(store: store).spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous)).transition(.opacity) }
-            else if store.hasBody {
+            if surface != .collapsed || retainsBody {
                 VStack(spacing: 0) {
-                    if store.isAppBrowser { AppBrowserView(store: store, library: store.appLibrary, gridFocused: $appGridFocused).transition(.opacity) }
+                    if store.composerMode != nil { TaskComposerView(store: store).transition(.opacity) }
+                    else if store.isAppBrowser { AppBrowserView(store: store, library: store.appLibrary, gridFocused: $appGridFocused).transition(.opacity) }
                     else { resultPanel.transition(.opacity) }
-                }.spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous)).transition(.opacity)
+                }
+                .animation(LauncherMotion.structure(enabled: store.motionEnabled), value: surface)
+                .opacity(bodyContentVisible ? 1 : 0)
+                .spotlightGlass(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .launcherGlassIdentity("body", in: glassNamespace)
+                .transition(.identity)
             }
         }
-        .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.isAppBrowser)
+    }
+    private func updateSurface() {
+        surfaceGeneration += 1
+        let generation = surfaceGeneration
+        if surface != .collapsed { retainsBody = true }
+        // Animate content inside the material, never an opacity group containing
+        // the glass. Keep the same surface alive while the window contracts.
+        withAnimation(LauncherMotion.structure(enabled: store.motionEnabled), completionCriteria: .logicallyComplete) {
+            bodyContentVisible = surface != .collapsed
+        } completion: {
+            guard generation == surfaceGeneration, surface == .collapsed else { return }
+            retainsBody = false
+        }
     }
     private func category(_ mode: SearchMode, symbol: String, hint: String) -> some View {
         Button {
@@ -97,8 +125,9 @@ struct ContentView: View {
                 .frame(width: 54, height: 60)
                 .background(store.mode == mode ? Color.primary.opacity(0.08) : .clear, in: Circle())
                 .spotlightGlass(Circle())
+                .launcherGlassIdentity("category-" + mode.rawValue, in: glassNamespace)
                 .contentShape(.interaction, Circle())
-        }.buttonStyle(.plain).help(L.text(hint)).accessibilityLabel(L.text(hint))
+        }.buttonStyle(LauncherButtonStyle(shape: AnyShape(Circle()))).help(L.text(hint)).accessibilityLabel(L.text(hint))
             .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
     }
     private var resultPanel: some View {
@@ -106,13 +135,16 @@ struct ContentView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(filters, id: \.self) { mode in
-                        Button(L.text(mode.rawValue)) { store.mode = mode; focused = true }
-                            .buttonStyle(.plain).font(.system(size: 11, weight: .medium))
-                            .padding(.horizontal, 11).padding(.vertical, 7)
-                            .background(store.mode == mode ? Color.primary.opacity(0.10) : .clear, in: Capsule())
-                            .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
+                        Button { store.mode = mode; focused = true } label: {
+                            Text(L.text(mode.rawValue)).font(.system(size: 11, weight: .medium))
+                                .padding(.horizontal, 11).padding(.vertical, 7)
+                                .contentShape(Capsule())
+                        }.buttonStyle(LauncherButtonStyle())
+                            .launcherSelectionAnchor(mode.rawValue)
                     }
-                }.padding(.horizontal, 14).padding(.vertical, 9)
+                }
+                .launcherSelectionBackground(store.mode.rawValue, cornerRadius: 20)
+                .padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
             if store.canSortFileResults {
@@ -192,8 +224,8 @@ struct ContentView: View {
                 } else if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
                     Button(L.text("選擇資料夾…")) { store.chooseCatalogFolder() }.controlSize(.small)
                 }
-                Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
-                SettingsEntryButton(store: store) { Image(systemName: "gearshape") }.buttonStyle(.plain).help(L.text("設定與資料來源"))
+                Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }.buttonStyle(LauncherButtonStyle()).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
+                SettingsEntryButton(store: store) { Image(systemName: "gearshape").frame(width: 24, height: 24).contentShape(Rectangle()) }.buttonStyle(LauncherButtonStyle()).help(L.text("設定與資料來源"))
                 if store.selectedPreviewItem != nil {
                     Button(L.text("空白鍵 預覽")) { if let item = store.selectedPreviewItem { store.previewFile(item) } }
                         .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.secondary)

@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let focusReturn = LauncherFocusReturn()
     private var fadeGeneration = 0
     private var layoutTarget: NSRect?
+    private var layoutScheduled = false
     private var updateObservation: AnyCancellable?
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -79,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         self.panel = panel
         store.showOnboarding = { [weak self] in self?.showOnboarding() }
-        store.onLayoutChanged = { [weak self] in self?.resizePanel() }
+        store.onLayoutChanged = { [weak self] in self?.scheduleLayout() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
         store.dismissLauncher = { [weak self] in self?.hideSearch(returnFocus: true) }
         store.toggleFilePreview = { [weak self] in self?.toggleFilePreview() }
@@ -196,11 +197,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         store.search(); return true
     }
+    private func scheduleLayout() {
+        guard !layoutScheduled else { return }
+        layoutScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.layoutScheduled = false
+            self.resizePanel()
+        }
+    }
     func resizePanel() {
         guard let panel else { return }
-        let count = store.results.count + store.allQuickResults.count
         let detailHeight = min(600, CGFloat(320 + ((store.details?.count ?? 0) / 50) * 22))
-        let baseHeight: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : store.isAppBrowser ? 650 : count == 0 ? 410 : 580))
+        // A pending/empty query uses the same surface as its eventual results.
+        // Async search batches must not repeatedly shrink and grow the window.
+        let baseHeight: CGFloat = store.composerMode != nil ? 610 : (store.details != nil ? detailHeight : (!store.hasBody ? 140 : store.isAppBrowser ? 650 : 580))
         let desired = baseHeight + (store.appUpdater.showsBanner ? 48 : 0)
         let screen = presentation.isPresented ? (panel.screen ?? NSScreen.main) : (NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main)
         let visible = screen?.visibleFrame
@@ -279,6 +290,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             layoutTarget = panel.frame
         }
+        // Resolve the final offscreen layout before fading in a native glass
+        // window. Keep the hosting/material identity across every invocation.
+        panel.contentView?.layoutSubtreeIfNeeded()
         let fade = store.motionEnabled
         if !panel.isVisible { panel.alphaValue = fade ? 0 : 1 }
         presentation.show()

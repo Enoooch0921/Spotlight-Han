@@ -100,7 +100,15 @@ public actor NaturalTaskParser {
         // bundle locations instead, both in the .app and beside the SwiftPM check executable.
         let bundleName = "HanSearch_HanSearchCore.bundle"
         let roots = [Bundle.main.resourceURL, Bundle.main.executableURL?.deletingLastPathComponent(), Bundle.main.bundleURL].compactMap { $0 }
-        let url = roots.map { $0.appendingPathComponent(bundleName + "/Resources/NaturalDates.js") }.first { FileManager.default.fileExists(atPath: $0.path) }
+        let url = roots.lazy.compactMap { root -> URL? in
+            let directory = root.appendingPathComponent(bundleName)
+            if let resource = Bundle(url: directory)?.url(forResource: "NaturalDates", withExtension: "js", subdirectory: "Resources") {
+                return resource
+            }
+            // Older SwiftPM toolchains emit a flat directory instead of a macOS bundle.
+            let flat = directory.appendingPathComponent("Resources/NaturalDates.js")
+            return FileManager.default.fileExists(atPath: flat.path) ? flat : nil
+        }.first
         guard let url, let source = try? String(contentsOf: url, encoding: .utf8), let context = JSContext() else { throw NaturalTaskFailure.invalid("缺少時間解析元件，請重新安裝 Han。") }
         context.evaluateScript(source)
         guard context.exception == nil, context.objectForKeyedSubscript("HanDates")?.isUndefined == false else { throw NaturalTaskFailure.invalid("時間解析暫時無法使用，請重新開啟 Han。") }

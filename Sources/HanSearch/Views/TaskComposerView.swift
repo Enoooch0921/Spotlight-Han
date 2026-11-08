@@ -16,8 +16,7 @@ struct TaskComposerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let created = store.composerCreated {
-                        Label(L.text("已建立"), systemImage: "checkmark.circle.fill").font(.title2).foregroundStyle(.green)
-                        Text(created).textSelection(.enabled)
+                        TaskCreatedFeedback(message: created).transition(.opacity)
                     } else if store.composerReviewing, let draft = store.composerDraft {
                         Text(L.text("確認預覽")).font(.title3.weight(.semibold))
                         TextField(L.text("事項名稱"), text: draftBinding(\.title)).textFieldStyle(.roundedBorder).accessibilityLabel(L.text("事項名稱"))
@@ -67,6 +66,7 @@ struct TaskComposerView: View {
                         Label(L.text(validationError), systemImage: "exclamationmark.circle").foregroundStyle(.orange).font(.callout)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
+                    .animation(LauncherMotion.structure(enabled: store.motionEnabled), value: store.composerCreated != nil)
             }.disabled(store.actionInFlight)
             Spacer(minLength: 0)
             Divider()
