@@ -14,16 +14,18 @@ public struct QuickResult: Identifiable, Hashable, Sendable {
     public let action: QuickAction
     public let startDate: Date?
     public let endDate: Date?
+    public let sourceApp: SystemSourceApp?
     public let noteText: String?
     public let supplement: SearchSupplement?
-    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil, supplement: SearchSupplement? = nil, noteText: String? = nil) {
+    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil, supplement: SearchSupplement? = nil, noteText: String? = nil, sourceApp: SystemSourceApp? = nil) {
         self.id = "quick:" + id; self.title = title; self.subtitle = subtitle; self.symbol = symbol; self.action = action
         self.startDate = startDate; self.endDate = endDate
+        self.sourceApp = sourceApp
         self.noteText = noteText
         self.supplement = supplement
     }
     public func supplemented(by match: SearchSupplement) -> QuickResult {
-        QuickResult(id: String(id.dropFirst("quick:".count)), title: title, subtitle: subtitle, symbol: symbol, action: action, startDate: startDate, endDate: endDate, supplement: match, noteText: noteText)
+        QuickResult(id: String(id.dropFirst("quick:".count)), title: title, subtitle: subtitle, symbol: symbol, action: action, startDate: startDate, endDate: endDate, supplement: match, noteText: noteText, sourceApp: sourceApp)
     }
 }
 
@@ -89,7 +91,7 @@ public struct PersonalRecord: Sendable {
         } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query.text) {
             preview = SearchHighlight.excerpt(in: text, query: query.text)
         } else { preview = subtitle }
-        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate, noteText: self.mode == .notes ? text : nil)
+        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate, noteText: self.mode == .notes ? text : nil, sourceApp: SystemSourceApp(self.mode))
     }
 
     public static func search(_ records: [PersonalRecord], query: String, mode: SearchMode,
@@ -140,7 +142,7 @@ public enum QuickProvider {
             let destination = plan.kind == .alarm ? "Apple 系統時鐘 · 分鐘精度，向上取整" : (plan.kind == .reminder ? "系統提醒事項（預設清單）" : "行事曆（預覽時選擇）")
             let duration = plan.kind == .event ? " · \(Int(plan.duration / 60)) 分鐘" : ""
             let actionHint = plan.kind == .alarm ? " · ↵ 建立" : " · ↵ 確認預覽"
-            items.append(QuickResult(id: "task-command", title: kind + "：" + plan.title, subtitle: formatter.string(from: displayDate) + (plan.relativeDelay != nil ? " · 按 Return 起算" : "") + duration + " · " + destination + actionHint, symbol: plan.kind == .alarm ? "alarm" : (plan.kind == .reminder ? "checklist" : "calendar.badge.plus"), action: .createTask(plan)))
+            items.append(QuickResult(id: "task-command", title: kind + "：" + plan.title, subtitle: formatter.string(from: displayDate) + (plan.relativeDelay != nil ? " · 按 Return 起算" : "") + duration + " · " + destination + actionHint, symbol: plan.kind == .alarm ? "alarm" : (plan.kind == .reminder ? "checklist" : "calendar.badge.plus"), action: .createTask(plan), sourceApp: plan.kind == .alarm ? .clock : (plan.kind == .reminder ? .reminders : .calendar)))
             return items
         }
         if Calculator.looksLikeExpression(query), let value = try? Calculator.evaluate(query) {

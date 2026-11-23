@@ -9,7 +9,7 @@ struct OnboardingSourcesPage: View {
         VStack(alignment: .leading, spacing: 18) {
             ForEach(sources, id: \.self) { source in
                 HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: symbol(source)).font(.title3).foregroundStyle(.secondary).frame(width: 26)
+                    SourceAppIcon(app: SystemSourceApp(source), symbol: symbol(source), size: 26)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(L.text(source.rawValue)).font(.headline)
                         Text(L.text(detail(source))).font(.callout).foregroundStyle(.secondary)
@@ -25,7 +25,15 @@ struct OnboardingSourcesPage: View {
                 }
                 if source != sources.last { Divider() }
             }
-            OnboardingNote(text: "只有按下「連接」才會要求對應權限。授權有效時，已連接來源可安靜背景更新。", symbol: "hand.raised")
+            let remaining = SearchStore.personalPermissionSources.filter {
+                sources.contains($0) && store.sourceHealth[$0]?.hasSnapshot != true && store.sourceHealth[$0]?.offersPrivacySettings != true && !store.connecting.contains($0)
+            }
+            if remaining.count > 1 {
+                Button(L.format("一次連接 %@ 個來源", String(remaining.count))) { store.connectSources(remaining) }
+                    .help(remaining.map { L.text($0.rawValue) }.joined(separator: "、"))
+                    .disabled(store.authorizationInFlight || store.setupRunning || store.actionInFlight)
+            }
+            OnboardingNote(text: "可逐一或一次連接這些來源。macOS 會依序詢問需要的權限，已授權的來源會直接讀取。", symbol: "hand.raised")
             HStack {
                 Text(L.text("Mail、捷徑與系統時鐘，也能在設定中連接。"))
                     .font(.callout).foregroundStyle(.secondary)

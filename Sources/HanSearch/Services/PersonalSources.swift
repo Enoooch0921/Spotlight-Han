@@ -42,6 +42,19 @@ enum PersonalSources {
 
     @MainActor static func authorize(_ source: SearchMode) async throws {
         if isAuthorized(source) { return }
+        do { try await requestAuthorization(source) }
+        catch {
+            // Contacts and EventKit may return a framework error when the person declines.
+            // A known refusal is a completed decision and can advance the setup batch.
+            if !(error is SourceAccessFailure) && !(error is CancellationError) {
+                let failure = permissionFailure(source)
+                if failure.status == .denied || failure.status == .restricted { throw failure }
+            }
+            throw error
+        }
+    }
+
+    @MainActor private static func requestAuthorization(_ source: SearchMode) async throws {
         let granted: Bool
         switch source {
         case .contacts:

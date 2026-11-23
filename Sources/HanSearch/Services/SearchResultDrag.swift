@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 enum SearchResultDrag {
     case url(URL)
-    case text(title: String, value: String, symbol: String)
+    case text(title: String, value: String, symbol: String, app: SystemSourceApp?)
 
     init?(_ result: QuickResult) {
         let value: String
@@ -23,13 +23,13 @@ enum SearchResultDrag {
         case .createTask, .prepareTranslation, .shortcut: return nil
         }
         guard !value.isEmpty else { return nil }
-        self = .text(title: result.title, value: value, symbol: result.symbol)
+        self = .text(title: result.title, value: value, symbol: result.symbol, app: result.sourceApp)
     }
 
     @MainActor func draggingItem() -> NSDraggingItem {
         switch self {
         case .url(let url): return NSDraggingItem(pasteboardWriter: url as NSURL)
-        case let .text(title, value, _):
+        case let .text(title, value, _, _):
             return NSDraggingItem(pasteboardWriter: ResultTextPromise(title: title, text: value))
         }
     }
@@ -38,7 +38,8 @@ enum SearchResultDrag {
         switch self {
         case .url(let url) where url.isFileURL: return NSWorkspace.shared.icon(forFile: url.path)
         case .url: return NSImage(systemSymbolName: "link", accessibilityDescription: nil)
-        case .text(_, _, let symbol): return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        case .text(_, _, let symbol, let app):
+            return app.flatMap { AppIconCache.shared.icon(for: $0) } ?? NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         }
     }
 }

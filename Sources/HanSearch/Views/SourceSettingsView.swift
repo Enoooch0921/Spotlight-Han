@@ -12,6 +12,7 @@ struct SourceSettingsView: View {
                 HStack {
                     Button(L.text("全部重新讀取")) { store.refreshAllConnectedSources() }
                         .disabled(store.refreshableSources.isEmpty || store.setupRunning || !store.connecting.isEmpty || store.authorizationInFlight || store.actionInFlight)
+                    PendingSourceConnectionsButton(store: store)
                     Button(L.text("一次設定所有資料來源")) { store.setupAllSources() }.disabled(store.setupRunning || !store.connecting.isEmpty || store.authorizationInFlight || store.actionInFlight)
                     if store.setupRunning { ProgressView().controlSize(.small) }
                     if !store.connecting.isEmpty { Button(L.text("停止連接")) { store.cancelConnections() } }
@@ -20,6 +21,7 @@ struct SourceSettingsView: View {
                 ForEach(sources, id: \.self) { source in
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
+                            SourceAppIcon(app: SystemSourceApp(source), symbol: "app", size: 24)
                             Text(L.text(source.rawValue)).fontWeight(.medium)
                             Spacer()
                             if store.connecting.contains(source) { ProgressView().controlSize(.small) }

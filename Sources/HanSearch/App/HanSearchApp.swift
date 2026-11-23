@@ -54,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var rejectedBinding: ShortcutBinding?
     private var presentation = LauncherPresentation()
     private let focusReturn = LauncherFocusReturn()
+    private var resumeLauncherAfterConsent = false
+    private weak var sourceConsentWindow: NSWindow?
     private var fadeGeneration = 0
     private var layoutTarget: NSRect?
     private var layoutScheduled = false
@@ -123,6 +125,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.hideSearch(animated: false)
             NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
             if let window = NSApp.windows.first(where: { $0.isVisible && $0 !== self?.panel && $0.canBecomeMain }) {
+                window.makeKeyAndOrderFront(nil)
+            }
+        }
+        store.prepareSourceAuthorization = { [weak self] in
+            guard let self else { return }
+            self.resumeLauncherAfterConsent = self.presentation.isPresented && self.panel?.isVisible == true
+            self.sourceConsentWindow = NSApp.keyWindow.flatMap { $0 !== self.panel && $0.isVisible ? $0 : nil }
+            self.synchronizeApplicationPresence()
+            if self.resumeLauncherAfterConsent { self.hideSearch(animated: false, preserveFocusOrigin: true) }
+            NSApp.unhide(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            self.sourceConsentWindow?.makeKeyAndOrderFront(nil)
+        }
+        store.finishSourceAuthorization = { [weak self] resolved in
+            guard let self else { return }
+            let launcher = self.resumeLauncherAfterConsent
+            let window = self.sourceConsentWindow
+            self.resumeLauncherAfterConsent = false
+            self.sourceConsentWindow = nil
+            self.synchronizeApplicationPresence()
+            guard resolved else {
+                if launcher { self.focusReturn.discard() }
+                return
+            }
+            if launcher {
+                self.showSearch(continuingFlow: true, preserveFocusOrigin: true)
+            } else if let window, window.isVisible {
+                NSApp.activate(ignoringOtherApps: true)
                 window.makeKeyAndOrderFront(nil)
             }
         }
@@ -276,8 +306,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Logger(subsystem: "local.hansearch.mac", category: "hotkey").info("Toggle launcher; active=\(active, privacy: .public), visible=\(visible, privacy: .public)")
         if action == .hide { hideSearch(returnFocus: true) } else { showSearch() }
     }
-    private func hideSearch(animated: Bool = true, returnFocus: Bool = false) {
-        if !returnFocus { focusReturn.discard() }
+    private func hideSearch(animated: Bool = true, returnFocus: Bool = false, preserveFocusOrigin: Bool = false) {
+        if !returnFocus && !preserveFocusOrigin { focusReturn.discard() }
         quickPreview.dismiss(restoreFocus: false)
         store.launcherDidHide()
         presentation.hide(); fadeGeneration += 1
@@ -300,12 +330,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if quickPreview.isPresented { quickPreview.dismiss() }
         else { quickPreview.present(FilePreviewRequest(item: item, query: store.matchText), relativeTo: panel) }
     }
-    func showSearch(continuingFlow: Bool = false) {
+    func showSearch(continuingFlow: Bool = false, preserveFocusOrigin: Bool = false) {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
         synchronizeApplicationPresence()
         if !store.onboarding.hasFinished { showOnboarding(); return }
         if store.onboardingPresented { onboardingWindow?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
-        focusReturn.capture()
+        if !preserveFocusOrigin { focusReturn.capture() }
         store.prepareLauncherForOpening(continuingFlow: continuingFlow)
         fadeGeneration += 1
         let wasVisible = panel.isVisible && NSApp.isActive && !NSApp.isHidden

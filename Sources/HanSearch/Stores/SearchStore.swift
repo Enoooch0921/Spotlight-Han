@@ -197,6 +197,8 @@ final class SearchStore: ObservableObject {
     var hideLauncher: (() -> Void)?
     var dismissLauncher: (() -> Void)?
     var prepareSystemAuthorization: (() -> Void)?
+    var prepareSourceAuthorization: (() -> Void)?
+    var finishSourceAuthorization: ((_ resolved: Bool) -> Void)?
     var settingsVisibilityChanged: ((Bool) -> Void)?
     private var sourceQueue = SourceConnectionQueue()
     private var sourceTask: Task<Void, Never>?
@@ -216,6 +218,7 @@ final class SearchStore: ObservableObject {
     var cachedGlobalContents: [SearchItem] = []
     private let sourcePreferences: UserDefaults
     private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
+    private let sourceAuthorizer: @MainActor (SearchMode) async throws -> Void
     private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
     let fileAccess: FileAccessBookmarks
     private(set) var entries: [CatalogEntry] = []
@@ -239,6 +242,7 @@ final class SearchStore: ObservableObject {
     init(loadSources: Bool = true, fileAccess: FileAccessBookmarks? = nil,
          taskPreferences: UserDefaults = .standard, sourcePreferences: UserDefaults = .standard,
          sourceAccessCheck: @escaping @MainActor (SearchMode) -> Bool = { PersonalSources.isAuthorized($0) },
+         sourceAuthorizer: @escaping @MainActor (SearchMode) async throws -> Void = { try await PersonalSources.authorize($0) },
          eventSourceLoader: @escaping @MainActor (SearchMode) async throws -> PersonalLoad = { source in
              source == .calendar ? try await PersonalSources.calendar() : try await PersonalSources.reminders()
          },
@@ -278,7 +282,7 @@ final class SearchStore: ObservableObject {
         self.aliases = SearchAliasStore(defaults: taskPreferences)
         self.fileAccess = fileAccess ?? FileAccessBookmarks()
         self.taskWriter = taskWriter
-        self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.eventSourceLoader = eventSourceLoader
+        self.sourcePreferences = sourcePreferences; self.sourceAccessCheck = sourceAccessCheck; self.sourceAuthorizer = sourceAuthorizer; self.eventSourceLoader = eventSourceLoader
         self.autoRefreshEnabled = sourcePreferences.object(forKey: "autoRefreshSources.v1") as? Bool ?? true
         self.taskPreferences = taskPreferences; self.eventCalendarLoader = eventCalendarLoader
         self.ocrEnabled = taskPreferences.object(forKey: "documentOCR.v1") as? Bool ?? true
@@ -350,13 +354,10 @@ final class SearchStore: ObservableObject {
         } else { catalogRoots = allowed }
         saveCatalogRoots()
         clipboard.changed = { [weak self] value in self?.rememberClipboardText(value) }
+        Task { restoreConnectedSources() }
         Task {
             await loadPersistentDocumentIndex()
             await loadCatalog()
-            let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
-            for source: SearchMode in [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms] {
-                if enabled.contains(source.rawValue) { enqueueSource(source, allowPrompt: false) }
-            }
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
@@ -518,7 +519,7 @@ final class SearchStore: ObservableObject {
                 if filter == nil && mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {
-                        quick.append(QuickResult(id: "dictionary", title: word, subtitle: String(definition.prefix(140)), symbol: "character.book.closed", action: .details(definition)))
+                        quick.append(QuickResult(id: "dictionary", title: word, subtitle: String(definition.prefix(140)), symbol: "character.book.closed", action: .details(definition), sourceApp: .dictionary))
                     }
                 }
                 let web = filter == nil && mode == .all ? QuickProvider.webSearch(query: term) : nil
@@ -743,20 +744,44 @@ final class SearchStore: ObservableObject {
             }
         }
     }
-    func setupAllSources() {
-        guard !setupRunning, connecting.isEmpty, !authorizationInFlight, !actionInFlight else { return }
-        setupRunning = true
-        batchSources = [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms]
-        // Request the short native permissions before potentially slow Notes/Mail indexing.
-        for source in batchSources {
-            enqueueSource(source, allowPrompt: true)
+    static let personalPermissionSources: [SearchMode] = [.contacts, .calendar, .reminders, .notes, .mail]
+
+    var pendingPermissionSources: [SearchMode] {
+        Self.personalPermissionSources.filter { source in
+            guard let health = sourceHealth[source] else { return false }
+            return health.phase == .needsPermission && !health.offersPrivacySettings
         }
+    }
+
+    func setupAllSources() {
+        connectSources(Self.personalPermissionSources + [.shortcuts, .alarms])
+    }
+
+    func connectSources(_ sources: [SearchMode]) {
+        guard !setupRunning, !authorizationInFlight, !actionInFlight else { return }
+        batchSources = sources.filter { !connecting.contains($0) }
+        guard !batchSources.isEmpty else { return }
+        setupRunning = true
+        for source in batchSources { enqueueSource(source, allowPrompt: true) }
         finishSetupIfIdle()
     }
     var refreshableSources: [SearchMode] {
         let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
         return [.contacts, .calendar, .reminders, .shortcuts, .notes, .mail, .alarms].filter {
             enabled.contains($0.rawValue) || sourceHealth[$0] != nil
+        }
+    }
+    func restoreConnectedSources() {
+        let enabled = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
+        for source in Self.personalPermissionSources + [.shortcuts, .alarms] where enabled.contains(source.rawValue) {
+            guard !connecting.contains(source) else { continue }
+            if sourceAccessCheck(source) {
+                enqueueSource(source, allowPrompt: false)
+            } else {
+                let failure = PersonalSources.permissionFailure(source)
+                sourceHealth[source, default: SourceHealth()].recordFailure(failure, at: Date())
+                personalStatus[source] = failure.localizedDescription
+            }
         }
     }
     func refreshAllConnectedSources() {
@@ -853,14 +878,27 @@ final class SearchStore: ObservableObject {
         }
         startNextSource()
     }
+    private var anotherPermissionPending: Bool {
+        sourceQueue.pending.contains { $0.allowPrompt && !sourceAccessCheck($0.source) }
+    }
+
+    private func finishSourceConsent(resolved: Bool) {
+        guard sourceOwnsAuthorization else { return }
+        sourceOwnsAuthorization = false
+        authorizationInFlight = false
+        finishSourceAuthorization?(resolved)
+    }
+
     func startNextSource() {
-        guard !authorizationInFlight, !actionInFlight, sourceTask == nil, let request = sourceQueue.next() else { return }
+        guard !authorizationInFlight || sourceOwnsAuthorization, !actionInFlight, sourceTask == nil, let request = sourceQueue.next() else { return }
         connectionGeneration = UUID()
         let token = connectionGeneration
         sourceTask = Task {
-            await loadSource(request.source, allowPrompt: request.allowPrompt, token: token)
+            var readAfterConsent = false
+            await loadSource(request.source, allowPrompt: request.allowPrompt, token: token) { readAfterConsent = true }
             guard token == connectionGeneration else { return }
             connecting.remove(request.source); sourceQueue.finish(); sourceTask = nil
+            if readAfterConsent { enqueueSource(request.source, allowPrompt: false) }
             // Changes received during a Notes slice run in the separate EventKit lane;
             // the next Notes worker resumes the same scan without asking permission.
             refreshAuthorizedSources(changedOnly: true)
@@ -891,18 +929,18 @@ final class SearchStore: ObservableObject {
             sourceHealth[source, default: SourceHealth()].lastAttempt = Date()
         }
         connecting.removeAll(); setupRunning = false; batchSources = []
-        if sourceOwnsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false }
+        finishSourceConsent(resolved: false)
         setupStatus = "已停止，可稍後逐一重新連接。"; search()
     }
-    private func loadSource(_ source: SearchMode, allowPrompt: Bool, token: UUID) async {
+    private func loadSource(_ source: SearchMode, allowPrompt: Bool, token: UUID, deferRead: () -> Void) async {
         personalStatus[source] = "正在檢查授權…"
         if setupRunning {
             setupStatus = L.format("正在處理 %@（%@/%@）；可隨時停止", L.text(source.rawValue), String((batchSources.firstIndex(of: source) ?? 0) + 1), String(batchSources.count))
         }
         let cancellation = ProcessCancellation()
-        var ownsAuthorization = false
+        var awaitingAnswer = false
         defer { if token == connectionGeneration {
-            if ownsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false }
+            if sourceOwnsAuthorization && !anotherPermissionPending { finishSourceConsent(resolved: true) }
             sourceReading = false
         } }
         do {
@@ -913,22 +951,33 @@ final class SearchStore: ObservableObject {
                     sourceHealth[source]?.permissionStatus = PersonalSources.permissionFailure(source).status; return
                 }
                 sourceHealth[source, default: SourceHealth()].phase = .authorizing
-                ownsAuthorization = true; sourceOwnsAuthorization = true
-                authorizationInFlight = true; prepareSystemAuthorization?()
+                awaitingAnswer = true
+                if !sourceOwnsAuthorization {
+                    sourceOwnsAuthorization = true
+                    authorizationInFlight = true
+                    prepareSourceAuthorization?()
+                }
                 personalStatus[source] = "等待系統授權；請在系統視窗選擇允許或不允許…"
                 await Task.yield()
-                try await PersonalSources.authorize(source)
+                try await sourceAuthorizer(source)
+                awaitingAnswer = false
             }
             try Task.checkCancellation()
+            guard token == connectionGeneration else { return }
             // Once consent is valid, remember the source even if its first data read
             // fails. Background retry should not require another manual Connect click.
             var remembered = Set(sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? [])
             remembered.insert(source.rawValue)
             sourcePreferences.set(remembered.sorted(), forKey: "enabledSources.v1")
+            // Let the user answer the next prompt before starting a potentially long read.
+            if allowPrompt && anotherPermissionPending && source != .alarms {
+                deferRead()
+                return
+            }
+            if sourceOwnsAuthorization && !anotherPermissionPending { finishSourceConsent(resolved: true) }
             sourceReading = true
             sourceHealth[source, default: SourceHealth()].phase = .loading
             let observedRevision = sourceHealth[source]?.changeRevision
-            if ownsAuthorization { authorizationInFlight = false; sourceOwnsAuthorization = false; ownsAuthorization = false }
             personalStatus[source] = "正在讀取\(source.rawValue)…"
             let loaded: PersonalLoad
             if source == .alarms {
@@ -943,13 +992,13 @@ final class SearchStore: ObservableObject {
                 clockSetupPending = false
                 loaded = PersonalLoad(records: [], status: "已連接 Apple 系統時鐘")
             }
-            else {
+            else if source == .calendar || source == .reminders {
+                loaded = try await eventSourceLoader(source)
+            } else {
                 let notesCheckpoint = notesReadState
                 let worker = Task.detached(priority: .utility) { () async throws -> PersonalLoad in
                 switch source {
                 case .contacts: return try await PersonalSources.contacts()
-                case .calendar: return try await PersonalSources.calendar()
-                case .reminders: return try await PersonalSources.reminders()
                 case .notes: return try PersonalSources.notes(checkpoint: notesCheckpoint, cancellation: cancellation) { [weak self] update in
                     Task { @MainActor in
                         guard let self, token == self.connectionGeneration, self.sourceReading, self.sourceQueue.active?.source == .notes else { return }
@@ -987,7 +1036,8 @@ final class SearchStore: ObservableObject {
             guard token == connectionGeneration else { return }
             // A completed denial can proceed to the next source. An unresolved native
             // prompt (timeout/error) must stop the queue to avoid stacking dialogs.
-            if ownsAuthorization && !(error is SourceAccessFailure) {
+            if awaitingAnswer && !(error is SourceAccessFailure) {
+                finishSourceConsent(resolved: false)
                 for request in sourceQueue.discardPending() {
                     connecting.remove(request.source)
                     sourceHealth[request.source, default: SourceHealth()].phase = .stopped
@@ -1055,7 +1105,7 @@ final class SearchStore: ObservableObject {
                     } catch {
                         notice = error.localizedDescription
                         if plan.kind == .alarm, query == originalQuery {
-                            quickResults = [QuickResult(id: "check-clock", title: "請先核對系統時鐘", subtitle: error.localizedDescription, symbol: "alarm", action: .open(URL(fileURLWithPath: "/System/Applications/Clock.app")))]
+                            quickResults = [QuickResult(id: "check-clock", title: "請先核對系統時鐘", subtitle: error.localizedDescription, symbol: "alarm", action: .open(URL(fileURLWithPath: "/System/Applications/Clock.app")), sourceApp: .clock)]
                             results = []; selection = quickResults.first?.id; onLayoutChanged?()
                         }
                     }

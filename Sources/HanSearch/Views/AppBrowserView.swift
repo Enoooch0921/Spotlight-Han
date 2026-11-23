@@ -184,7 +184,7 @@ struct AppBrowserView: View {
                             ForEach(store.appSettingsResults) { item in
                                 Button { store.selection = item.id; store.openSelection() } label: {
                                     HStack {
-                                        Image(systemName: item.symbol).frame(width: 24)
+                                        SourceAppIcon(app: item.sourceApp, symbol: item.symbol, size: 24, showsPaneSymbol: item.id.hasPrefix("quick:system-settings:"))
                                         Text(L.text(item.title)).font(.callout)
                                         Spacer(); Image(systemName: "arrow.up.forward").font(.caption)
                                     }.padding(10).contentShape(Rectangle())
@@ -322,13 +322,4 @@ private struct AppLibraryTile: View {
             .help(app.name + "\n" + app.url.path).accessibilityLabel(app.name)
     }
     private var icon: some View { Image(nsImage: AppIconCache.shared.icon(app.url.path)).resizable().interpolation(.high).scaledToFit().accessibilityHidden(true) }
-}
-
-@MainActor private final class AppIconCache {
-    static let shared = AppIconCache()
-    private let images = NSCache<NSString, NSImage>()
-    func icon(_ path: String) -> NSImage {
-        if let cached = images.object(forKey: path as NSString) { return cached }
-        let icon = NSWorkspace.shared.icon(forFile: path); images.setObject(icon, forKey: path as NSString); return icon
-    }
 }

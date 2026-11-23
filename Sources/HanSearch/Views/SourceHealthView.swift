@@ -79,12 +79,25 @@ struct SearchSourceHealthBanner: View {
                                 .disabled(store.connecting.contains(source) || store.authorizationInFlight || store.actionInFlight || (source == .names && store.catalogRefreshing) || (source == .contents && store.indexing))
                         }
                     }
+                    PendingSourceConnectionsButton(store: store)
                     if store.mode == .all && attention.count > 2 {
                         SettingsLink { Text(L.format("另有 %@ 個來源需要注意，查看設定", String(attention.count - 2))) }.font(.caption)
                     }
                 }.padding(.horizontal, 18).padding(.vertical, 10)
                     .background(Color.orange.opacity(attention.isEmpty ? 0 : 0.07))
             }
+        }
+    }
+}
+
+struct PendingSourceConnectionsButton: View {
+    @ObservedObject var store: SearchStore
+    var body: some View {
+        let sources = store.pendingPermissionSources
+        if sources.count > 1 {
+            Button(L.format("一次連接 %@ 個來源", String(sources.count))) { store.connectSources(sources) }
+                .help(sources.map { L.text($0.rawValue) }.joined(separator: "、"))
+                .disabled(store.setupRunning || store.authorizationInFlight || store.actionInFlight)
         }
     }
 }

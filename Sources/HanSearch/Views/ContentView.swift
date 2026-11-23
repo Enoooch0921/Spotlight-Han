@@ -341,7 +341,7 @@ struct ContentView: View {
     }
     private func quickRow(_ item: QuickResult) -> some View {
         HStack(spacing: 13) {
-            Image(systemName: item.symbol).font(.system(size: 22)).foregroundStyle(.secondary).frame(width: 30, height: 32)
+            SourceAppIcon(app: item.sourceApp, symbol: item.symbol, showsPaneSymbol: item.id.hasPrefix("quick:system-settings:")).frame(width: 30, height: 32)
             VStack(alignment: .leading, spacing: 3) {
                 HighlightedText(text: quickTitle(item), query: item.supplement?.query ?? store.query).font(.system(size: item.id == "quick:calculator" ? 25 : 14, weight: .medium)).lineLimit(item.id == "quick:translation" ? 2 : 1)
                 HighlightedText(text: quickSubtitle(item), query: item.supplement?.query ?? store.query).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)

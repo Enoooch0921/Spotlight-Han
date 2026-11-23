@@ -6,6 +6,7 @@ import HanSearchCore
 @main
 struct SourceRefreshChecks {
     @MainActor static func main() async throws {
+        try await checkConnectionFlow()
         let suite = "HanSourceRefreshChecks.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -138,4 +139,94 @@ struct SourceRefreshChecks {
         store.cancelConnections()
         print("PASS: deferred notifications, concurrent EventKit refresh during Notes/setup, changes during reads, auto-refresh switch, failure backoff, old timestamps, permission loss, quiet search refresh preserving selection/details and near-miss query completion/replacement; fake loaders only, no personal reads or writes")
     }
+    @MainActor private static func checkConnectionFlow() async throws {
+        let suite = "HanConsentChecks.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suite)!
+        defer { preferences.removePersistentDomain(forName: suite) }
+        var allowed = Set<SearchMode>()
+        var requested: [SearchMode] = [], read: [SearchMode] = []
+        var answers: [SearchMode: CheckedContinuation<Void, Error>] = [:]
+        var began = 0, completed: [Bool] = []
+        let store = SearchStore(loadSources: false, fileAccess: FileAccessBookmarks(defaults: preferences), taskPreferences: preferences, sourcePreferences: preferences,
+            sourceAccessCheck: { allowed.contains($0) },
+            sourceAuthorizer: { source in
+                precondition(answers.isEmpty, "Native prompts must never overlap")
+                requested.append(source)
+                try await withCheckedThrowingContinuation { answers[source] = $0 }
+                allowed.insert(source)
+            }, eventSourceLoader: { source in
+                read.append(source)
+                return PersonalLoad(records: [], status: "Fixture")
+            }, eventCalendarLoader: { [] }, contentSearcher: { _, _ in SearchResponse(items: []) })
+        store.autoRefreshEnabled = false
+        store.query = "保留查詢"; store.mode = .calendar
+        store.prepareLauncherForOpening(continuingFlow: true)
+        store.prepareSourceAuthorization = {
+            precondition(store.authorizationInFlight)
+            began += 1
+            store.launcherDidHide()
+        }
+        store.finishSourceAuthorization = { resolved in
+            precondition(!store.authorizationInFlight)
+            completed.append(resolved)
+            if resolved { store.prepareLauncherForOpening(continuingFlow: true) }
+        }
+        func wait(_ condition: @escaping @MainActor () -> Bool) async throws {
+            for _ in 0..<400 {
+                if condition() { return }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            preconditionFailure("Connection flow stalled")
+        }
+        let group: [SearchMode] = [.contacts, .calendar, .reminders]
+        for source in group { store.sourceHealth[source] = SourceHealth(phase: .needsPermission, permissionStatus: .notDetermined) }
+        store.sourceHealth[.mail] = SourceHealth(phase: .needsPermission, permissionStatus: .denied)
+        precondition(store.pendingPermissionSources == group)
+        store.connectSources(store.pendingPermissionSources)
+        store.connectSources(group) // A double click cannot enqueue another prompt.
+        try await wait { answers[.contacts] != nil }
+        answers.removeValue(forKey: .contacts)!.resume(throwing: SourceAccessFailure(source: "Contacts", status: .denied))
+        try await wait { answers[.calendar] != nil }
+        answers.removeValue(forKey: .calendar)!.resume()
+        try await wait { answers[.reminders] != nil }
+        precondition(read.isEmpty && began == 1 && completed.isEmpty && !store.launcherSessionOpen)
+        answers.removeValue(forKey: .reminders)!.resume()
+        try await wait { !store.setupRunning }
+        precondition(requested == group && Set(read) == [.calendar, .reminders] && read.count == 2)
+        precondition(completed == [true] && store.launcherSessionOpen && store.mode == .calendar && store.query == "保留查詢")
+        precondition(store.sourceHealth[.contacts]?.phase == .needsPermission && store.pendingPermissionSources.isEmpty)
+        precondition(Set(preferences.stringArray(forKey: "enabledSources.v1") ?? []) == Set([SearchMode.calendar.rawValue, SearchMode.reminders.rawValue]))
+
+        // Restart path and explicit re-read reuse valid consent with no window transition.
+        store.restoreConnectedSources()
+        try await wait { store.connecting.isEmpty }
+        store.connectSources([.calendar, .reminders])
+        try await wait { !store.setupRunning }
+        precondition(requested == group && read.count == 6 && began == 1 && completed == [true])
+
+        // Single-source flow also reopens the launcher's existing session.
+        allowed.remove(.calendar)
+        store.connect(.calendar)
+        try await wait { answers[.calendar] != nil }
+        answers.removeValue(forKey: .calendar)!.resume()
+        try await wait { store.connecting.isEmpty }
+        precondition(began == 2 && completed == [true, true] && store.launcherSessionOpen)
+
+        // An unresolved dialog stops the other prompts and cannot be covered by Han.
+        allowed.removeAll()
+        store.connectSources([.calendar, .reminders])
+        try await wait { answers[.calendar] != nil }
+        answers.removeValue(forKey: .calendar)!.resume(throwing: ProcessFailure.failed("Fixture timeout"))
+        try await wait { !store.setupRunning && store.connecting.isEmpty }
+        precondition(requested.suffix(2) == [.calendar, .calendar] && completed.last == false && !store.launcherSessionOpen)
+
+        store.connectSources([.calendar, .reminders])
+        try await wait { answers[.calendar] != nil }
+        store.cancelConnections()
+        answers.removeValue(forKey: .calendar)!.resume()
+        try await Task.sleep(for: .milliseconds(50))
+        precondition(!store.authorizationInFlight && store.connecting.isEmpty && completed == [true, true, false, false] && requested.last == .calendar)
+        print("PASS: one Connect for three sources, sequential allow/deny, one launcher restoration, unchanged query and mode, silent reconnect on restart, single connection, timeout and cancellation")
+    }
+
 }

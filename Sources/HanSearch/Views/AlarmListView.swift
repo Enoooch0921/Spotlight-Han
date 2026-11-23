@@ -4,7 +4,7 @@ struct AlarmListView: View {
     var connect: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(L.text("使用 Apple 系統時鐘"), systemImage: "alarm").font(.headline)
+            Label { Text(L.text("使用 Apple 系統時鐘")) } icon: { SourceAppIcon(app: .clock, symbol: "alarm", size: 24) }.font(.headline)
             Text(L.text("輸入「設定30分鐘後的鬧鐘」，先預覽時間，按 Return 交給系統時鐘新增。"))
             HStack {
                 Button(L.text("連接系統時鐘")) { connect() }

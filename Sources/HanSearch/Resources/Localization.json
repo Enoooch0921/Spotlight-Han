@@ -1026,5 +1026,9 @@
   "可移除上方條件，或檢查檔案所在資料夾是否已加入搜尋。": "Remove a filter above or check whether the containing folder is in your search scope.",
   "拖曳以移動搜尋視窗": "Drag to move the search window",
   "目前只有備忘錄標題可拖出": "Only the note title is available to drag",
-  "拖到文字欄位可插入備忘錄文字，拖到 Finder 可存成文字檔": "Drag into a text field to insert note text, or into Finder to save a text file"
+  "拖到文字欄位可插入備忘錄文字，拖到 Finder 可存成文字檔": "Drag into a text field to insert note text, or into Finder to save a text file",
+  "時鐘": "Clock",
+  "辭典": "Dictionary",
+  "一次連接 %@ 個來源": "Connect %@ Sources Together",
+  "可逐一或一次連接這些來源。macOS 會依序詢問需要的權限，已授權的來源會直接讀取。": "Connect these sources individually or together. macOS asks for each permission it needs and reads sources you have already allowed."
 }

@@ -46,7 +46,7 @@ public enum SystemSettingsCatalog {
         guard !query.isEmpty else { return [] }
         let rootNames = ["設定", "設置", "系統設定", "系統設置", "settings", "system settings", "system preferences"].map(normalized)
         if rootNames.contains(query) {
-            return [QuickResult(id: "settings", title: "系統設定", subtitle: "開啟 Mac 系統設定", symbol: "gearshape", action: .open(URL(fileURLWithPath: "/System/Applications/System Settings.app")))]
+            return [QuickResult(id: "settings", title: "系統設定", subtitle: "開啟 Mac 系統設定", symbol: "gearshape", action: .open(URL(fileURLWithPath: "/System/Applications/System Settings.app")), sourceApp: .settings)]
         }
         for prefix in ["打開", "開啟", "前往", "系統設定", "系統設置", "open ", "system settings ", "settings "].map(normalized).sorted(by: { $0.count > $1.count }) {
             if query.hasPrefix(prefix) { query.removeFirst(prefix.count); query = query.trimmingCharacters(in: .whitespaces) }
@@ -62,7 +62,7 @@ public enum SystemSettingsCatalog {
             guard terms.allSatisfy({ haystack.contains($0) }) else { return nil }
             let score = aliases.contains(query) ? 0 : aliases.contains(where: { $0.hasPrefix(query) }) ? 1 : 2
             let url = URL(string: "x-apple.systempreferences:" + pane.id)!
-            return (score, QuickResult(id: "system-settings:" + pane.id, title: pane.title, subtitle: "系統設定 · 按 Return 開啟此頁面", symbol: pane.symbol, action: .open(url)))
+            return (score, QuickResult(id: "system-settings:" + pane.id, title: pane.title, subtitle: "系統設定 · 按 Return 開啟此頁面", symbol: pane.symbol, action: .open(url), sourceApp: .settings))
         }.sorted { $0.0 < $1.0 || ($0.0 == $1.0 && $0.1.id < $1.1.id) }.prefix(6).map(\.1)
     }
 }

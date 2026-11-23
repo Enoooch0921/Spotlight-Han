@@ -81,7 +81,7 @@ swiftc -parse-as-library Sources/HanSearch/Views/LauncherSearchField.swift \
   script/check_launcher_search_field.swift -o "$BUILD_DIR/HanLauncherFieldChecks"
 "$BUILD_DIR/HanLauncherFieldChecks"
 
-swiftc -parse-as-library "${core_flags[@]}" Sources/HanSearch/Services/SearchResultDrag.swift \
+swiftc -parse-as-library "${core_flags[@]}" Sources/HanSearch/Services/{AppIconCache,SearchResultDrag}.swift \
   Sources/HanSearch/Views/ResultDragRegion.swift Sources/HanSearch/App/LauncherPanel.swift \
   script/check_result_drag.swift -o "$BUILD_DIR/HanResultDragChecks"
 "$BUILD_DIR/HanResultDragChecks"

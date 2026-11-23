@@ -8,6 +8,15 @@ import HanSearchCore
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: directory) }
 
+        for source in SystemSourceApp.allCases {
+            // Some OS installations omit optional apps. Notes is a required fixture on macOS CI.
+            let installed = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.rawValue)
+            if installed != nil || source == .notes {
+                let icon = AppIconCache.shared.icon(for: source)
+                precondition(icon?.isValid == true && icon === AppIconCache.shared.icon(for: source))
+            }
+        }
+        precondition(SystemSettingsCatalog.results(query: "wifi").first?.sourceApp == .settings)
         let title = "../會議:紀錄"
         let body = "第一段 🗒️\n" + String(repeating: "背景資訊\n", count: 90) + "软体测试\n決議留在最後一行。"
         var scan = NotesReadState(identifiers: ["a", "b", "c"])
@@ -16,7 +25,7 @@ import HanSearchCore
         scan.skip(id: "c", protected: true)
         for mode in [SearchMode.all, .notes] {
             let result = try PersonalRecord.search(scan.records, query: "軟體", mode: mode).first!
-            precondition(result.subtitle != body)
+            precondition(result.subtitle != body && result.sourceApp == .notes)
             let board = NSPasteboard.withUniqueName()
             defer { board.releaseGlobally() }
             let provider = SearchResultDrag(result)!.draggingItem().item as! NSFilePromiseProvider
@@ -37,10 +46,10 @@ import HanSearchCore
             }
         }
         let partial = try PersonalRecord.search(scan.records, query: "只有標題", mode: .notes).first!
-        guard case let .text(_, value, _) = SearchResultDrag(partial) else { preconditionFailure() }
+        guard case let .text(_, value, _, .notes) = SearchResultDrag(partial) else { preconditionFailure() }
         precondition(value == "只有標題" && scan.records.count == 2)
         let calculator = QuickProvider.results(query: "24+18").first { $0.id == "quick:calculator" }!
-        guard case let .text(_, answer, _) = SearchResultDrag(calculator) else { preconditionFailure() }
+        guard case let .text(_, answer, _, nil) = SearchResultDrag(calculator) else { preconditionFailure() }
         precondition(answer == "42")
 
         let panel = LauncherPanel(contentRect: NSRect(x: 50, y: 150, width: 350, height: 140),

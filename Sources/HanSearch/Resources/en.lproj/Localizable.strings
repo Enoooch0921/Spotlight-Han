@@ -97,6 +97,7 @@
 "一個快捷鍵，回到手邊的事。" = "One shortcut. Back to your flow.";
 "一個搜尋框，找回你要的東西" = "One search box. Find what you need.";
 "一次設定所有資料來源" = "Connect all sources";
+"一次連接 %@ 個來源" = "Connect %@ Sources Together";
 "一般" = "General";
 "上一個命中頁" = "Previous matching page";
 "上一步" = "Back";
@@ -249,6 +250,7 @@
 "可自訂組合，也可使用 ⌘Space。若原 Spotlight 仍占用，設定會提示並提供系統設定入口。" = "Choose your own shortcut or use ⌘Space. If Spotlight still uses it, settings will explain the conflict and link to macOS settings.";
 "可調整預覽欄位；修改上方文字會重新解析。" = "Adjust these fields, or edit the text above to parse it again.";
 "可輸入國家名稱，不用先知道貨幣代碼。結果會標示每日參考匯率的資料日期。" = "Use a country name without knowing its currency code. Results show the date of the daily reference rate.";
+"可逐一或一次連接這些來源。macOS 會依序詢問需要的權限，已授權的來源會直接讀取。" = "Connect these sources individually or together. macOS asks for each permission it needs and reads sources you have already allowed.";
 "可選擇使用者資料夾，一次授權下方勾選的常用位置；只索引勾選位置，不掃描 Library。也可以直接多選其他資料夾。" = "Select your home folder to authorize the checked common locations together. Only checked locations are indexed; Library is excluded. You can also select other folders directly.";
 "可重新更新索引；若持續失敗，請確認圖片清晰、檔案可開啟，或拆分文件。" = "Try updating the index again. If it still fails, check image clarity and file readability, or split the document.";
 "台斤：1 台斤 = 0.6 公斤" = "Taiwanese catty: 1 台斤 = 0.6 kg";
@@ -525,6 +527,7 @@
 "日期由舊到新" = "Event date: oldest first";
 "日期與時間" = "Date & Time";
 "明細顯示前 200 份，分類數量包含全部未完成文件。" = "Showing the first 200 files. Reason counts include all unfinished files.";
+"時鐘" = "Clock";
 "時間單位" = "Time unit";
 "時間尚未完整辨識，請簡化成一個日期與時間。" = "The time is incomplete. Simplify it to one date and time.";
 "時間已經過去，請調整後再建立。" = "This time has passed. Adjust it before creating.";
@@ -915,6 +918,7 @@
 "輸入繁體「會議記錄」，也能找到簡體檔名。" = "Type Traditional Chinese 會議記錄 to find a filename in Simplified Chinese.";
 "輸入自然語言時間與事項，再按 Return 看預覽。提醒也可用 rem；系統鬧鐘需先連接時鐘捷徑。" = "Enter a time and task in natural language, then press Return to preview. Use rem for reminders. System alarms require the Clock companion shortcut.";
 "輸入關鍵字，繁體與簡體一起比對。" = "Type a keyword to match Traditional and Simplified Chinese.";
+"辭典" = "Dictionary";
 "農曆日期尚未支援，請改用國曆日期。" = "Lunar calendar dates are not supported yet. Use a Gregorian date.";
 "返回 App" = "Back to apps";
 "返回搜尋" = "Back to search";
