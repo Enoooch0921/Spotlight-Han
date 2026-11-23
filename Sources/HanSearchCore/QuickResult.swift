@@ -14,14 +14,16 @@ public struct QuickResult: Identifiable, Hashable, Sendable {
     public let action: QuickAction
     public let startDate: Date?
     public let endDate: Date?
+    public let noteText: String?
     public let supplement: SearchSupplement?
-    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil, supplement: SearchSupplement? = nil) {
+    public init(id: String, title: String, subtitle: String, symbol: String, action: QuickAction, startDate: Date? = nil, endDate: Date? = nil, supplement: SearchSupplement? = nil, noteText: String? = nil) {
         self.id = "quick:" + id; self.title = title; self.subtitle = subtitle; self.symbol = symbol; self.action = action
         self.startDate = startDate; self.endDate = endDate
+        self.noteText = noteText
         self.supplement = supplement
     }
     public func supplemented(by match: SearchSupplement) -> QuickResult {
-        QuickResult(id: String(id.dropFirst("quick:".count)), title: title, subtitle: subtitle, symbol: symbol, action: action, startDate: startDate, endDate: endDate, supplement: match)
+        QuickResult(id: String(id.dropFirst("quick:".count)), title: title, subtitle: subtitle, symbol: symbol, action: action, startDate: startDate, endDate: endDate, supplement: match, noteText: noteText)
     }
 }
 
@@ -87,7 +89,7 @@ public struct PersonalRecord: Sendable {
         } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query.text) {
             preview = SearchHighlight.excerpt(in: text, query: query.text)
         } else { preview = subtitle }
-        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate)
+        return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate, noteText: self.mode == .notes ? text : nil)
     }
 
     public static func search(_ records: [PersonalRecord], query: String, mode: SearchMode,

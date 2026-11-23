@@ -40,7 +40,7 @@ import HanSearchCore
         precondition(store.primaryResultIDs.last == original[0])
         store.setLowered(false, fileID: original[0])
         precondition(store.primaryResultIDs == original)
-        let drag = FileResultActions.draggingItem(for: file)
+        let drag = SearchResultDrag.url(file).draggingItem()
         let pasteboard = NSPasteboard.withUniqueName()
         defer { pasteboard.releaseGlobally() }
         precondition(pasteboard.writeObjects([drag.item as! NSPasteboardWriting]))

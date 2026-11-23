@@ -72,6 +72,7 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 HStack(spacing: 13) {
                     Image(systemName: store.composerMode == .event ? "calendar.badge.plus" : store.composerMode == .reminder ? "checklist" : "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
+                        .overlay { LauncherMoveHandle().help(L.text("拖曳以移動搜尋視窗")) }
                     LauncherSearchField(text: $store.query, focused: $focused,
                         placeholder: L.text(store.composerMode == nil ? (store.isAppBrowser ? "搜尋應用程式…" : "Spotlight Han 搜尋") : "輸入時間和事項…"),
                         accessibilityLabel: L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"),
@@ -288,7 +289,7 @@ struct ContentView: View {
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
             .onTapGesture { store.selection = item.id; store.previewSelectionArmed = true }
-            .background { if !item.isApplication { FileDragRegion(url: item.url) } }
+            .background { ResultDragRegion(payload: .url(item.url)) }
             .contextMenu {
                 if !item.isApplication {
                     Button(L.text("快速預覽")) { store.previewFile(item) }
@@ -354,12 +355,21 @@ struct ContentView: View {
                 Text(L.text((item.endDate ?? start) < Date() ? "已過去" : start <= Date() ? "進行中" : "即將到來"))
                     .font(.caption2).foregroundStyle(.secondary)
             }
+            if case .note = item.action {
+                let titleOnly = item.noteText?.isEmpty != false
+                Image(systemName: "arrow.up.forward.square")
+                    .foregroundStyle(.secondary).font(.caption)
+                    .help(L.text(titleOnly ? "目前只有備忘錄標題可拖出" : "拖到文字欄位可插入備忘錄文字，拖到 Finder 可存成文字檔"))
+            }
             if store.selection == item.id { Image(systemName: "return").font(.caption).foregroundStyle(.secondary) }
         }.padding(.horizontal, 12).padding(.vertical, 10)
             .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
             .onTapGesture { store.selection = item.id }
+            .background {
+                if let payload = SearchResultDrag(item) { ResultDragRegion(payload: payload) }
+            }
             .contextMenu {
                 if let candidate = store.habitCandidate(item) {
                     Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: candidate.identity, title: item.title) }

@@ -108,37 +108,3 @@ struct FileFilterBar: View {
         }
     }
 }
-
-/// A row marker lets the panel begin a native drag without taking clicks,
-/// contextual menus or accessibility focus away from the SwiftUI result.
-struct FileDragRegion: NSViewRepresentable {
-    let url: URL
-    func makeNSView(context: Context) -> Region { Region() }
-    func updateNSView(_ view: Region, context: Context) { view.url = url }
-
-    final class Region: NSView, NSDraggingSource {
-        static let visible = NSHashTable<Region>.weakObjects()
-        var url: URL?
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            if window == nil { Self.visible.remove(self) } else { Self.visible.add(self) }
-        }
-        static func at(_ point: NSPoint, in window: NSWindow) -> Region? {
-            visible.allObjects.first { region in
-                region.window === window && !region.isHiddenOrHasHiddenAncestor &&
-                    region.visibleRect.contains(region.convert(point, from: nil))
-            }
-        }
-        func beginFileDrag(_ url: URL, with event: NSEvent) {
-            let item = FileResultActions.draggingItem(for: url)
-            let icon = NSWorkspace.shared.icon(forFile: url.path)
-            let point = convert(event.locationInWindow, from: nil)
-            item.setDraggingFrame(NSRect(origin: point, size: NSSize(width: 40, height: 40)), contents: icon)
-            beginDraggingSession(with: [item], event: event, source: self)
-        }
-        func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-            context == .outsideApplication ? .copy : []
-        }
-    }
-}

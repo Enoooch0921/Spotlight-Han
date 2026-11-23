@@ -72,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
         panel.level = .floating; panel.isFloatingPanel = true; panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isMovableByWindowBackground = true; panel.isReleasedWhenClosed = false
+        panel.isReleasedWhenClosed = false
         panel.animationBehavior = .none
         let hosting = TransparentHostingView(rootView: ContentView(store: store))
         // AppKit owns this panel's finite frame. Intrinsic/min/max probes can loop
@@ -340,42 +340,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         else if NSApp.modalWindow == nil { showSearch() }
         return true
     }
-}
-
-private final class LauncherPanel: NSPanel {
-    var command: ((String) -> Bool)?
-    var dismiss: (() -> Void)?
-    private weak var dragRegion: FileDragRegion.Region?
-    private var dragURL: URL?
-    private var dragOrigin = NSPoint.zero
-
-    override func sendEvent(_ event: NSEvent) {
-        switch event.type {
-        case .leftMouseDown:
-            dragOrigin = event.locationInWindow
-            dragRegion = FileDragRegion.Region.at(dragOrigin, in: self)
-            dragURL = dragRegion?.url
-        case .leftMouseDragged:
-            if let region = dragRegion, let url = dragURL, hypot(event.locationInWindow.x - dragOrigin.x, event.locationInWindow.y - dragOrigin.y) >= 4 {
-                dragRegion = nil
-                dragURL = nil
-                region.beginFileDrag(url, with: event)
-                return
-            }
-        case .leftMouseUp:
-            dragRegion = nil
-            dragURL = nil
-        default: break
-        }
-        super.sendEvent(event)
-    }
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command, let key = event.charactersIgnoringModifiers, command?(key) == true { return true }
-        return super.performKeyEquivalent(with: event)
-    }
-    override func cancelOperation(_ sender: Any?) { if let dismiss { dismiss() } else { orderOut(nil) } }
 }
 
 /// Keep the hosting surface clear; only the individual native glass shapes draw chrome.

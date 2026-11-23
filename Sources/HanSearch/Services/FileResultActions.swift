@@ -32,10 +32,6 @@ extension SearchStore {
     private var handlers: [() -> Void] = []
     private let menu = NSMenu()
 
-    static func draggingItem(for url: URL) -> NSDraggingItem {
-        NSDraggingItem(pasteboardWriter: url as NSURL)
-    }
-
     static func show(for store: SearchStore, in window: NSWindow) {
         guard let item = store.actionFile, let view = window.contentView else { return }
         let actions = FileResultActions()

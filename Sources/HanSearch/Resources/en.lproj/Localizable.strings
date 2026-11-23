@@ -437,7 +437,9 @@
 "找名稱與路徑，不讀取影片內容。適合先加入下載、文件、影片等常用位置。" = "Find names and paths without reading video contents. Start with Downloads, Documents or Movies.";
 "找檔名，也找文件裡的字" = "Search names and document contents";
 "把 App 拖到左側此分類，即可加入" = "Drag an app onto this category in the sidebar to add it.";
+"拖到文字欄位可插入備忘錄文字，拖到 Finder 可存成文字檔" = "Drag into a text field to insert note text, or into Finder to save a text file";
 "拖動 App 到左側分類；分類可拖動排序，自訂分類可右鍵編輯。" = "Drag apps to sidebar categories. Drag any category to reorder; right-click custom categories to edit.";
+"拖曳以移動搜尋視窗" = "Drag to move the search window";
 "拼音、注音與搜尋縮寫" = "Pinyin, Zhuyin and Search Aliases";
 "拼音、注音，也可以自訂" = "Pinyin, Zhuyin and your own aliases";
 "拼音首字母" = "Pinyin initials";
@@ -690,6 +692,7 @@
 "登入 Mac 時自動啟動" = "Launch at login";
 "登入項目與延伸功能" = "Login Items & Extensions";
 "目前不會在登入時自動開啟。" = "Launch at login is off.";
+"目前只有備忘錄標題可拖出" = "Only the note title is available to drag";
 "目前已是最新可用版本" = "You have the latest available version";
 "目前已關閉搜尋習慣學習，可在「搜尋與快捷鍵」更改。" = "Search learning is currently off. Change it in Search & Shortcuts.";
 "目前快捷鍵：%@" = "Current shortcut: %@";
