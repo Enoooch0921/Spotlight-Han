@@ -64,15 +64,15 @@ public struct PersistentDocumentIndex: Sendable {
             value + ((try? FileManager.default.attributesOfItem(atPath: databaseURL.path + suffix)[.size] as? NSNumber)?.int64Value ?? 0)
         }
     }
-    public func search(query: String, roots: [URL], mode: SearchMode = .all, cancellation: ProcessCancellation? = nil, limit: Int = 200) throws -> SearchResponse {
+    public func search(query: String, roots: [URL], mode: SearchMode = .all, cancellation: ProcessCancellation? = nil, limit: Int = 200, filter: FileQueryFilter? = nil) throws -> SearchResponse {
         guard limit > 0 else { return SearchResponse(items: []) }
-        let primary = try literalSearch(query: query, roots: roots, mode: mode, cancellation: cancellation, limit: limit)
+        let primary = try literalSearch(query: query, roots: roots, mode: mode, cancellation: cancellation, limit: limit, filter: filter)
         var items = primary.items, truncated = primary.truncated, seen = Set(primary.items.map(\.id))
         for alternative in TaiwanVocabulary.alternatives(for: query) {
             if cancellation?.isCancelled == true { throw CancellationError() }
             // Primary results always get the entire cap first.
             guard items.count < limit else { break }
-            let response = try literalSearch(query: alternative.query, roots: roots, mode: mode, cancellation: cancellation, limit: limit)
+            let response = try literalSearch(query: alternative.query, roots: roots, mode: mode, cancellation: cancellation, limit: limit, filter: filter)
             truncated = truncated || response.truncated
             for item in response.items where seen.insert(item.id).inserted {
                 if items.count == limit { truncated = true; break }
@@ -81,21 +81,32 @@ public struct PersistentDocumentIndex: Sendable {
         }
         return SearchResponse(items: items, truncated: truncated)
     }
-    private func literalSearch(query: String, roots: [URL], mode: SearchMode, cancellation: ProcessCancellation?, limit: Int) throws -> SearchResponse {
-        guard !roots.isEmpty, FileManager.default.fileExists(atPath: databaseURL.path), let expression = DocumentIndexTerms.expression(String(query.prefix(200))) else { return SearchResponse(items: []) }
+    private func literalSearch(query: String, roots: [URL], mode: SearchMode, cancellation: ProcessCancellation?, limit: Int, filter: FileQueryFilter?) throws -> SearchResponse {
+        guard !roots.isEmpty, FileManager.default.fileExists(atPath: databaseURL.path) else { return SearchResponse(items: []) }
         let db = try IndexDatabase(url: databaseURL, limit: limitBytes, readOnly: true)
         let (scope, bindings) = predicate(roots)
         let hasPages = try db.rows("PRAGMA user_version")[0][0] == "2"
+        let browse = query.isEmpty && filter != nil
+        let expression = DocumentIndexTerms.expression(String(query.prefix(200)))
+        guard expression != nil || browse else { return SearchResponse(items: []) }
+        let matchClause = browse ? "" : "rowid IN (SELECT rowid FROM document_terms WHERE document_terms MATCH ?) AND "
+        let arguments: [String?] = browse ? bindings : [expression] + bindings
         // Stream through candidate pages. False gram intersections must not consume the result cap.
-        var found: [SearchItem] = [], offset = 0
+        var found: [SearchItem] = [], cursor = ""
         while true {
             if cancellation?.isCancelled == true { throw CancellationError() }
-            let rows = try db.rows("SELECT path, body FROM documents WHERE rowid IN (SELECT rowid FROM document_terms WHERE document_terms MATCH ?) AND (\(scope)) ORDER BY path LIMIT 8 OFFSET ?", [expression] + bindings + [String(offset)])
+            let rows = try db.rows("SELECT path, \(browse ? "NULL" : "body") FROM documents WHERE \(matchClause)(\(scope)) AND path > ? ORDER BY path LIMIT \(browse ? 128 : 8)", arguments + [cursor])
             if rows.isEmpty { break }
             for row in rows {
                 if cancellation?.isCancelled == true { throw CancellationError() }
                 let url = URL(fileURLWithPath: row[0])
-                guard FileManager.default.isReadableFile(atPath: url.path), let item = IndexedDocument(url: url, text: row[1]).match(query: query, mode: mode, allowVocabulary: false) else { continue }
+                guard filter?.accepts(url) != false, FileManager.default.isReadableFile(atPath: url.path) else { continue }
+                if browse {
+                    found.append(SearchItem(url: url, source: "Han 索引・檔名"))
+                    if found.count > limit { return SearchResponse(items: Array(found.prefix(limit)), truncated: true) }
+                    continue
+                }
+                guard let item = IndexedDocument(url: url, text: row[1]).match(query: query, mode: mode, allowVocabulary: false) else { continue }
                 let pages = hasPages && !item.excerpt.isEmpty ? try loadPages(db, path: url.path) : []
                 let matching = pages.filter { IndexedDocument(url: url, text: $0.text).match(query: query, mode: .contents, allowVocabulary: false) != nil }
                 let locations = matching.isEmpty ? pages.filter { !SearchHighlight.ranges(in: $0.text, query: query).isEmpty } : matching
@@ -106,7 +117,7 @@ public struct PersistentDocumentIndex: Sendable {
                     matchPages: url.pathExtension.lowercased() == "pdf" ? Array(locations.filter { $0.number > 0 }.prefix(5).map(\.number)) : [], isOCR: ocr))
                 if found.count > limit { return SearchResponse(items: Array(found.prefix(limit)), truncated: true) }
             }
-            offset += rows.count
+            cursor = rows.last![0]
         }
         return SearchResponse(items: found)
     }

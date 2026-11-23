@@ -209,7 +209,7 @@ struct AppBrowserView: View {
                         }
                     }.padding(.horizontal, 14).padding(.bottom, 14)
                 }.focusable().focused($gridFocused).focusEffectDisabled()
-                    .onChange(of: library.selection) { _, id in if gridFocused, let id { proxy.scrollTo(id, anchor: .center) } }
+                    .onChange(of: library.selection) { _, id in if gridFocused, let id { proxy.scrollTo(id) } }
             }
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

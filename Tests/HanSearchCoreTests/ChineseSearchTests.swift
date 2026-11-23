@@ -25,6 +25,10 @@ struct CheckRunner {
             return
         }
         let tests = ChineseSearchTests()
+        try tests.testFileWorkflows()
+        if CommandLine.arguments.contains("--file-workflows-only") { return }
+        try await tests.testSearchWorkBoundaries()
+        if CommandLine.arguments.contains("--search-work-only") { return }
         if CommandLine.arguments.contains("--pdf-preview-only") { try tests.testPDFPreviewSearch(); return }
         try tests.testOCRScheduling()
         if CommandLine.arguments.contains("--ocr-energy-only") { return }
@@ -76,7 +80,7 @@ struct CheckRunner {
         tests.testNotesResumeState()
         tests.testEventAccessCallbackState()
         tests.testCalendarChronologicalSort()
-        print("PASS: 38 check groups — Apple Vision OCR and resumable page-aware index, Taiwan era years and recurring tasks, natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
+        print("PASS: 40 check groups — file search workflows, bounded query matching and cooperative cancellation, Apple Vision OCR and resumable page-aware index, Taiwan era years and recurring tasks, natural unit conversion and temperature preferences, Taiwan wording and Zhuyin keyboard supplements, Excel extraction, model identifier boundaries, App-only initials, PPTX extraction, document query grammar, phonetic titles/initials, Chinese matching, ambiguous characters, escaping, deduplication, real DOCX extraction, Spotlight grammar, calculator, unit conversion, independent filename cache, personal-record matching, safe URL actions, calendar/reminder parsing and system Clock date boundaries, currency aliases and conversion, shortcut persistence and validation, launcher visibility after switching apps, serialized source connections, callback timeout/cancellation, streaming process cancellation, system shortcut preference decoding, multilingual settings pane search, currency country aliases, original-text highlighting and hit-centered excerpts.")
     }
 }
 
@@ -134,11 +138,12 @@ final class ChineseSearchTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("HanAppCatalog-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        func bundle(_ relative: String, _ name: String, _ id: String, _ category: String?) throws {
+        func bundle(_ relative: String, _ name: String, _ id: String, _ category: String?, displayName: String? = nil) throws {
             let contents = root.appendingPathComponent(relative).appendingPathComponent("Contents")
             try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
             var info: [String: Any] = ["CFBundleIdentifier": id, "CFBundleName": name, "CFBundlePackageType": "APPL", "CFBundleExecutable": "Fixture"]
             info["LSApplicationCategoryType"] = category
+            info["CFBundleDisplayName"] = displayName
             let data = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             try data.write(to: contents.appendingPathComponent("Info.plist"))
         }
@@ -172,6 +177,30 @@ final class ChineseSearchTests {
         XCTAssertEqual(merged.first?.id, logic.id)
         XCTAssertEqual(merged.first?.applicationIdentifier, logic.preferenceID)
         XCTAssertEqual(apps.first { $0.bundleID == "fixture.tool" }?.group, .other)
+
+        try bundle("TencentMeeting.app", "腾讯会议", "com.tencent.meeting", nil, displayName: "TencentMeeting")
+        try bundle("Study.app", "Study Desk", "fixture.study", nil, displayName: "學習桌")
+        try bundle("Waves Tool.app", "AudioPluginHost", "com.wavesaudio.fixture", nil)
+        let namedApps = ApplicationCatalog.scan(roots: [root])
+        let meeting = namedApps.first { $0.bundleID == "com.tencent.meeting" }!
+        XCTAssertEqual(meeting.name, "TencentMeeting")
+        for query in ["騰訊會議", "腾讯会议", "騰訊", "Tencent Meeting", "tengxunhuiyi", "txhy", "ㄊㄒㄏㄧ"] {
+            XCTAssertTrue(meeting.matches(query))
+        }
+        XCTAssertFalse(meeting.matches("腾讯文件"))
+        XCTAssertFalse(meeting.matches("QQ"))
+        let study = namedApps.first { $0.bundleID == "fixture.study" }!
+        XCTAssertEqual(study.name, "學習桌")
+        XCTAssertTrue(study.matches("學習桌")); XCTAssertTrue(study.matches("Study Desk"))
+        let waves = namedApps.first { $0.bundleID == "com.wavesaudio.fixture" }!
+        XCTAssertEqual(waves.name, "Waves Tool"); XCTAssertFalse(waves.matches("AudioPluginHost"))
+
+        let exactMeeting = SearchItem(url: root.appendingPathComponent("Exact.app"), name: "騰訊會議", source: "fixture")
+        let partialMeeting = SearchItem(url: root.appendingPathComponent("騰訊會議記錄.pdf"), source: "fixture")
+        let chineseOrder = SearchService.merge([partialMeeting, meeting.searchItem, exactMeeting], query: "騰訊會議")
+        XCTAssertEqual(chineseOrder.map(\.id), [exactMeeting.id, meeting.id, partialMeeting.id])
+        let supplemented = meeting.searchItem.supplemented(by: SearchSupplement(kind: .zhuyinKeyboard, query: "ㄊㄒㄏㄧ"))
+        XCTAssertEqual(supplemented.applicationAliases, meeting.aliases)
     }
 
     private func similarlyNamedFileFixture() -> SearchItem {

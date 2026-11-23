@@ -83,7 +83,8 @@ actor NoteFixture {
         store.openSelection(); store.query = "changed while opening"
         try await waitUntil("Successful Note open did not record the original query") { store.habits.history.entries.count == 2 }
         precondition(store.habits.history.entries.count == 2)
-        store.query = "logicpro"; store.selection = quickNote.id; store.openSelection()
+        store.query = "logicpro"; store.results = [result]; store.quickResults = [quickNote]
+        store.selection = quickNote.id; store.openSelection()
         try await waitUntil("Repeated Note opening did not affect ranking") { store.allIDs.first == quickNote.id }
         precondition(store.allIDs.first == quickNote.id, "Learned Notes must cross the App/file section boundary")
         let calculator = QuickResult(id:"calculator",title:"2",subtitle:"",symbol:"equal",action:.details("fixture"))
@@ -108,6 +109,7 @@ actor NoteFixture {
         precondition(preparedSource == "en", "Footer Return must preserve the language preparation action")
         print("PASS: translation accessory keyboard order, primary-list isolation, selection removal and language setup action; no clipboard or personal data changed")
         store.mode = .calendar
+        store.quickResults = [calculator, quickNote]; store.results = [result]
         precondition(store.allIDs == store.allQuickResults.map(\.id) + store.results.map(\.id))
         store.habits.clear(); precondition(store.habits.history.entries.isEmpty)
         let aliases = SearchAliasStore(defaults: defaults)

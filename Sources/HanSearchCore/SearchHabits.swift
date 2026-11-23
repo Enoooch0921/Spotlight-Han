@@ -32,6 +32,25 @@ public struct SearchHabitHistory: Codable, Sendable {
     public static func queryKey(_ query: String) -> String {
         ChineseSearch.normalized(String(query.prefix(200))).filter { !$0.isWhitespace }
     }
+    // Optional so histories written before manual corrections decode unchanged.
+    private var lowered: [String: Set<String>]?
+    public var hasCorrections: Bool { lowered?.isEmpty == false }
+    public func loweredFiles(query: String, ids: [String]) -> Set<String> {
+        guard let lowered, !lowered.isEmpty, let targets = lowered[digest("q:" + Self.queryKey(query))] else { return [] }
+        return Set(ids.filter { targets.contains(digest("file:" + $0)) })
+    }
+    public mutating func setLowered(_ lower: Bool, query: String, fileID: String) {
+        let key = Self.queryKey(query)
+        guard !key.isEmpty else { return }
+        let q = digest("q:" + key), target = digest("file:" + fileID)
+        var rules = lowered ?? [:]
+        if lower { rules[q, default: []].insert(target) }
+        else {
+            rules[q]?.remove(target)
+            if rules[q]?.isEmpty == true { rules.removeValue(forKey: q) }
+        }
+        lowered = rules
+    }
     private func digest(_ value: String) -> String {
         let alphabet = Array("0123456789abcdef".utf8)
         var bytes: [UInt8] = []; bytes.reserveCapacity(64)

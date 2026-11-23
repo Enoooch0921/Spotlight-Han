@@ -29,6 +29,7 @@ private struct HanMenuView: View {
     var body: some View {
         Group {
             Button(L.text("開啟 Spotlight Han"), action: open)
+            Button(L.text("檢查這個檔案…")) { open(); store.chooseDiagnosticFile() }
             SettingsEntryButton(store: store) { Text(L.text("設定與資料來源…")) }
             Button(L.text("使用說明…")) { openWindow(id: "usage-guide") }
             Button(L.text("新手引導…")) { store.showOnboarding?() }
@@ -57,8 +58,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var layoutTarget: NSRect?
     private var layoutScheduled = false
     private var updateObservation: AnyCancellable?
+    private var authorizationObservation: AnyCancellable?
+    private let applicationPresence = ApplicationPresence(application: .shared)
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        synchronizeApplicationPresence()
+        // Use the current value after @Published finishes its write. Every exit
+        // path (success, denial, timeout, cancel, composer) restores utility mode.
+        authorizationObservation = store.$authorizationInFlight.dropFirst().receive(on: DispatchQueue.main).sink { [weak self] _ in
+            self?.synchronizeApplicationPresence()
+        }
         let panel = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 804, height: 140), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Spotlight Han"
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
@@ -72,13 +80,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hosting.sizingOptions = []
         panel.contentView = hosting
         panel.command = { [weak self] key in self?.command(key) ?? false }
-        panel.dismiss = { [weak self] in
-            guard let self else { return }
-            if self.store.appLibrary.isEditingCategory { self.store.appLibrary.isEditingCategory = false }
-            else if self.store.appLibrary.isPreviewingSuggestions { self.store.appLibrary.isPreviewingSuggestions = false }
-            else { self.hideSearch(returnFocus: true) }
-        }
+        panel.dismiss = { [weak self] in self?.store.escapeLauncherLayer() }
         self.panel = panel
+        store.showFileActions = { [weak self] in
+            guard let self, let panel = self.panel else { return }
+            FileResultActions.show(for: self.store, in: panel)
+        }
         store.showOnboarding = { [weak self] in self?.showOnboarding() }
         store.onLayoutChanged = { [weak self] in self?.scheduleLayout() }
         store.hideLauncher = { [weak self] in self?.hideSearch() }
@@ -88,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.previewSelectionChanged = { [weak self] in
             guard let self, self.quickPreview.isPresented else { return }
             if let item = self.store.selectedPreviewItem {
-                self.quickPreview.present(FilePreviewRequest(item: item, query: self.store.query), relativeTo: self.panel)
+                self.quickPreview.present(FilePreviewRequest(item: item, query: self.store.matchText), relativeTo: self.panel)
             } else { self.quickPreview.dismiss() }
         }
         quickPreview.didClose = { [weak self] in
@@ -105,17 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         store.showLauncher = { [weak self] in self?.showSearch(continuingFlow: true) }
         store.settingsVisibilityChanged = { [weak self] visible in
+            self?.synchronizeApplicationPresence()
             if visible {
                 self?.hideSearch(animated: false)
-                // Present system consent from an ordinary foreground app while Settings is open.
-                NSApp.setActivationPolicy(.regular)
                 NSApp.activate(ignoringOtherApps: true)
-            } else if self?.store.authorizationInFlight != true {
-                NSApp.setActivationPolicy(.accessory)
             }
         }
         store.prepareSystemAuthorization = { [weak self] in
-            NSApp.setActivationPolicy(.regular)
+            self?.synchronizeApplicationPresence()
             self?.hideSearch(animated: false)
             NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
             if let window = NSApp.windows.first(where: { $0.isVisible && $0 !== self?.panel && $0.canBecomeMain }) {
@@ -150,9 +154,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if !event.isARepeat { self.toggleFilePreview() }
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "," {
+            if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command, event.charactersIgnoringModifiers == "," {
                 self.hideSearch(animated: false)
-                NSApp.setActivationPolicy(.regular)
+                self.synchronizeApplicationPresence()
                 return event
             }
             guard self.hotkey.matches(event) else { return event }
@@ -173,7 +177,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    private func synchronizeApplicationPresence() {
+        applicationPresence.synchronize(authorizationInFlight: store.authorizationInFlight)
+    }
     func applicationDidBecomeActive(_ notification: Notification) {
+        synchronizeApplicationPresence()
         store.checkClockSetupOnReturn(); store.loginItem.refresh()
         if let rejectedBinding { setHotkey(rejectedBinding) }
         else if let binding = hotkey.binding { store.hotkeyError = HotKey.systemConflict(binding) ?? "" }
@@ -183,8 +192,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if onboardingWindow == nil { onboardingWindow = OnboardingWindowController(store: store) }
         onboardingWindow?.present { [weak self] in self?.showSearch() }
     }
-    func applicationDidResignActive(_ notification: Notification) { hideSearch(animated: false) }
+    func applicationDidResignActive(_ notification: Notification) {
+        guard presentation.isPresented else { return }
+        // A Finder mouse-down can be the start of a drop onto this floating panel.
+        // Ordinary outside clicks still dismiss it as soon as the mouse is released.
+        let generation = fadeGeneration
+        Task { @MainActor [weak self] in
+            // Activation can change before the initiating mouse-down is delivered.
+            try? await Task.sleep(for: .milliseconds(120))
+            guard self?.fadeGeneration == generation, !NSApp.isActive else { return }
+            while NSEvent.pressedMouseButtons & 1 != 0 {
+                try? await Task.sleep(for: .milliseconds(100))
+                guard let self, self.fadeGeneration == generation, !NSApp.isActive else { return }
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+            guard let self, self.fadeGeneration == generation, !NSApp.isActive else { return }
+            self.hideSearch(animated: false)
+        }
+    }
     private func command(_ key: String) -> Bool {
+        if store.diagnosticURL != nil, key != "f" { return false }
         if store.composerMode != nil, key != "f" { return false }
         switch key {
         case "1": store.appLibrary.isEditingCategory = false; store.appLibrary.isPreviewingSuggestions = false; store.appLibrary.select(.all); store.mode = .apps
@@ -192,10 +219,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case "3": store.mode = .shortcuts
         case "4": store.mode = .clipboard
         case "f": store.focusToken = UUID()
+        case "k": guard store.actionFile != nil else { return false }; store.showFileActions?()
         case "r": store.revealSelection()
         default: return false
         }
-        store.search(); return true
+        return true
     }
     private func scheduleLayout() {
         guard !layoutScheduled else { return }
@@ -255,25 +283,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         presentation.hide(); fadeGeneration += 1
         guard let panel else { return }
         let generation = fadeGeneration
+        panel.ignoresMouseEvents = true
+        if returnFocus { focusReturn.restore(excluding: panel) }
         guard panel.isVisible, animated, store.motionEnabled else {
             panel.orderOut(nil); panel.alphaValue = 1
-            if returnFocus { focusReturn.restore(excluding: panel) }
             return
         }
         LauncherMotion.perform(duration: LauncherMotion.hideDuration, changes: { panel.animator().alphaValue = 0 }) { [weak self, weak panel] in
             guard let self, self.fadeGeneration == generation, !self.presentation.isPresented else { return }
             guard let panel else { return }
             panel.orderOut(nil); panel.alphaValue = 1
-            if returnFocus { self.focusReturn.restore(excluding: panel) }
         }
     }
     private func toggleFilePreview() {
         guard let item = store.selectedPreviewItem else { return }
         if quickPreview.isPresented { quickPreview.dismiss() }
-        else { quickPreview.present(FilePreviewRequest(item: item, query: store.query), relativeTo: panel) }
+        else { quickPreview.present(FilePreviewRequest(item: item, query: store.matchText), relativeTo: panel) }
     }
     func showSearch(continuingFlow: Bool = false) {
         guard !store.authorizationInFlight, let panel, NSApp.modalWindow == nil else { return }
+        synchronizeApplicationPresence()
         if !store.onboarding.hasFinished { showOnboarding(); return }
         if store.onboardingPresented { onboardingWindow?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         focusReturn.capture()
@@ -295,6 +324,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentView?.layoutSubtreeIfNeeded()
         let fade = store.motionEnabled
         if !panel.isVisible { panel.alphaValue = fade ? 0 : 1 }
+        panel.ignoresMouseEvents = false
         presentation.show()
         NSApp.unhide(nil); NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -315,10 +345,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private final class LauncherPanel: NSPanel {
     var command: ((String) -> Bool)?
     var dismiss: (() -> Void)?
+    private weak var dragRegion: FileDragRegion.Region?
+    private var dragURL: URL?
+    private var dragOrigin = NSPoint.zero
+
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            dragOrigin = event.locationInWindow
+            dragRegion = FileDragRegion.Region.at(dragOrigin, in: self)
+            dragURL = dragRegion?.url
+        case .leftMouseDragged:
+            if let region = dragRegion, let url = dragURL, hypot(event.locationInWindow.x - dragOrigin.x, event.locationInWindow.y - dragOrigin.y) >= 4 {
+                dragRegion = nil
+                dragURL = nil
+                region.beginFileDrag(url, with: event)
+                return
+            }
+        case .leftMouseUp:
+            dragRegion = nil
+            dragURL = nil
+        default: break
+        }
+        super.sendEvent(event)
+    }
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.contains(.command), let key = event.charactersIgnoringModifiers, command?(key) == true { return true }
+        if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command, let key = event.charactersIgnoringModifiers, command?(key) == true { return true }
         return super.performKeyEquivalent(with: event)
     }
     override func cancelOperation(_ sender: Any?) { if let dismiss { dismiss() } else { orderOut(nil) } }

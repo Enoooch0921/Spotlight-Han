@@ -57,7 +57,7 @@ struct TranslationBridge: View {
     @MainActor private func translateAutomatic() async {
         token = UUID(); configuration = nil; store.setTranslation(nil)
         let query = currentQuery, request = requestID
-        guard store.composerMode == nil, store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
+        guard !store.parsedFileQuery.active, store.composerMode == nil, store.translationEnabled, [.all, .apps, .names, .videos, .contents].contains(store.mode), query.count >= 2, query.count <= 200,
               query.unicodeScalars.filter({ CharacterSet.letters.contains($0) }).count >= 2,
               !CurrencyQuery.isCurrencyQuery(query), TaskCommandParser.parse(query) == nil, SystemSettingsCatalog.results(query: query).isEmpty,
               !ModelSearch.Query(query).isIdentifier,

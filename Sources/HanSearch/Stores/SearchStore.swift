@@ -6,8 +6,8 @@ import Combine
 
 @MainActor
 final class SearchStore: ObservableObject {
-    @Published var query = "" { didSet { if query != oldValue { previewSelectionArmed = false; dismissFilePreview?() } } }
-    @Published var mode: SearchMode = .all { didSet { if mode != oldValue { previewSelectionArmed = false; dismissFilePreview?() } } }
+    @Published var query = "" { didSet { if query != oldValue { invalidateInputResults() } } }
+    @Published var mode: SearchMode = .all { didSet { if mode != oldValue { invalidateInputResults() } } }
     @Published var reopenBehavior: SearchReopenBehavior = .timed {
         didSet { taskPreferences.set(reopenBehavior.rawValue, forKey: "searchReopenBehavior.v1") }
     }
@@ -218,9 +218,14 @@ final class SearchStore: ObservableObject {
     private let sourceAccessCheck: @MainActor (SearchMode) -> Bool
     private let eventSourceLoader: @MainActor (SearchMode) async throws -> PersonalLoad
     let fileAccess: FileAccessBookmarks
-    private var entries: [CatalogEntry] = []
+    private(set) var entries: [CatalogEntry] = []
     private var personal: [PersonalRecord] = []
-    private var clips: [String] = []
+    private struct Clip: Identifiable {
+        let id = UUID()
+        let text: String
+    }
+    private var clips: [Clip] = []
+    var hasClipboardHistory: Bool { !clips.isEmpty }
     private let clipboard = ClipboardHistory()
     private var lastRefresh = Date.distantPast
     private var generation = UUID()
@@ -344,13 +349,7 @@ final class SearchStore: ObservableObject {
             catalogRoots = restored.available; unavailableCatalogRoots = restored.unavailable
         } else { catalogRoots = allowed }
         saveCatalogRoots()
-        clipboard.changed = { [weak self] value in
-            guard let self else { return }
-            self.clips.removeAll { $0 == value }
-            self.clips.insert(value, at: 0)
-            self.clips = Array(self.clips.prefix(50))
-            if self.mode == .clipboard { self.refreshSearchResults() }
-        }
+        clipboard.changed = { [weak self] value in self?.rememberClipboardText(value) }
         Task {
             await loadPersistentDocumentIndex()
             await loadCatalog()
@@ -361,7 +360,7 @@ final class SearchStore: ObservableObject {
         }
         Task.detached(priority: .utility) { _ = SearchService.searchApplications(query: "HanSearch") }
     }
-    var hasBody: Bool { composerMode != nil || !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
+    var hasBody: Bool { diagnosticURL != nil || composerMode != nil || !query.isEmpty || mode != .all || details != nil || !hotkeyError.isEmpty }
     var isAppBrowser: Bool { mode == .apps && composerMode == nil && details == nil }
     var appSettingsResults: [QuickResult] {
         let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
@@ -375,7 +374,7 @@ final class SearchStore: ObservableObject {
         if verifyingDocumentContents { return "正在核對文件內文，已確認的結果會先顯示…" }
         if indexing { return indexNotice.isEmpty ? "正在讀取文件內容…" : indexNotice }
         if catalogRefreshing { return catalogStatus }
-        if currencyResults.first?.id == "currency:loading" { return "正在取得每日參考匯率…" }
+        if currencyResults.first?.id == "quick:currency:loading" { return "正在取得每日參考匯率…" }
         return nil
     }
 
@@ -394,9 +393,51 @@ final class SearchStore: ObservableObject {
             self.search(silent: true)
         }
     }
+    @Published var rankingUndo: String?
+    @Published var diagnosticURL: URL?
+    var showFileActions: (() -> Void)?
+    private(set) var parsedFileQuery = FileQueryFilter("")
+    var matchText: String { parsedFileQuery.active ? parsedFileQuery.text : query }
+    private(set) var inputRevision: UInt = 0
+
+    /// Input changes arrive before SwiftUI starts the next debounced search.
+    /// Drop actions for the previous input immediately, including pending replies.
+    private func invalidateInputResults() {
+        diagnosticURL = nil
+        rankingUndo = nil
+        parsedFileQuery = [.all, .names, .contents, .videos].contains(mode) && composerMode == nil ? FileQueryFilter(String(query.prefix(200))) : FileQueryFilter("")
+        inputRevision &+= 1
+        searchTask?.cancel()
+        generation = UUID()
+        completedQuery = nil
+        completedMode = nil
+        previewSelectionArmed = false
+        dismissFilePreview?()
+        selection = nil
+        if details != nil { details = nil }
+        if documentVerificationTask != nil { resetDocumentVerification() }
+        if !quickResults.isEmpty { quickResults = [] }
+        if !results.isEmpty { results = [] }
+        if translationResult != nil { translationResult = nil }
+        currencyTask?.cancel()
+        currencyQuery = ""
+        if !currencyResults.isEmpty { currencyResults = [] }
+    }
+
+    func escapeLauncherLayer() {
+        if diagnosticURL != nil { diagnosticURL = nil; focusToken = UUID(); onLayoutChanged?() }
+        else if appLibrary.isEditingCategory { appLibrary.isEditingCategory = false }
+        else if appLibrary.isPreviewingSuggestions { appLibrary.isPreviewingSuggestions = false }
+        else if composerMode != nil { cancelComposer() }
+        else if details != nil { details = nil; focusToken = UUID(); onLayoutChanged?() }
+        else { dismissLauncher?() }
+    }
+
     func search(silent: Bool = false) {
         if silent && searching { pendingResultsRefresh = true; return }
-        let term = String(query.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
+        let filter = parsedFileQuery.active ? parsedFileQuery : nil
+        let cacheKey = query
+        let term = String(matchText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         if silent && (composerMode != nil || completedQuery != term || completedMode != mode) { return }
         if !silent {
             resetDocumentVerificationIfNeeded(query: term)
@@ -412,15 +453,15 @@ final class SearchStore: ObservableObject {
             updateComposerPreview()
             return
         }
-        if !silent { updateCurrency(query: term) }
+        if !silent { updateCurrency(query: filter == nil ? term : "") }
         if mode == .clipboard {
-            quickResults = clips.enumerated().filter { term.isEmpty || ChineseSearch.matches($0.element, query: term) }.map {
-                QuickResult(id: "clip:\($0.offset)", title: String($0.element.prefix(100)), subtitle: "剪貼板 · 按 Return 複製", symbol: "doc.on.clipboard", action: .copy($0.element))
+            quickResults = clips.filter { term.isEmpty || ChineseSearch.matches($0.text, query: term) }.map {
+                QuickResult(id: "clip:\($0.id)", title: String($0.text.prefix(100)), subtitle: "剪貼板 · 按 Return 複製", symbol: "doc.on.clipboard", action: .copy($0.text))
             }
             results = []; if !silent || !allIDs.contains(selection ?? "") { selection = quickResults.first?.id }
             completedQuery = term; completedMode = mode; searching = false; onLayoutChanged?(); return
         }
-        guard !term.isEmpty else {
+        guard !term.isEmpty || filter != nil else {
             results = []; quickResults = []; selection = nil; searching = false; notice = ""; onLayoutChanged?(); return
         }
         if !silent {
@@ -433,7 +474,7 @@ final class SearchStore: ObservableObject {
         }
         let mode = mode, folder = folder, localIndex = documentIndex, localRoots = documentIndexRoots, entries = entries, personal = personal, calendarSort = calendarSort
         let spotlightSupplement = spotlightSupplement
-        let cachedContents = cachedGlobalQuery == term ? cachedGlobalContents : []
+        let cachedContents = cachedGlobalQuery == cacheKey ? cachedGlobalContents : []
         let fullTextInAll = fullTextInAll, contentSearcher = contentSearcher
         let temperatureScale = temperaturePreference.resolved()
         let aliasTargets = aliases.matchingTargets(term)
@@ -443,46 +484,51 @@ final class SearchStore: ObservableObject {
             if !silent { do { try await Task.sleep(for: .milliseconds(60)) } catch { return } }
             guard !Task.isCancelled else { return }
             let task = Task.detached(priority: silent ? .utility : .userInitiated) {
+                try Task.checkCancellation()
                 let start = Date()
                 var files: [SearchItem] = [], quick: [QuickResult] = []
                 var localWarning: String?
-                let utilities = mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term, defaultTemperatureScale: temperatureScale).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
+                let utilities = filter != nil ? [] : mode == .apps ? SystemSettingsCatalog.results(query: term) : ([SearchMode.all, .calendar, .reminders, .alarms].contains(mode) ? QuickProvider.results(query: term, defaultTemperatureScale: temperatureScale).filter { mode == .all || (!$0.id.hasPrefix("quick:system-settings:") && $0.id != "quick:settings") } : [])
                 let utilityOnly = utilities.contains { $0.id == "quick:calculator" || $0.id == "quick:conversion" || $0.id == "quick:task-command" }
                 if !utilityOnly && (mode == .all || mode == .names || mode == .videos) {
-                    files += FileCatalog.search(entries, query: term, mode: mode, aliasPaths: aliasPaths)
+                    files += FileCatalog.search(entries, query: term, mode: mode, aliasPaths: aliasPaths, filter: filter)
                 }
-                if !utilityOnly && (mode == .all || mode == .apps) {
+                try Task.checkCancellation()
+                if filter == nil && !utilityOnly && (mode == .all || mode == .apps) {
                     files += SearchService.searchApplications(query: term, aliasTargets: aliasTargets)
                 }
+                try Task.checkCancellation()
                 if !utilityOnly && (mode == .contents || mode == .all || mode == .names) {
                     let documentMode: SearchMode = mode == .contents ? .contents : mode == .names ? .names : fullTextInAll ? .all : .names
                     do {
-                        let response = try localIndex.search(query: term, roots: localRoots, mode: documentMode, cancellation: processCancellation)
+                        let response = try localIndex.search(query: term, roots: localRoots, mode: documentMode, cancellation: processCancellation, filter: filter)
                         files += response.items
                         if response.truncated { localWarning = "Han 內文符合超過 200 筆，請增加關鍵字" }
-                    } catch is CancellationError {}
+                    } catch is CancellationError { throw CancellationError() }
                     catch { localWarning = error.localizedDescription }
                 }
-                let lookup = spotlightSupplement && !utilityOnly && (mode == .all && fullTextInAll || mode == .contents && folder == nil)
+                try Task.checkCancellation()
+                let lookup = !term.isEmpty && spotlightSupplement && !utilityOnly && (mode == .all && fullTextInAll || mode == .contents && folder == nil)
                 let base = files
                 if lookup { files += cachedContents }
                 quick += utilities
-                if !utilityOnly {
-                    let matches = calendarSort.sorted(personal).compactMap { $0.result(query: term, mode: mode, aliasMatch: aliasTargets.contains("quick:" + $0.id)) }
-                    quick += (matches.filter { $0.supplement == nil } + matches.filter { $0.supplement != nil }).prefix(50)
+                if filter == nil && !utilityOnly {
+                    quick += try PersonalRecord.search(personal, query: term, mode: mode, calendarSort: calendarSort, aliasTargets: aliasTargets, cancellation: processCancellation)
                 }
-                if mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
+                if filter == nil && mode == .all && (term.hasPrefix("define ") || term.hasPrefix("查 ")) {
                     let word = term.split(separator: " ", maxSplits: 1).last.map(String.init) ?? ""
                     if let definition = PersonalSources.definition(word) {
                         quick.append(QuickResult(id: "dictionary", title: word, subtitle: String(definition.prefix(140)), symbol: "character.book.closed", action: .details(definition)))
                     }
                 }
-                let web = mode == .all ? QuickProvider.webSearch(query: term) : nil
+                let web = filter == nil && mode == .all ? QuickProvider.webSearch(query: term) : nil
+                try Task.checkCancellation()
                 return (SearchService.merge(files, query: term), quick, web, lookup && !silent, base, Date().timeIntervalSince(start) * 1000, localWarning)
             }
-            let (files, quick, web, lookup, base, elapsed, localWarning) = await withTaskCancellationHandler {
-                await task.value
-            } onCancel: { processCancellation.cancel(); task.cancel() }
+            guard let batch = try? await withTaskCancellationHandler(operation: {
+                try await task.value
+            }, onCancel: { processCancellation.cancel(); task.cancel() }) else { return }
+            let (files, quick, web, lookup, base, elapsed, localWarning) = batch
             guard !Task.isCancelled, self.generation == token else { return }
             self.quickResults = quick; self.results = files
             if files.isEmpty, quick.isEmpty, let web { self.quickResults = [web] }
@@ -496,14 +542,19 @@ final class SearchStore: ObservableObject {
                 self.searchPhase = "正在搜尋整台 Mac 的文件內文…"
                 do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
                 guard !Task.isCancelled, self.generation == token else { return }
-                let contentTask = Task.detached(priority: .userInitiated) { contentSearcher(term, processCancellation) }
+                let contentTask = Task.detached(priority: .userInitiated) {
+                    let response = contentSearcher(term, processCancellation)
+                    guard let filter else { return response }
+                    let items = response.items.filter { !processCancellation.isCancelled && filter.accepts($0.url) }
+                    return SearchResponse(items: items, warning: response.warning, truncated: response.truncated)
+                }
                 let response = await withTaskCancellationHandler { await contentTask.value } onCancel: { processCancellation.cancel(); contentTask.cancel() }
                 guard !Task.isCancelled, self.generation == token else { return }
                 totalElapsed += Date().timeIntervalSince(contentStarted) * 1000
                 warning = [localWarning, response.warning].compactMap { $0 }.joined(separator: " · ")
                 if warning?.isEmpty == true { warning = nil }
                 if response.warning == nil {
-                    self.cachedGlobalQuery = term; self.cachedGlobalContents = response.items
+                    self.cachedGlobalQuery = cacheKey; self.cachedGlobalContents = response.items
                 }
                 // Keep already-visible local matches when the system index fails.
                 finalFiles = SearchService.merge(base + (response.warning == nil ? response.items : cachedContents), query: term)
@@ -963,9 +1014,17 @@ final class SearchStore: ObservableObject {
         let remembered = (sourcePreferences.stringArray(forKey: "enabledSources.v1") ?? []).filter { $0 != source.rawValue }
         sourcePreferences.set(remembered, forKey: "enabledSources.v1"); search()
     }
+    func rememberClipboardText(_ value: String) {
+        let existing = clips.firstIndex { $0.text == value }
+        let clip = existing.map { clips.remove(at: $0) } ?? Clip(text: value)
+        clips.insert(clip, at: 0)
+        if clips.count > 50 { clips.removeLast() }
+        if mode == .clipboard { refreshSearchResults() }
+    }
     private func updateClipboard() { if clipboardEnabled { clipboard.start() } else { clipboard.stop(); clips = [] }; search() }
     func clearClipboard() { clips = []; search() }
     func openSelection() {
+        guard diagnosticURL == nil else { return }
         if composerMode != nil { reviewComposer(); return }
         if let quick = allQuickResults.first(where: { $0.id == selection }) {
             let chosenQuery = query, candidate = habitCandidate(quick)

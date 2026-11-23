@@ -4,7 +4,7 @@ import HanSearchCore
 extension SearchStore {
     func habitCandidate(_ item: SearchItem) -> HabitCandidate {
         let identity = item.isApplication ? "app:" + (item.applicationIdentifier ?? item.url.path) : "file:" + item.id
-        return HabitCandidate(id: item.id, identity: identity, title: item.name, kind: item.isApplication ? .app : .file, aliases: (item.isApplication ? ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier) : []) + aliases.aliases(for: identity))
+        return HabitCandidate(id: item.id, identity: identity, title: item.name, kind: item.isApplication ? .app : .file, aliases: (item.isApplication ? item.applicationAliases + ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier) : []) + aliases.aliases(for: identity))
     }
     func habitCandidate(_ item: QuickResult) -> HabitCandidate? {
         let kinds: [(String, SearchResultKind)] = [("note:", .note), ("contact:", .contact), ("event:", .calendar), ("reminder:", .reminder), ("mail:", .mail), ("shortcut:", .shortcut)]
@@ -16,8 +16,13 @@ extension SearchStore {
         let translationIDs = translationResult.map { [$0.id] } ?? []
         let original = primaryQuickResults.map(\.id) + results.map(\.id) + translationIDs
         let supplements = Set(primaryQuickResults.filter { $0.supplement != nil }.map(\.id) + results.filter { $0.supplement != nil }.map(\.id))
+        let lowered = habits.history.loweredFiles(query: query, ids: results.map(\.id))
+        func applyCorrections(_ ids: [String]) -> [String] {
+            guard !lowered.isEmpty else { return ids }
+            return ids.filter { !lowered.contains($0) } + ids.filter(lowered.contains)
+        }
         func primaryFirst(_ ids: [String]) -> [String] {
-            ids.filter { !supplements.contains($0) } + ids.filter { supplements.contains($0) }
+            applyCorrections(ids.filter { !supplements.contains($0) }) + applyCorrections(ids.filter(supplements.contains))
         }
         // Explicit calendar chronology and clipboard order remain authoritative.
         guard mode != .clipboard else { return original }
@@ -25,8 +30,8 @@ extension SearchStore {
         let candidates = primaryQuickResults.compactMap { habitCandidate($0) } + results.map { habitCandidate($0) }
         let eligible = Set(candidates.map(\.id))
         let fixed = primaryQuickResults.filter { !eligible.contains($0.id) }.map(\.id)
-        var ranked = habits.ordered(candidates, query: query)
-        let model = ModelSearch.Query(query)
+        var ranked = habits.ordered(candidates, query: matchText)
+        let model = ModelSearch.Query(matchText)
         if model.isIdentifier {
             var tiers: [String: Int] = [:]
             for item in results {

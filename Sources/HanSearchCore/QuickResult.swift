@@ -26,6 +26,28 @@ public struct QuickResult: Identifiable, Hashable, Sendable {
 }
 
 public struct PersonalRecord: Sendable {
+    /// Compile query-wide matching work once for a source snapshot, not once per
+    /// note/contact/event. Titles and body text keep their existing match rules.
+    public struct Query: Sendable {
+        fileprivate struct Pattern: Sendable {
+            let text: String
+            let terms: [String]
+            let model: ModelSearch.Query
+            let phonetics: PhoneticSearch.Query
+            init(_ text: String) {
+                self.text = text
+                terms = ChineseSearch.terms(ChineseSearch.normalized(text))
+                model = ModelSearch.Query(text)
+                phonetics = PhoneticSearch.Query(text)
+            }
+        }
+        fileprivate let primary: Pattern
+        fileprivate let alternatives: [(SearchSupplement, Pattern)]
+        public init(_ text: String) {
+            primary = Pattern(text)
+            alternatives = TaiwanVocabulary.alternatives(for: text).map { ($0, Pattern($0.query)) }
+        }
+    }
     public let id: String
     public let title: String
     public let subtitle: String
@@ -45,26 +67,51 @@ public struct PersonalRecord: Sendable {
         self.startDate = startDate; self.endDate = endDate
     }
     public func result(query: String, mode: SearchMode, aliasMatch: Bool = false) -> QuickResult? {
+        result(query: Query(query), mode: mode, aliasMatch: aliasMatch)
+    }
+    public func result(query: Query, mode: SearchMode, aliasMatch: Bool = false) -> QuickResult? {
         guard mode == .all || mode == self.mode else { return nil }
-        if let result = primaryResult(query: query, mode: mode, aliasMatch: aliasMatch) { return result }
-        for alternative in TaiwanVocabulary.alternatives(for: query) {
-            if let result = primaryResult(query: alternative.query, mode: mode, aliasMatch: false) { return result.supplemented(by: alternative) }
+        if let result = primaryResult(query: query.primary, aliasMatch: aliasMatch) { return result }
+        for (alternative, pattern) in query.alternatives {
+            if let result = primaryResult(query: pattern, aliasMatch: false) { return result.supplemented(by: alternative) }
         }
         return nil
     }
-    private func primaryResult(query: String, mode: SearchMode, aliasMatch: Bool) -> QuickResult? {
-        guard mode == .all || mode == self.mode else { return nil }
-        let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
-        let model = ModelSearch.Query(query)
+    private func primaryResult(query: Query.Pattern, aliasMatch: Bool) -> QuickResult? {
+        let terms = query.terms, model = query.model
         let literal = model.isIdentifier ? model.matches(title + "\n" + subtitle + "\n" + text) : terms.allSatisfy { folded.contains($0) }
-        guard !terms.isEmpty, literal || phonetics.matches(query, allowInitials: false) || aliasMatch else { return nil }
+        guard !terms.isEmpty, literal || phonetics.matches(query.phonetics, allowInitials: false) || aliasMatch else { return nil }
         let preview: String
         if self.mode == .notes {
-            preview = SearchHighlight.excerpt(in: text, query: query)
-        } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query) {
-            preview = SearchHighlight.excerpt(in: text, query: query)
+            preview = SearchHighlight.excerpt(in: text, query: query.text)
+        } else if self.mode == .mail && !ChineseSearch.matches(title + " " + subtitle, query: query.text) {
+            preview = SearchHighlight.excerpt(in: text, query: query.text)
         } else { preview = subtitle }
         return QuickResult(id: id, title: title, subtitle: preview, symbol: symbol, action: action, startDate: startDate, endDate: endDate)
+    }
+
+    public static func search(_ records: [PersonalRecord], query: String, mode: SearchMode,
+                              calendarSort: CalendarResultSort = .upcoming, aliasTargets: Set<String> = [],
+                              limit: Int = 50, cancellation: ProcessCancellation? = nil) throws -> [QuickResult] {
+        func checkCancellation() throws {
+            try Task.checkCancellation()
+            if cancellation?.isCancelled == true { throw CancellationError() }
+        }
+        try checkCancellation()
+        guard limit > 0 else { return [] }
+        let prepared = Query(query)
+        let ordered = calendarSort.sorted(records)
+        var primary: [QuickResult] = [], supplementary: [QuickResult] = []
+        for record in ordered {
+            try checkCancellation()
+            guard let result = record.result(query: prepared, mode: mode, aliasMatch: aliasTargets.contains("quick:" + record.id)) else { continue }
+            if result.supplement == nil {
+                primary.append(result)
+                if primary.count == limit { break }
+            } else if supplementary.count < limit { supplementary.append(result) }
+        }
+        try checkCancellation()
+        return Array((primary + supplementary).prefix(limit))
     }
 }
 

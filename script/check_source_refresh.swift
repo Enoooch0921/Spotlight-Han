@@ -102,8 +102,40 @@ struct SourceRefreshChecks {
         try await wait { store.quickResults.contains { $0.id == "quick:fixture:second" } }
         precondition(store.selection == selected && store.details == "Keep this open")
         precondition(queryStarts == 1 && !store.showSearchActivity)
+        // A near-valid identifier must finish through the real Store pipeline,
+        // including silent source refreshes, then allow an ordinary search.
+        store.query = "DL" + String(repeating: "1", count: 36) + ":"
+        store.search()
+        for _ in 0..<20 { store.refreshSearchResults() }
+        try await wait { !store.searching }
+        precondition(store.quickResults.isEmpty)
+        store.query = "Fixture"; store.search()
+        try await wait { !store.searching }
+        precondition(store.quickResults.count == 2)
+        // Return before the next debounced result batch must never act on the old row.
+        store.query = "Next fixture"
+        store.openSelection()
+        precondition(store.selection == nil && store.quickResults.isEmpty && store.details == nil)
+        store.details = "Fixture details"
+        store.escapeLauncherLayer()
+        precondition(store.details == nil && store.query == "Next fixture")
+        var dismissals = 0
+        store.dismissLauncher = { dismissals += 1 }
+        store.escapeLauncherLayer()
+        precondition(dismissals == 1)
+
+        store.mode = .clipboard; store.query = ""
+        store.rememberClipboardText("first"); store.rememberClipboardText("second"); store.search()
+        let firstID = store.quickResults.last!.id
+        store.selection = firstID
+        store.rememberClipboardText("third")
+        try await wait { store.quickResults.count == 3 }
+        precondition(store.selection == firstID && store.quickResults.first(where: { $0.id == firstID })?.action == .copy("first"))
+        store.rememberClipboardText("first")
+        try await wait { store.quickResults.first?.id == firstID }
+        precondition(store.quickResults.count == 3)
         changes.cancel()
         store.cancelConnections()
-        print("PASS: deferred notifications, concurrent EventKit refresh during Notes/setup, changes during reads, auto-refresh switch, failure backoff, old timestamps, permission loss and quiet search refresh preserving selection/details; fake loaders only, no personal reads or writes")
+        print("PASS: deferred notifications, concurrent EventKit refresh during Notes/setup, changes during reads, auto-refresh switch, failure backoff, old timestamps, permission loss, quiet search refresh preserving selection/details and near-miss query completion/replacement; fake loaders only, no personal reads or writes")
     }
 }

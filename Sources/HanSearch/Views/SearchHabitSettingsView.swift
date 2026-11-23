@@ -9,7 +9,7 @@ struct SearchHabitSettingsView: View {
         HStack {
             Text(L.format("已記住 %@ 組開啟選擇", String(habits.history.entries.count))).font(.caption).foregroundStyle(.secondary)
             Spacer()
-            Button(L.text("清除學習紀錄")) { habits.clear() }.disabled(habits.history.entries.isEmpty)
+            Button(L.text("清除學習紀錄")) { habits.clear() }.disabled(habits.history.entries.isEmpty && !habits.history.hasCorrections)
         }
         if habits.saveFailed { Text(L.text("無法儲存搜尋習慣；本次仍可使用。" )).font(.caption).foregroundStyle(.orange) }
     }

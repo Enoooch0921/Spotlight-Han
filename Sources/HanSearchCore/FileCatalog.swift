@@ -85,28 +85,35 @@ public enum FileCatalog {
         return CatalogSnapshot(roots: roots.map(\.path), entries: entries, updated: Date(), unreadable: failures, capped: capped)
     }
 
-    public static func search(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL? = nil, aliasPaths: Set<String> = []) -> [SearchItem] {
-        var items = searchLiteral(entries, query: query, mode: mode, folder: folder, aliasPaths: aliasPaths)
+    public static func search(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL? = nil, aliasPaths: Set<String> = [], filter: FileQueryFilter? = nil) -> [SearchItem] {
+        guard !Task<Never, Never>.isCancelled else { return [] }
+        var items = searchLiteral(entries, query: query, mode: mode, folder: folder, aliasPaths: aliasPaths, filter: filter)
         var seen = Set(items.map(\.id))
         for alternative in TaiwanVocabulary.alternatives(for: query) where items.count < 2000 {
-            for item in searchLiteral(entries, query: alternative.query, mode: mode, folder: folder, aliasPaths: []) where seen.insert(item.id).inserted {
+            guard !Task<Never, Never>.isCancelled else { return [] }
+            for item in searchLiteral(entries, query: alternative.query, mode: mode, folder: folder, aliasPaths: [], filter: filter) where seen.insert(item.id).inserted {
                 items.append(item.supplemented(by: alternative))
                 if items.count == 2000 { break }
             }
         }
         return items
     }
-    private static func searchLiteral(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL?, aliasPaths: Set<String>) -> [SearchItem] {
+    private static func searchLiteral(_ entries: [CatalogEntry], query: String, mode: SearchMode, folder: URL?, aliasPaths: Set<String>, filter: FileQueryFilter?) -> [SearchItem] {
         let terms = ChineseSearch.terms(ChineseSearch.normalized(query))
-        guard !terms.isEmpty else { return [] }
+        guard !terms.isEmpty || filter != nil else { return [] }
         let prefix = folder.map { $0.path + "/" }
         let needle = ChineseSearch.normalized(query)
         let phoneticQuery = PhoneticSearch.Query(query)
         let identifier = ModelSearch.Query(query)
-        let hits = entries.filter { entry in
-            if let prefix, !entry.path.hasPrefix(prefix) { return false }
-            if mode == .videos && (entry.directory || !videoExtensions.contains(entry.ext)) { return false }
-            return (identifier.isIdentifier ? identifier.matches(entry.name) : terms.allSatisfy { entry.foldedName.contains($0) }) || entry.phonetics.matches(phoneticQuery, allowInitials: false) || aliasPaths.contains(entry.path)
+        var hits: [CatalogEntry] = []
+        for entry in entries {
+            guard !Task<Never, Never>.isCancelled else { return [] }
+            if let prefix, !entry.path.hasPrefix(prefix) { continue }
+            if mode == .videos && (entry.directory || !videoExtensions.contains(entry.ext)) { continue }
+            if (identifier.isIdentifier ? identifier.matches(entry.name) : terms.allSatisfy { entry.foldedName.contains($0) }) || entry.phonetics.matches(phoneticQuery, allowInitials: false) || aliasPaths.contains(entry.path) {
+                if let filter, entry.directory || !filter.accepts(URL(fileURLWithPath: entry.path, isDirectory: false)) { continue }
+                hits.append(entry)
+            }
         }
         func score(_ entry: CatalogEntry) -> Int {
             (entry.foldedName == needle ? 100 : 0) + (entry.foldedName.hasPrefix(needle) ? 20 : 0)

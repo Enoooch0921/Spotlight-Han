@@ -171,7 +171,7 @@ public enum SearchService {
             let name = ChineseSearch.normalized(item.name)
             let compactName = item.isApplication ? ChineseSearch.applicationKey(item.name) : name
             let compactNeedle = item.isApplication ? ChineseSearch.applicationKey(query) : needle
-            let alias = item.isApplication && ApplicationAliases.matches(query, aliases: ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier))
+            let alias = item.isApplication && ApplicationAliases.matches(query, aliases: item.applicationAliases + ApplicationAliases.aliases(name: item.name, bundleID: item.applicationIdentifier))
             let evidence = model.isIdentifier ? (model.matches(item.name) ? 400 : model.matches(item.excerpt) ? 200 : 0) : 0
             return evidence + (compactName == compactNeedle ? 100 : 0) + (compactName.hasPrefix(compactNeedle) ? 30 : 0) + (compactName.contains(compactNeedle) ? 10 : 0) + (alias ? 80 : 0) + (item.isApplication ? 5 : 0)
         }

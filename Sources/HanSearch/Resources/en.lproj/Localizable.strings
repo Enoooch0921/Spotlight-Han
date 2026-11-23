@@ -213,6 +213,8 @@
 "功能預覽・範例資料" = "Feature preview · Sample data";
 "加入 iCloud Drive…" = "Add iCloud Drive…";
 "加入常用資料夾與 iCloud" = "Add common folders and iCloud";
+"加入所在資料夾" = "Add Containing Folder";
+"加入所在資料夾…" = "Add Containing Folder…";
 "加入搜尋範圍…" = "Add search folders…";
 "加入文件資料夾…" = "Add document folder…";
 "加入文件資料夾以建立 Han 全文索引" = "Add document folders to build the Han full-text index";
@@ -231,6 +233,7 @@
 "只下載公開的 USD 匯率表並在本機換算，金額與搜尋文字不會傳送。" = "Only a public USD rate table is downloaded. Amounts and queries are not sent.";
 "只在本機保存加鹽雜湊識別碼、類型、次數與時間，不保存原始搜尋詞、檔名或內容、不上傳。最多保留 2,000 組，365 天未使用會淘汰；關閉後停止記錄與套用，清除會刪除既有學習紀錄。" = "Stores salted identifiers, types, counts and timestamps locally, without raw queries, filenames or contents. Nothing is uploaded. Limited to 2,000 pairs and 365 days of inactivity. Turning this off stops recording and ranking; clearing removes existing learning.";
 "只在本機搜尋已授權資料；移除來源不會刪除原始內容。" = "Searches authorized data locally. Removing a source does not delete its original content.";
+"只在這個搜尋詞降低順位" = "Lower ranking for this search only";
 "只在閒置時辨識" = "Recognize only while idle";
 "只整理尚未手動分類的 App；不覆蓋你的安排。音訊外掛本體不屬於可啟動的 App。" = "Only organizes apps without a manual category. Audio plug-in files are not launchable apps.";
 "只有按下「連接」才會要求對應權限。授權有效時，已連接來源可安靜背景更新。" = "Permission is requested only when you choose Connect. Authorized sources can update quietly in the background.";
@@ -242,6 +245,7 @@
 "可在下方查看結果來源與完整位置。" = "See the result source and full location below.";
 "可拆分成較小文件或匯出文字副本，再更新索引。" = "Split into smaller documents or export a text copy, then update the index.";
 "可按住 ⌘ 一次選擇多個資料夾；選擇使用者資料夾會涵蓋下載、桌面、影片、音樂、圖片、文件六處，不掃描 Library。App 會記住選擇。" = "Hold Command to select multiple folders. Selecting your home folder includes Downloads, Desktop, Movies, Music, Pictures, and Documents, excluding Library. Your choices are remembered.";
+"可移除上方條件，或檢查檔案所在資料夾是否已加入搜尋。" = "Remove a filter above or check whether the containing folder is in your search scope.";
 "可自訂組合，也可使用 ⌘Space。若原 Spotlight 仍占用，設定會提示並提供系統設定入口。" = "Choose your own shortcut or use ⌘Space. If Spotlight still uses it, settings will explain the conflict and link to macOS settings.";
 "可調整預覽欄位；修改上方文字會重新解析。" = "Adjust these fields, or edit the text above to parse it again.";
 "可輸入國家名稱，不用先知道貨幣代碼。結果會標示每日參考匯率的資料日期。" = "Use a country name without knowing its currency code. Results show the date of the daily reference rate.";
@@ -308,6 +312,7 @@
 "尚無剪貼板記錄" = "No clipboard history yet";
 "尚無可寫入的預設提醒事項清單" = "No writable default reminder list";
 "尚無可寫入的預設行事曆" = "No writable default calendar";
+"尚無可搜尋內文" = "No searchable text yet";
 "尚無完整更新記錄" = "No complete refresh yet";
 "展開完整翻譯" = "Expand full translation";
 "工作保護" = "Work protection";
@@ -334,11 +339,13 @@
 "已掃描 %@ 筆檔名…" = "Scanned %@ filenames…";
 "已搜尋 Han 收錄的文件與已連接資料；可增加搜尋資料夾。Spotlight 補充可在設定另行啟用；掃描 PDF 尚需 OCR。" = "Searched Han-indexed documents and connected sources. Add more folders to expand coverage. Spotlight supplementation is optional in Settings; scanned PDFs require OCR.";
 "已搜尋全機文件索引與已連接資料。可縮短關鍵字，或加入資料夾補強尚未索引的文件；掃描 PDF 尚需 OCR。" = "Searched the system document index and connected sources. Try fewer keywords or add a folder for unindexed documents. Scanned PDFs still need OCR.";
+"已收錄" = "Indexed";
 "已收錄 %@ 筆可搜尋資料" = "%@ searchable items indexed";
 "已整理 %@ 個 App；保留原本手動分類" = "Organized %@ apps; kept existing manual categories";
 "已新增提醒「%@」" = "Created reminder “%@”";
 "已新增行程「%@」" = "Created event “%@”";
 "已暫停排隊，請先處理前一個來源的授權，再重新連接。" = "Queue paused. Finish the previous source's permission before reconnecting.";
+"已有可搜尋內文" = "Contains searchable text";
 "已有同名分類，請換個名稱" = "This category name already exists. Choose another name.";
 "已有結束時間，請移除額外的時長，避免衝突。" = "An end time is already set. Remove the extra duration.";
 "已標示 OCR 文字位置（辨識可能有誤差）" = "OCR text positions are highlighted (recognition may be imperfect)";
@@ -349,6 +356,7 @@
 "已確認內文命中" = "Content match confirmed";
 "已確認檔名符合" = "Filename match confirmed";
 "已移至「%@」" = "Moved to “%@”";
+"已處理 %@ 頁" = "%@ pages processed";
 "已複製" = "Copied";
 "已記住 %@ 組開啟選擇" = "Remembered %@ opening choices";
 "已設定" = "Configured";
@@ -399,6 +407,7 @@
 "影音製作" = "Audio and video production";
 "從 Han 開啟 App 後會出現在這裡" = "Apps you open through Han will appear here";
 "從收起時開始計時；逾時後，下次開啟才清空搜尋並回到預設頁。正在輸入時不會被清除。" = "The timer starts when search is dismissed. After it expires, the next opening clears the query and returns to the default page. Active typing is never cleared.";
+"復原降序" = "Undo Lower Ranking";
 "忘記切換輸入法時，可用標準注音鍵位找 App，例如 rnr 或 ru4nj04ru 找計算機。必須完整對上 App 的注音或至少三個首符號，不套用到文件內文；原始查詢命中始終優先。" = "Forgot to switch input methods? Use standard Zhuyin keys such as rnr or ru4nj04ru to find Calculator. Only complete app pronunciations or at least three initials qualify. This does not apply to document contents; original-query matches always come first.";
 "忘記所有資料夾與搜尋索引" = "Forget all folders and search indexes";
 "忘記資料夾" = "Forget folders";
@@ -412,6 +421,7 @@
 "快速檔名清單用來找檔名與影片；Han 文件全文索引用來找文件內文。兩者需要各自選取搜尋範圍，「全部」會合併結果。" = "The filename catalog finds files and videos by name. The Han full-text index searches document contents. Select folders for each; All combines their results.";
 "快速開始" = "Getting started";
 "快速預覽" = "Quick Preview";
+"恢復這筆的搜尋順位" = "Restore ranking for this search";
 "恢復預設" = "Restore default";
 "想搜尋哪一類，就連接哪一類。其餘可以留到需要時。" = "Connect the sources you want to search. Leave the rest until you need them.";
 "想用 ⌘Space，可在設定中直接前往 macOS 關閉原 Spotlight 快捷鍵，再指定給 Han。" = "To use ⌘Space, settings can take you to macOS to disable the original Spotlight shortcut before assigning it to Han.";
@@ -476,18 +486,21 @@
 "搜尋習慣由你決定" = "Learning is your choice";
 "搜尋與快捷鍵" = "Search & Shortcuts";
 "搜尋需要完整存取" = "Search requires full access";
+"操作 ⌘K" = "Actions ⌘K";
 "操作示範・不會執行或新增資料" = "Demonstration · No actions or data changes";
 "攝氏（°C）" = "Celsius (°C)";
 "支援 Word、PDF、PPTX、XLSX、文字及常見圖片。開啟 OCR 時圖片與 PDF 單檔 100 MB，其他文件 20 MB、文字 8 MB；PDF 最多 2,000 頁。略過 Library、隱藏檔與套件內容，不跟隨符號連結。" = "Supports Word, PDF, PPTX, XLSX, text, and common images. With OCR on, images/PDFs are limited to 100 MB, other files to 20 MB, extracted text to 8 MB, and PDFs to 2,000 pages. Skips Library, hidden files, and package contents, without following symlinks.";
 "支援 Word、文字 PDF、PPTX、XLSX 與文字文件。預設略過 Library、快取、隱藏檔與部分開發資料夾，不跟隨符號連結；單檔 20 MB、文字 8 MB，每次最多檢查 100,000 個普通檔案。" = "Supports Word, text PDFs, PPTX, XLSX and text documents. Skips Library, caches, hidden files and some development folders; does not follow symlinks. Limits: 20 MB per file, 8 MB extracted text, 100,000 ordinary files examined per pass.";
 "收起其他系統索引結果（%@）" = "Hide other system-index results (%@)";
 "收起完整翻譯" = "Collapse full translation";
+"放開以檢查檔案" = "Drop to inspect file";
 "文件" = "Documents";
 "文件・內文命中" = "Document · content match";
 "文件・檔名命中" = "Document · name match";
 "文件・系統索引" = "Document · System index";
 "文件內容" = "Document content";
 "文件內容・系統索引" = "Contents · System index";
+"文件內文" = "Document contents";
 "文件內文符合超過 2,000 筆，請增加關鍵字。" = "Over 2,000 document matches. Add more keywords.";
 "文件全文" = "Document Text";
 "文件全文範圍" = "Document folders";
@@ -519,6 +532,7 @@
 "暫無可用匯率" = "No exchange rates available";
 "更改分類" = "Change Category";
 "更新 App 清單" = "Refresh App List";
+"更新已選索引" = "Refresh Selected Indexes";
 "更新搜尋索引" = "Update search indexes";
 "更新檔名清單" = "Refresh file index";
 "更新索引" = "Update index";
@@ -553,15 +567,18 @@
 "標題與純文字內文，最多 2,000 則；不讀取受密碼保護的備忘錄" = "Titles and plain text, up to 2,000 notes. Locked notes are skipped.";
 "檔名" = "Filename";
 "檔名搜尋範圍" = "Filename folders";
+"檔名清單" = "Filename index";
 "檔名符合搜尋詞，可在下方查看完整位置。" = "The filename matches your search. See its full location below.";
 "檔名符合搜尋詞；尚未找到可凸顯的內文片段。" = "The filename matches your search. No matching content excerpt was found.";
 "檔名與內文是兩種索引；都只讀取你主動選取的資料夾。" = "Filename and content search use separate indexes. Both read only the folders you choose.";
 "檔名與內文符合" = "Filename and content match";
 "檔名與影片" = "Filenames & Videos";
 "檔案 ⌘2" = "Files ⌘2";
+"檔案在收錄後已變更" = "File has changed since indexing";
 "檔案尚未下載，請先在 Finder 下載後再預覽。" = "This file is not downloaded. Download it in Finder before previewing.";
 "檔案已移動或刪除，請更新檔名清單" = "The file moved or was deleted. Refresh the index.";
 "檔案排序" = "File sorting";
+"檔案搜尋診斷" = "File Search Diagnostics";
 "檔案與內文" = "Files & Contents";
 "檔案與索引" = "Files & Index";
 "檔案與索引設定分類" = "File and index settings categories";
@@ -570,6 +587,8 @@
 "檢查翻譯…" = "Check translation…";
 "檢查語言…" = "Check languages…";
 "檢查資料來源與更新狀態…" = "Check sources & update status…";
+"檢查這個檔案" = "Inspect This File";
+"檢查這個檔案…" = "Inspect a File…";
 "檢查連接" = "Check connection";
 "歡迎使用 Spotlight Han" = "Welcome to Spotlight Han";
 "正在取得公開匯率。" = "Fetching public exchange rates.";
@@ -583,10 +602,12 @@
 "正在搜尋應用程式…" = "Searching applications…";
 "正在搜尋整台 Mac 的文件內文…" = "Searching document contents across this Mac…";
 "正在更新 Han 文件索引；既有結果仍可搜尋…" = "Updating the Han document index; existing results remain searchable…";
+"正在更新…" = "Updating…";
 "正在查詢全機文件內文；可先使用已出現的結果。" = "Searching document contents across this Mac. You can use results already shown.";
 "正在查詢系統文件內容索引…" = "Querying the system content index…";
 "正在核對文件內文，已確認的結果會先顯示…" = "Checking document content; confirmed matches appear first…";
 "正在標示命中文字…" = "Highlighting matching text…";
+"正在檢查…" = "Checking…";
 "正在檢查授權…" = "Checking permission…";
 "正在檢查更新…" = "Checking for updates…";
 "正在檢查本機語言…" = "Checking local languages…";
@@ -613,7 +634,9 @@
 "此幣別目前沒有可用匯率。" = "No rate available for this currency.";
 "此捷徑會執行你在捷徑 App 中設定的動作。請確認內容後執行。" = "This runs the actions defined in Shortcuts. Review them before continuing.";
 "此時間無法建立系統鬧鐘" = "Cannot create a Clock alarm at this time";
+"此格式不支援內文索引" = "Content indexing is unavailable for this format";
 "此模式僅支援行事曆與提醒事項。" = "This mode supports Calendar and Reminders only.";
+"此路徑依索引規則排除" = "Path excluded by indexing rules";
 "每 %@ 個月：%@ 號" = "Every %@ months: day %@";
 "每 %@ 天" = "Every %@ days";
 "每 %@ 週：%@" = "Every %@ weeks: %@";
@@ -637,6 +660,7 @@
 "清單" = "List";
 "清除並重建索引" = "Clear and rebuild index";
 "清除學習紀錄" = "Clear learned choices";
+"清除搜尋" = "Clear Search";
 "清除搜尋，瀏覽全部" = "Clear Search and Browse All";
 "清除記錄" = "Clear history";
 "準備就緒" = "Ready to Go";
@@ -655,6 +679,7 @@
 "無法檢查更新，請稍後再試" = "Could not check for updates. Try again later.";
 "無法確認%@的自動化授權（錯誤 %@）；請稍後重新連接。" = "Cannot determine automation access for %@ (error %@). Try connecting again later.";
 "無法記住資料夾授權：%@" = "Could not save folder access: %@";
+"無法讀取索引" = "Could not read the index";
 "無法讀取預覽，檔案可能已移動或沒有取用權限。" = "Cannot load the preview. The file may have moved or access may be unavailable.";
 "無法連接%@，請先開啟該 App，再按「連接」。" = "Cannot connect to %@. Open the app, then click Connect.";
 "無法開啟 App；可能已移動或刪除，請更新清單。" = "Could not open the app. It may have moved or been deleted; refresh the list.";
@@ -671,6 +696,7 @@
 "目前按 %@ 解讀「37度」；明寫攝氏或華氏時，以輸入為準。" = "“37 degrees” currently means %@. An explicitly written Celsius or Fahrenheit takes precedence.";
 "目前支援每天、每週一個星期幾、每月一個日期；其他重複規則請在系統 App 設定。" = "Daily, one weekday per week, and one date per month are supported. Configure other patterns in the system app.";
 "目前支援每天、每週一個星期幾、每月一個日期；結束條件請在系統 App 調整。" = "Daily, one weekday per week, and one date per month are supported. Edit end conditions in the system app.";
+"目前清單沒有這個檔名" = "Missing from the current filename index";
 "目前無法取得匯率" = "Exchange rates unavailable";
 "目前第 %@／%@ 頁" = "Processing page %@ of %@";
 "目標語言" = "Target language";
@@ -693,6 +719,7 @@
 "移除搜尋範圍" = "Remove search folder";
 "移除搜尋範圍只會清除 Han 的索引，不會刪除原始檔案。" = "Removing a search folder clears its Han index without deleting original files.";
 "移除搜尋範圍會清除對應的 Han 內文索引；清除並重建會重新擷取原檔。這些操作不刪除原始文件。Spotlight 補充搜尋預設關閉，開啟後的補充結果仍受系統索引限制。" = "Removing a scope clears its Han full-text index. Rebuilding extracts the original documents again. Neither deletes originals. Supplementary Spotlight search is off by default and remains subject to system index limitations.";
+"移除條件" = "Remove filter";
 "移除範圍：%@" = "Remove folder: %@";
 "稍後" = "Later";
 "稍後設定" = "Set up later";
@@ -719,6 +746,7 @@
 "節能等待：系統已開啟低耗電模式" = "Waiting to save energy: Low Power Mode is enabled";
 "節能等待：閒置 90 秒後自動繼續" = "Waiting to save energy: resumes after 90 seconds idle";
 "節能等待：電量低於或等於 30%，或無法確認電量" = "Waiting to save energy: battery is at or below 30%, or its level is unavailable";
+"範圍內，尚無此檔的索引紀錄" = "In scope, with no index entry yet";
 "簡報 XML 文字無法完整讀取。" = "The presentation XML could not be read completely.";
 "簡報文字格式無法安全讀取。" = "The presentation text format could not be read safely.";
 "簡報沒有可讀取的文字頁面，或超過讀取上限。" = "The presentation has no readable text parts or exceeds the read limit.";
@@ -847,6 +875,7 @@
 "請補上明確時間，例如「明天下午3點」。" = "Add a specific time, such as “tomorrow at 3pm”.";
 "請輸入時間和事項，最多 200 字。" = "Enter a time and task, up to 200 characters.";
 "請輸入至少 1 秒的有效時長；目前仍沿用上次設定。" = "Enter a valid duration of at least 1 second. Your previous setting is still in use.";
+"請選取這個檔案所在的資料夾" = "Choose the folder containing this file";
 "讀取 Word、PDF、PPTX、XLSX、文字及圖片；掃描頁與圖片用 Apple Vision 辨識，結果顯示片段與 PDF 頁碼。" = "Reads Word, PDF, PPTX, XLSX, text, and images. Apple Vision recognizes scanned pages and images; results include excerpts and PDF page numbers.";
 "讀取 Word、文字 PDF、PPTX、XLSX 與文字文件。搜尋時會顯示命中的內文片段。" = "Read Word, text PDF, PPTX, XLSX and text documents. Results show matching excerpts.";
 "讀取不完整（部分資料）" = "Incomplete read (partial data)";
@@ -864,6 +893,8 @@
 "資料夾全文索引只留在記憶體，結束 App 後需重新加入。掃描文件尚未提供 OCR。" = "Content indexing stays in memory. Add folders again after quitting. OCR is not available.";
 "資料夾授權" = "Folder access";
 "資料夾授權說明" = "About folder permissions";
+"資料夾未加入內文搜尋" = "Folder is outside content search";
+"資料夾未加入檔名搜尋" = "Folder is outside filename search";
 "資料已舊（超過15分鐘）" = "Out of date (over 15 minutes)";
 "資料有變動，待更新" = "Data changed; refresh needed";
 "超過單檔 20 MB 上限" = "Exceeds the 20 MB per-file limit";
@@ -947,6 +978,7 @@
 "開發工具" = "Development";
 "開發測試版在重新編譯或重新簽章後，macOS 仍可能要求重新授權；正式發行需要固定的開發者簽章。" = "Development builds may require permission again after rebuilding or signing. Stable distribution needs a consistent developer signature.";
 "關於" = "About";
+"限定上週修改" = "Modified last week";
 "隱私與安全性" = "Privacy & Security";
 "雲端檔案尚未下載" = "Cloud file has not been downloaded";
 "雲端與遠端" = "Cloud and remote access";

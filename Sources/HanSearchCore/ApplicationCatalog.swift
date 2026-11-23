@@ -61,13 +61,16 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
     private let compact: [String]
     public let aliases: [String]
     private let phonetics: [PhoneticSearch]
-    public init(url: URL, name: String, bundleID: String? = nil, declaredCategory: String? = nil) {
+    public init(url: URL, name: String, bundleID: String? = nil, declaredCategory: String? = nil, alternateNames: [String] = []) {
         self.url = url; self.name = name; self.bundleID = bundleID; self.declaredCategory = declaredCategory
-        let translatedNames = ApplicationAliases.localizedNames(bundleID: bundleID)
-        folded = ([name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""] + translatedNames).map(ChineseSearch.normalized)
+        var seen = Set([ChineseSearch.normalized(name)])
+        let otherNames = (ApplicationAliases.localizedNames(bundleID: bundleID) + alternateNames)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert(ChineseSearch.normalized($0)).inserted }
+        folded = ([name, url.deletingPathExtension().lastPathComponent, bundleID ?? ""] + otherNames).map(ChineseSearch.normalized)
         compact = folded.map(ChineseSearch.applicationKey)
-        aliases = ApplicationAliases.aliases(name: name, bundleID: bundleID)
-        phonetics = ([name] + translatedNames).map(PhoneticSearch.init)
+        aliases = ApplicationAliases.aliases(name: name, bundleID: bundleID) + otherNames
+        phonetics = ([name] + otherNames).map(PhoneticSearch.init)
     }
     public func matches(_ query: String) -> Bool {
         matches(terms: ChineseSearch.terms(ChineseSearch.normalized(query)))
@@ -93,7 +96,7 @@ public struct InstalledApplication: Identifiable, Sendable, Hashable {
         if let keyboard = ZhuyinKeyboard.Query(query), phonetics.contains(where: { keyboard.matches($0) }) { return keyboard.supplement }
         return TaiwanVocabulary.alternatives(for: query).first { primaryMatches($0.query) }
     }
-    public var searchItem: SearchItem { SearchItem(url: url, name: name, source: "App・繁簡比對", applicationIdentifier: preferenceID) }
+    public var searchItem: SearchItem { SearchItem(url: url, name: name, source: "App・繁簡比對", applicationIdentifier: preferenceID, applicationAliases: aliases) }
     public func searchItem(query: String) -> SearchItem {
         supplement(for: query).map { searchItem.supplemented(by: $0) } ?? searchItem
     }
@@ -109,16 +112,18 @@ public enum ApplicationCatalog {
             guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
             for case let url as URL in enumerator where url.pathExtension.lowercased() == "app" {
                 guard let bundle = Bundle(url: url) else { continue }
-                var name = (bundle.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
-                    ?? (bundle.localizedInfoDictionary?["CFBundleName"] as? String)
-                    ?? (bundle.infoDictionary?["CFBundleDisplayName"] as? String)
-                    ?? (bundle.infoDictionary?["CFBundleName"] as? String)
-                    ?? url.deletingPathExtension().lastPathComponent
+                // Keep every declared name: an English display name can coexist
+                // with a Chinese bundle name, as in Tencent Meeting.
+                var names = [bundle.localizedInfoDictionary, bundle.infoDictionary].flatMap { info in
+                    ["CFBundleDisplayName", "CFBundleName"].compactMap { info?[$0] as? String }
+                }.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                var name = names.first ?? url.deletingPathExtension().lastPathComponent
                 if name == "AudioPluginHost", bundle.bundleIdentifier?.lowercased().hasPrefix("com.wavesaudio.") == true {
                     name = url.deletingPathExtension().lastPathComponent
+                    names.removeAll { $0 == "AudioPluginHost" }
                 }
                 let resolved = url.resolvingSymlinksInPath().standardizedFileURL.path
-                apps[resolved] = InstalledApplication(url: URL(fileURLWithPath: resolved), name: name, bundleID: bundle.bundleIdentifier, declaredCategory: bundle.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String)
+                apps[resolved] = InstalledApplication(url: URL(fileURLWithPath: resolved), name: name, bundleID: bundle.bundleIdentifier, declaredCategory: bundle.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String, alternateNames: names)
             }
         }
         return apps.values.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

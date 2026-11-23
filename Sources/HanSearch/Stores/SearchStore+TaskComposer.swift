@@ -112,7 +112,6 @@ extension SearchStore {
     }
     private func finishTaskAuthorization() {
         authorizationInFlight = false
-        NSApp.setActivationPolicy(settingsPresented ? .regular : .accessory)
-        if !settingsPresented { showLauncher?() }
+        if !settingsPresented && !helpPresented && !onboardingPresented { showLauncher?() }
     }
 }

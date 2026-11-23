@@ -22,6 +22,10 @@ import HanSearchCore
     func ordered(_ candidates: [HabitCandidate], query: String) -> [String] {
         enabled ? history.ordered(candidates, query: query) : candidates.map(\.id)
     }
+    func setLowered(_ lower: Bool, query: String, fileID: String) {
+        history.setLowered(lower, query: query, fileID: fileID)
+        save()
+    }
     func clear() { history = SearchHabitHistory(); defaults.removeObject(forKey: "searchHabits.history.v1"); saveFailed = false }
     private func save() {
         do { let data = try JSONEncoder().encode(history); defaults.set(data, forKey: "searchHabits.history.v1"); saveFailed = false }

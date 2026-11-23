@@ -1,18 +1,20 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 import HanSearchCore
 
 struct ContentView: View {
     @ObservedObject var store: SearchStore
-    @FocusState private var focused: Bool
+    @State private var dropTarget = false
+    @State private var focused = false
     @FocusState private var appGridFocused: Bool
     @Namespace private var glassNamespace
     @State private var retainsBody = false
     @State private var bodyContentVisible = false
     @State private var surfaceGeneration = 0
-    private enum Surface: Equatable { case collapsed, results, apps, composer }
+    private enum Surface: Equatable { case collapsed, results, apps, composer, inspection }
     private var surface: Surface {
-        store.composerMode != nil ? .composer : !store.hasBody ? .collapsed : store.isAppBrowser ? .apps : .results
+        store.diagnosticURL != nil ? .inspection : store.composerMode != nil ? .composer : !store.hasBody ? .collapsed : store.isAppBrowser ? .apps : .results
     }
     private let filters: [SearchMode] = [.all, .videos, .contents, .notes, .contacts, .calendar, .reminders, .alarms, .mail]
     var body: some View {
@@ -20,6 +22,21 @@ struct ContentView: View {
             if #available(macOS 26, *) {
                 GlassEffectContainer(spacing: 0) { layout }
             } else { layout }
+        }
+        .overlay {
+            if dropTarget { Label(L.text("放開以檢查檔案"), systemImage: "doc.text.magnifyingglass").padding(12).background(.regularMaterial, in: Capsule()).allowsHitTesting(false) }
+        }
+        .onDrop(of: [.fileURL], isTargeted: $dropTarget) { providers in
+            guard store.composerMode == nil, providers.count == 1, let provider = providers.first else { return false }
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
+                guard let data, let url = URL(dataRepresentation: data, relativeTo: nil), url.isFileURL else { return }
+                Task { @MainActor in
+                    guard store.composerMode == nil else { return }
+                    store.inspectFile(url)
+                    store.showLauncher?()
+                }
+            }
+            return true
         }
         .padding(40)
         .frame(width: 804, alignment: .top)
@@ -29,13 +46,13 @@ struct ContentView: View {
         }
         .onAppear { focused = true }
         .onChange(of: surface, initial: true) { _, _ in updateSurface() }
-        .onChange(of: store.query) { _, _ in store.search() }
+        .onChange(of: store.inputRevision) { _, _ in store.search() }
         .onChange(of: store.mode) { _, mode in
             appGridFocused = false; focused = true
             if mode == .apps { store.appLibrary.select(.all) }
-            store.search()
         }
         .onChange(of: store.focusToken) { _, _ in
+            dropTarget = false
             appGridFocused = false; focused = false
             DispatchQueue.main.async { focused = true }
         }
@@ -44,7 +61,7 @@ struct ContentView: View {
         .onKeyPress(.leftArrow) { horizontal(-1) }
         .onKeyPress(.rightArrow) { horizontal(1) }
         .onKeyPress(.return) { if store.isAppBrowser && appGridFocused && !store.appLibrary.isEditingCategory && !store.appLibrary.isPreviewingSuggestions { openApp(); return .handled }; return .ignored }
-        .onExitCommand { if store.appLibrary.isEditingCategory { store.appLibrary.isEditingCategory = false } else if store.appLibrary.isPreviewingSuggestions { store.appLibrary.isPreviewingSuggestions = false } else if store.composerMode != nil { store.cancelComposer() } else { store.dismissLauncher?() } }
+        .onExitCommand { escape() }
         .environment(\.locale, store.interfaceLanguage.locale)
         .environment(\.launcherMotionEnabled, store.motionEnabled)
         .id(store.interfaceLanguage.rawValue)
@@ -55,17 +72,29 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 HStack(spacing: 13) {
                     Image(systemName: store.composerMode == .event ? "calendar.badge.plus" : store.composerMode == .reminder ? "checklist" : "magnifyingglass").font(.system(size: 23, weight: .regular)).foregroundStyle(.secondary)
-                    TextField(L.text(store.composerMode == nil ? (store.isAppBrowser ? "搜尋應用程式…" : "Spotlight Han 搜尋") : "輸入時間和事項…"), text: $store.query)
-                        .font(.system(size: 25, weight: .regular)).textFieldStyle(.plain)
-                        .focused($focused).onSubmit {
+                    LauncherSearchField(text: $store.query, focused: $focused,
+                        placeholder: L.text(store.composerMode == nil ? (store.isAppBrowser ? "搜尋應用程式…" : "Spotlight Han 搜尋") : "輸入時間和事項…"),
+                        accessibilityLabel: L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"),
+                        enabled: !store.actionInFlight && store.composerCreated == nil,
+                        inspectDroppedFile: store.composerMode == nil ? { url in
+                            store.inspectFile(url)
+                            store.showLauncher?()
+                        } : nil,
+                        submit: {
+                            guard store.diagnosticURL == nil else { return }
                             if store.isAppBrowser {
                                 if let quick = store.appSettingsResults.first { store.selection = quick.id; store.openSelection() }
                                 else { openApp() }
                             } else { store.openSelection() }
-                        }
-                        .onKeyPress(.tab) { store.enterComposer() ? .handled : .ignored }
-                        .disabled(store.actionInFlight || store.composerCreated != nil)
-                        .accessibilityLabel(L.text(store.composerMode == nil ? "Spotlight Han 繁簡搜尋" : "輸入時間和事項"))
+                        }, tab: { store.enterComposer() }, move: { vertical($0) == .handled }, escape: escape)
+                        .frame(height: 34)
+                    if store.composerMode == nil && !store.query.isEmpty {
+                        Button { store.query = ""; focused = true } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                                .frame(width: 24, height: 32).contentShape(Rectangle())
+                        }.buttonStyle(LauncherButtonStyle()).help(L.text("清除搜尋"))
+                            .accessibilityLabel(L.text("清除搜尋"))
+                    }
                     if store.actionInFlight || store.composerParsing { ProgressView().controlSize(.small) }
                     if store.composerMode != nil {
                         Button { store.cancelComposer() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary).frame(width: 28, height: 32).contentShape(Rectangle()) }
@@ -91,7 +120,8 @@ struct ContentView: View {
             }
             if surface != .collapsed || retainsBody {
                 VStack(spacing: 0) {
-                    if store.composerMode != nil { TaskComposerView(store: store).transition(.opacity) }
+                    if let url = store.diagnosticURL { FileInspectionView(store: store, url: url).id(url) }
+                    else if store.composerMode != nil { TaskComposerView(store: store).transition(.opacity) }
                     else if store.isAppBrowser { AppBrowserView(store: store, library: store.appLibrary, gridFocused: $appGridFocused).transition(.opacity) }
                     else { resultPanel.transition(.opacity) }
                 }
@@ -128,10 +158,14 @@ struct ContentView: View {
                 .launcherGlassIdentity("category-" + mode.rawValue, in: glassNamespace)
                 .contentShape(.interaction, Circle())
         }.buttonStyle(LauncherButtonStyle(shape: AnyShape(Circle()))).help(L.text(hint)).accessibilityLabel(L.text(hint))
+            .accessibilityAddTraits(store.mode == mode ? .isSelected : [])
             .animation(LauncherMotion.animation(enabled: store.motionEnabled), value: store.mode == mode)
     }
     private var resultPanel: some View {
-        VStack(spacing: 0) {
+        let visibleIDs = store.primaryResultIDs
+        let quickByID = Dictionary(store.allQuickResults.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let fileByID = Dictionary(store.results.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(filters, id: \.self) { mode in
@@ -140,6 +174,7 @@ struct ContentView: View {
                                 .padding(.horizontal, 11).padding(.vertical, 7)
                                 .contentShape(Capsule())
                         }.buttonStyle(LauncherButtonStyle())
+                            .accessibilityAddTraits(store.mode == mode ? .isSelected : [])
                             .launcherSelectionAnchor(mode.rawValue)
                     }
                 }
@@ -147,6 +182,7 @@ struct ContentView: View {
                 .padding(.horizontal, 14).padding(.vertical, 9)
             }
             Divider().padding(.horizontal, 18)
+            FileFilterBar(store: store)
             if store.canSortFileResults {
                 HStack(spacing: 10) {
                     Picker(L.text("檔案排序"), selection: $store.fileSort) {
@@ -181,19 +217,23 @@ struct ContentView: View {
                 }.padding(22).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if store.mode == .alarms && store.allQuickResults.isEmpty {
                 AlarmListView { store.connect(.alarms) }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.primaryResultIDs.isEmpty {
+            } else if store.searching && visibleIDs.isEmpty {
+                // The footer shows progress for slower searches. Keep the results
+                // area quiet during the debounce instead of flashing setup actions.
+                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if visibleIDs.isEmpty {
                 emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 3) {
-                            ForEach(store.primaryResultIDs, id: \.self) { id in
-                                if let item = store.allQuickResults.first(where: { $0.id == id }) { quickRow(item).id(id) }
-                                else if let item = store.results.first(where: { $0.id == id }) { fileRow(item).id(id) }
+                            ForEach(visibleIDs, id: \.self) { id in
+                                if let item = quickByID[id] { quickRow(item).id(id) }
+                                else if let item = fileByID[id] { fileRow(item).id(id) }
                             }
                         }.padding(10)
                     }
-                    .onChange(of: store.selection) { _, selected in if let selected, store.primaryResultIDs.contains(selected) { proxy.scrollTo(selected) } }
+                    .onChange(of: store.selection) { _, selected in if let selected, visibleIDs.contains(selected) { proxy.scrollTo(selected) } }
                 }
             }
             if store.otherIndexedResultCount > 0 {
@@ -205,7 +245,7 @@ struct ContentView: View {
                     Spacer()
                 }.padding(.horizontal, 18).padding(.vertical, 8)
             }
-            SearchSourceHealthBanner(store: store)
+            if !store.parsedFileQuery.active { SearchSourceHealthBanner(store: store) }
             if let translation = store.translationResult, store.details == nil {
                 Divider().padding(.horizontal, 18)
                 SearchTranslationAccessory(store: store, item: translation)
@@ -227,23 +267,37 @@ struct ContentView: View {
                 Button { store.refreshCatalog() } label: { Image(systemName: "arrow.clockwise").frame(width: 24, height: 24).contentShape(Rectangle()) }.buttonStyle(LauncherButtonStyle()).disabled(store.catalogRefreshing || store.catalogRoots.isEmpty).help(L.text("更新檔名清單"))
                 SettingsEntryButton(store: store) { Image(systemName: "gearshape").frame(width: 24, height: 24).contentShape(Rectangle()) }.buttonStyle(LauncherButtonStyle()).help(L.text("設定與資料來源"))
                 if store.selectedPreviewItem != nil {
-                    Button(L.text("空白鍵 預覽")) { if let item = store.selectedPreviewItem { store.previewFile(item) } }
+                    Button(L.text(store.previewSelectionArmed ? "空白鍵 預覽" : "快速預覽")) { if let item = store.selectedPreviewItem { store.previewFile(item) } }
                         .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(.secondary)
                         .help(L.text("先選取檔案，再按空白鍵預覽；輸入搜尋詞時仍可打空格。"))
+                }
+                if let id = store.rankingUndo {
+                    Button(L.text("復原降序")) { store.setLowered(false, fileID: id) }.controlSize(.small)
+                }
+                if store.actionFile != nil {
+                    Button(L.text("操作 ⌘K")) { store.showFileActions?() }.controlSize(.small)
                 }
                 Text(L.text("↵ 開啟")).font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
     }
     private func fileRow(_ item: SearchItem) -> some View {
-        ResultRow(item: item, query: store.query, preview: store.documentPreviews[item.id])
+        ResultRow(item: item, query: store.matchText, preview: store.documentPreviews[item.id])
             .padding(.horizontal, 12).padding(.vertical, 4)
             .background(store.selection == item.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 13))
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { store.selection = item.id; store.openSelection() }
             .onTapGesture { store.selection = item.id; store.previewSelectionArmed = true }
+            .background { if !item.isApplication { FileDragRegion(url: item.url) } }
             .contextMenu {
-                if !item.isApplication { Button(L.text("快速預覽")) { store.previewFile(item) } }
+                if !item.isApplication {
+                    Button(L.text("快速預覽")) { store.previewFile(item) }
+                    Button(L.text("檢查這個檔案")) { store.inspectFile(item.url) }
+                    let lowered = store.habits.history.loweredFiles(query: store.query, ids: [item.id]).contains(item.id)
+                    Button(L.text(lowered ? "恢復這筆的搜尋順位" : "只在這個搜尋詞降低順位")) {
+                        store.setLowered(!lowered, fileID: item.id)
+                    }
+                }
                 Button(L.text("自訂搜尋縮寫…")) { store.editAliases(identity: store.habitCandidate(item).identity, title: item.name) }
                 Button(L.text("開啟")) { store.selection = item.id; store.openSelection() }
                 Button(L.text("在 Finder 顯示")) { store.selection = item.id; store.revealSelection() }
@@ -252,8 +306,11 @@ struct ContentView: View {
     private func openApp() {
         if let app = store.appLibrary.selected(query: store.query), store.appLibrary.open(app, query: store.query) { store.hideLauncher?() }
     }
+    private func escape() {
+        store.escapeLauncherLayer()
+    }
     private func vertical(_ direction: Int) -> KeyPress.Result {
-        guard !store.appLibrary.isEditingCategory, !store.appLibrary.isPreviewingSuggestions else { return .ignored }
+        guard store.diagnosticURL == nil, !store.appLibrary.isEditingCategory, !store.appLibrary.isPreviewingSuggestions else { return .ignored }
         guard store.isAppBrowser else { store.moveSelection(direction); return .handled }
         if !appGridFocused {
             guard direction > 0 else { return .ignored }
@@ -326,25 +383,32 @@ struct ContentView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Text(emptyTitle).font(.system(size: 15, weight: .medium))
-            Text(L.text(emptyDescription)).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if !emptyDescription.isEmpty {
+                Text(L.text(emptyDescription)).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
             if store.catalogRoots.isEmpty && [.all, .names, .videos].contains(store.mode) {
                 Button(L.text("選擇搜尋資料夾…")) { store.chooseCatalogFolder() }.buttonStyle(.bordered)
             }
             if [.all, .contents].contains(store.mode) && store.documentIndexRoots.isEmpty {
                 Button(L.text("加入文件資料夾…")) { store.chooseFolder() }.buttonStyle(.bordered)
             }
-            if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
+            if store.mode == .clipboard && store.hasClipboardHistory && !store.query.isEmpty {
+                Button(L.text("清除搜尋")) { store.query = ""; focused = true }.buttonStyle(.bordered)
+            } else if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts, .clipboard].contains(store.mode) {
                 SettingsEntryButton(store: store) { Text(L.text("設定資料來源")) }.buttonStyle(.bordered)
             }
         }.padding(24)
     }
     private var emptyTitle: String {
+        if store.mode == .clipboard && store.hasClipboardHistory && !store.query.isEmpty { return L.text("找不到符合的項目") }
         if store.mode == .clipboard { return L.text(store.clipboardEnabled ? "尚無剪貼板記錄" : "啟用剪貼板記錄") }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) && store.personalStatus[store.mode] == nil { return L.format("連接%@", L.text(store.mode.rawValue)) }
         if store.query.isEmpty { return L.format("搜尋%@", L.text(store.mode.rawValue)) }
         return L.text(store.searching || store.verifyingDocumentContents ? "正在搜尋…" : "找不到符合的項目")
     }
     private var emptyDescription: String {
+        if store.parsedFileQuery.active { return "可移除上方條件，或檢查檔案所在資料夾是否已加入搜尋。" }
+        if store.mode == .clipboard && store.hasClipboardHistory && !store.query.isEmpty { return "" }
         if store.mode == .clipboard { return "記錄預設關閉；啟用後只保留本次執行期間的文字。" }
         if [.notes, .contacts, .calendar, .reminders, .mail, .shortcuts].contains(store.mode) { return store.personalStatus[store.mode] ?? "在設定中啟用，並依系統提示授權。" }
         if store.query.isEmpty { return "輸入關鍵字，繁體與簡體一起比對。" }

@@ -21,14 +21,16 @@ import HanSearchCore
         precondition(opened == 1 && store.previewSelectionArmed)
         store.query = "preview phrase"
         precondition(!store.previewSelectionArmed && dismissed == 1, "Editing resets preview intent and dismisses stale content")
+        precondition(store.results.isEmpty && store.selection == nil, "Do not open or preview results from the previous query")
+        store.results = [first, app, second]; store.selection = first.id
         store.movePreviewSelection(1)
         precondition(store.selection == second.id && store.previewSelectionArmed, "Preview navigation must skip apps")
         store.movePreviewSelection(-1); precondition(store.selection == first.id)
         store.selection = app.id; precondition(store.selectedPreviewItem == nil)
         store.selection = first.id; store.mode = .apps
         precondition(store.selectedPreviewItem == nil && !store.previewSelectionArmed)
-        store.mode = .contents; store.results = [SearchItem(url: first.url, source: "文件・系統索引")]
-        store.query = "unconfirmed"; store.selection = first.id
+        store.mode = .contents; store.query = "unconfirmed"; store.results = [SearchItem(url: first.url, source: "文件・系統索引")]
+        store.selection = first.id
         precondition(store.selectedPreviewItem == nil, "Collapsed unconfirmed results cannot be previewed accidentally")
         store.showOtherIndexedResults = true; precondition(store.selectedPreviewItem != nil)
         print("PASS: explicit result preview intent, normal query spaces, stale-query dismissal, app filtering, file navigation and hidden-result boundaries; isolated store/preferences only")
